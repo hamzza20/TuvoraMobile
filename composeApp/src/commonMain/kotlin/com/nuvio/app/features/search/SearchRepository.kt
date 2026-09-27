@@ -85,8 +85,9 @@ object SearchRepository {
             return
         }
 
-        IptvCatalogAccess.catalog.ensureLoaded()
-        val xtreamEnabled = IptvCatalogAccess.catalog.hasEnabledAccounts()
+        val iptvCatalog = IptvCatalogAccess.catalogOrNull
+        iptvCatalog?.ensureLoaded()
+        val xtreamEnabled = iptvCatalog?.hasEnabledAccounts() == true
         // Upstream: addon manifests still loading => loading state, not "no addons". No early return
         // here — Xtream can carry search on its own (the fork's IPTV lane), handled below.
         val enabledAddons = addons.enabledAddons()

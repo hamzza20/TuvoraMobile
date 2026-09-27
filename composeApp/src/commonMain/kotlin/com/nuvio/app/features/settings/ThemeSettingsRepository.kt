@@ -4,6 +4,7 @@ import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.ThemeColors
+import com.nuvio.app.features.membership.resolveCustomThemeColors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,11 +71,11 @@ object ThemeSettingsRepository {
             AppTheme.MARIGOLD
         }
         _selectedTheme.value = theme
-        // Fork: upstream's CUSTOM theme is ungated (membership is inert here), so the stored custom
-        // colours apply as-is instead of going through resolveCustomThemeColors(tier).
         val customColors = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
         _customThemePreference.value = customColors
-        _customThemeColors.value = customColors
+        // Membership is inert in the fork, so upstream's free-tier rule applies: a synced gradient's
+        // stops are kept as the preference, but the applied colour is solid.
+        _customThemeColors.value = resolveCustomThemeColors(customColors, memberTier = null)
         publishAccent(theme)
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
         val liquidGlassEnabled = ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled() ?: false
@@ -97,10 +98,11 @@ object ThemeSettingsRepository {
 
     fun setCustomTheme(colors: CustomThemeColors) {
         ensureLoaded()
-        ThemeSettingsStorage.saveCustomThemeColors(colors.encode())
+        val selectedColors = resolveCustomThemeColors(colors, memberTier = null)
+        ThemeSettingsStorage.saveCustomThemeColors(selectedColors.encode())
         ThemeSettingsStorage.saveSelectedTheme(AppTheme.CUSTOM.name)
-        _customThemePreference.value = colors
-        _customThemeColors.value = colors
+        _customThemePreference.value = selectedColors
+        _customThemeColors.value = selectedColors
         _selectedTheme.value = AppTheme.CUSTOM
         publishAccent(AppTheme.CUSTOM)
     }

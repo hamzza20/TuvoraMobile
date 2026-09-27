@@ -137,6 +137,7 @@ class StreamBackgroundSettingsTest {
             NuvioTheme {
                 entries = settingsSearchEntries(
                     isTablet = isTablet.value,
+                    addonsEnabled = true,
                     pluginsEnabled = false,
                     supportersContributorsPageEnabled = false,
                     accountDeletionEnabled = false,
@@ -144,6 +145,7 @@ class StreamBackgroundSettingsTest {
                     liquidGlassNativeTabBarSupported = false,
                     switchProfileAvailable = false,
                     checkForUpdatesAvailable = false,
+                    traktCredentialsConfigured = false,
                 )
             }
         }

@@ -89,7 +89,8 @@ internal object ContinueWatchingEnrichmentCache {
     // than decoding an unbounded graph and only then trimming with capped(). Mirrors the TV file
     // cache's MAX_CACHE_BYTES pre-read check; sized well above a real ~500-record payload.
     private const val MAX_CACHE_CHARS = 4 * 1024 * 1024
-    private fun <T> List<T>.capped(): List<T> = if (size > MAX_RECORDS) take(MAX_RECORDS) else this
+    // Always a fresh list: the memoised payload must not alias the caller's (possibly mutable) input.
+    private fun <T> List<T>.capped(): List<T> = if (size > MAX_RECORDS) take(MAX_RECORDS) else toList()
     private val cacheLock = SynchronizedObject()
     private val cachedPayloads = mutableMapOf<CacheScope, CachedEnrichmentPayload?>()
     private val _generation = MutableStateFlow(0)
