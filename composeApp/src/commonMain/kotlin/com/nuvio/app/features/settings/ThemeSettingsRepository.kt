@@ -1,6 +1,7 @@
 package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.ui.AppTheme
+import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.ThemeColors
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 object ThemeSettingsRepository {
     private val _selectedTheme = MutableStateFlow(AppTheme.MARIGOLD)
     val selectedTheme: StateFlow<AppTheme> = _selectedTheme.asStateFlow()
+
+    private val _customThemePreference = MutableStateFlow(CustomThemeColors.Default)
+    val customThemePreference: StateFlow<CustomThemeColors> = _customThemePreference.asStateFlow()
+    private val _customThemeColors = MutableStateFlow(CustomThemeColors.solid(CustomThemeColors.Default.second))
+    val customThemeColors: StateFlow<CustomThemeColors> = _customThemeColors.asStateFlow()
 
     private val _amoledEnabled = MutableStateFlow(false)
     val amoledEnabled: StateFlow<Boolean> = _amoledEnabled.asStateFlow()
@@ -22,6 +28,9 @@ object ThemeSettingsRepository {
 
     private val _navBarStyle = MutableStateFlow(NavBarStyle.ADAPTIVE)
     val navBarStyle: StateFlow<NavBarStyle> = _navBarStyle.asStateFlow()
+
+    private val _navBarGlowEnabled = MutableStateFlow(true)
+    val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
 
     private var hasLoaded = false
 
@@ -37,11 +46,14 @@ object ThemeSettingsRepository {
     fun clearLocalState() {
         hasLoaded = false
         _selectedTheme.value = AppTheme.MARIGOLD
+        _customThemePreference.value = CustomThemeColors.Default
+        _customThemeColors.value = CustomThemeColors.Default
         _amoledEnabled.value = false
         _liquidGlassNativeTabBarEnabled.value = false
-        NativeTabBridge.publishAccentColor(AppTheme.MARIGOLD.nativeTabAccentHex())
+        publishAccent(AppTheme.MARIGOLD)
         NativeTabBridge.publishLiquidGlassEnabled(false)
         _selectedAppLanguage.value = AppLanguage.DEVICE
+        _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
     }
 
@@ -58,7 +70,12 @@ object ThemeSettingsRepository {
             AppTheme.MARIGOLD
         }
         _selectedTheme.value = theme
-        NativeTabBridge.publishAccentColor(theme.nativeTabAccentHex())
+        // Fork: upstream's CUSTOM theme is ungated (membership is inert here), so the stored custom
+        // colours apply as-is instead of going through resolveCustomThemeColors(tier).
+        val customColors = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
+        _customThemePreference.value = customColors
+        _customThemeColors.value = customColors
+        publishAccent(theme)
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
         val liquidGlassEnabled = ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled() ?: false
         _liquidGlassNativeTabBarEnabled.value = liquidGlassEnabled
@@ -66,6 +83,7 @@ object ThemeSettingsRepository {
         val appLanguage = AppLanguage.fromCode(ThemeSettingsStorage.loadSelectedAppLanguage())
         ThemeSettingsStorage.applySelectedAppLanguage(appLanguage.code)
         _selectedAppLanguage.value = appLanguage
+        _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
     }
 
@@ -74,7 +92,17 @@ object ThemeSettingsRepository {
         if (_selectedTheme.value == theme) return
         _selectedTheme.value = theme
         ThemeSettingsStorage.saveSelectedTheme(theme.name)
-        NativeTabBridge.publishAccentColor(theme.nativeTabAccentHex())
+        publishAccent(theme)
+    }
+
+    fun setCustomTheme(colors: CustomThemeColors) {
+        ensureLoaded()
+        ThemeSettingsStorage.saveCustomThemeColors(colors.encode())
+        ThemeSettingsStorage.saveSelectedTheme(AppTheme.CUSTOM.name)
+        _customThemePreference.value = colors
+        _customThemeColors.value = colors
+        _selectedTheme.value = AppTheme.CUSTOM
+        publishAccent(AppTheme.CUSTOM)
     }
 
     fun setAmoled(enabled: Boolean) {
@@ -106,7 +134,17 @@ object ThemeSettingsRepository {
         _navBarStyle.value = style
         ThemeSettingsStorage.saveNavBarStyle(style.key)
     }
-}
 
-private fun AppTheme.nativeTabAccentHex(): String =
-    ThemeColors.getColorPalette(this).nativeAccentHex
+    fun setNavBarGlowEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_navBarGlowEnabled.value == enabled) return
+        _navBarGlowEnabled.value = enabled
+        ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
+    }
+
+    private fun publishAccent(theme: AppTheme) {
+        NativeTabBridge.publishAccentColor(
+            ThemeColors.getColorPalette(theme, _customThemeColors.value).nativeAccentHex,
+        )
+    }
+}

@@ -53,7 +53,7 @@ internal object LocalAccountDataCleaner {
         WatchedRepository.clearLocalState()
         com.nuvio.app.core.contracts.LocalStateCleanerRegistry.all.forEach { it.clearLocalState() }
         LibraryRepository.runAccountStorageWipe {
-            PlatformLocalAccountDataCleaner.wipe()
+            wipePlatformStorage()
         }
 
         ProfileRepository.clearInMemory()
@@ -65,6 +65,7 @@ internal object LocalAccountDataCleaner {
         HomeRepository.clear()
         HomeCatalogSettingsRepository.clearLocalState()
         MetaScreenSettingsRepository.clearLocalState()
+        com.nuvio.app.features.shuffle.EpisodeShuffleRepository.clearLocalState()
         LibraryRepository.clearLocalState()
         LibraryDisplaySettingsRepository.clearLocalState()
         ContinueWatchingPreferencesRepository.clearLocalState()
@@ -89,6 +90,14 @@ internal object LocalAccountDataCleaner {
         PlayerLaunchStore.clear()
         StreamLaunchStore.clear()
         StreamContextStore.clear()
+    }
+
+    internal fun wipePlatformStorage(wipeStorage: () -> Unit = PlatformLocalAccountDataCleaner::wipe) {
+        try {
+            wipeStorage()
+        } finally {
+            ContinueWatchingEnrichmentCache.clearLocalState()
+        }
     }
 }
 

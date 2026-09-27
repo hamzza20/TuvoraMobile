@@ -18,4 +18,5 @@ actual object AppFeaturePolicy {
     actual val donationActionsEnabled: Boolean = false
     actual val donationProgressEnabled: Boolean = false
     actual val customServerConnectionsEnabled: Boolean = false
+    actual val downloadForegroundServiceEnabled: Boolean = true
 }

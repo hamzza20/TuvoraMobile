@@ -319,6 +319,10 @@ actual object PluginRepository {
         persist()
     }
 
+    actual fun setLocalPluginSearchPaused(paused: Boolean) {
+        PluginRuntime.setSearchPaused(paused)
+    }
+
     actual fun getEnabledScrapersForType(type: String): List<PluginScraper> {
         initialize()
         if (!_uiState.value.pluginsEnabled) return emptyList()
@@ -335,12 +339,13 @@ actual object PluginRepository {
         val mediaType = if (scraper.supportsType("movie")) "movie" else "tv"
         val season = if (mediaType == "tv") 1 else null
         val episode = if (mediaType == "tv") 1 else null
-        return executeScraper(
+        return executeScraperInternal(
             scraper = scraper,
             tmdbId = "603",
             mediaType = mediaType,
             season = season,
             episode = episode,
+            respectSearchPause = false,
         )
     }
 
@@ -350,6 +355,22 @@ actual object PluginRepository {
         mediaType: String,
         season: Int?,
         episode: Int?,
+    ): Result<List<PluginRuntimeResult>> = executeScraperInternal(
+        scraper = scraper,
+        tmdbId = tmdbId,
+        mediaType = mediaType,
+        season = season,
+        episode = episode,
+        respectSearchPause = true,
+    )
+
+    private suspend fun executeScraperInternal(
+        scraper: PluginScraper,
+        tmdbId: String,
+        mediaType: String,
+        season: Int?,
+        episode: Int?,
+        respectSearchPause: Boolean,
     ): Result<List<PluginRuntimeResult>> {
         val resolvedTmdbId = resolvePluginTmdbId(
             tmdbId = tmdbId,
@@ -364,6 +385,7 @@ actual object PluginRepository {
                 season = season,
                 episode = episode,
                 scraperId = scraper.id,
+                respectSearchPause = respectSearchPause,
             )
         }
     }

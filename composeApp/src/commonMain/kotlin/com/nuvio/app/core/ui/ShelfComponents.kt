@@ -1,9 +1,8 @@
 package com.nuvio.app.core.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -27,16 +27,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextAlign
@@ -85,6 +81,9 @@ fun <T> NuvioShelfSection(
     // other caller passes nothing and the shelf stays rec-agnostic.
     impressionsAttach?.invoke(state)
     val tokens = MaterialTheme.nuvio
+    ScreenActivityEffect(state) { active ->
+        if (!active) state.stopScroll()
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap + NuvioTokens.Space.s2),
@@ -134,6 +133,7 @@ fun NuvioPosterCard(
     title: String,
     imageUrl: String?,
     modifier: Modifier = Modifier,
+    fallbackImageUrl: String? = null,
     shape: NuvioPosterShape = NuvioPosterShape.Poster,
     detailLine: String? = null,
     showTitleBelow: Boolean = true,
@@ -185,8 +185,24 @@ fun NuvioPosterCard(
             val imageFailed = remember(imageUrl) { mutableStateOf(false) }
             val imageLoaded = remember(imageUrl) { mutableStateOf(false) }
             if (hasImageUrl) {
+                // Upstream custom poster patterns: carry the original poster as the fallback the
+                // CustomPosterFallbackInterceptor loads when the pattern URL fails.
+                val platformContext = coil3.compose.LocalPlatformContext.current
+                val hasFallback = !fallbackImageUrl.isNullOrBlank() && fallbackImageUrl != imageUrl
+                val imageModel = remember(imageUrl, fallbackImageUrl, platformContext) {
+                    if (hasFallback) {
+                        coil3.request.ImageRequest.Builder(platformContext)
+                            .data(imageUrl)
+                            .memoryCacheKeyExtras(
+                                mapOf(com.nuvio.app.core.poster.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackImageUrl!!)
+                            )
+                            .build()
+                    } else {
+                        imageUrl
+                    }
+                }
                 AsyncImage(
-                    model = imageUrl,
+                    model = imageModel,
                     contentDescription = title,
                     modifier = Modifier.matchParentSize(),
                     contentScale = ContentScale.Crop,
@@ -383,44 +399,3 @@ private fun NuvioPosterShape.cardWidth(basePosterWidthDp: Int): Dp =
         NuvioPosterShape.Square -> basePosterWidthDp.dp
         NuvioPosterShape.Landscape -> landscapePosterWidth(basePosterWidthDp)
     }
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-internal fun Modifier.posterCardClickable(
-    onClick: (() -> Unit)?,
-    onLongClick: (() -> Unit)?,
-    zoomImageUrl: String? = null,
-    zoomCornerRadius: Dp = NuvioTokens.Radius.poster,
-): Modifier {
-    if (onClick == null && onLongClick == null) return this
-    val bounds = remember { mutableStateOf<Rect?>(null) }
-    return this
-        .onGloballyPositioned { coordinates -> bounds.value = coordinates.unclippedBoundsInRoot() }
-        .combinedClickable(
-            onClick = { onClick?.invoke() },
-            onLongClick = onLongClick?.let { longClick ->
-                {
-                    bounds.value?.let { cardBounds ->
-                        PosterZoomAnchorHolder.stash(
-                            PosterZoomAnchor(
-                                boundsInRoot = cardBounds,
-                                imageUrl = zoomImageUrl,
-                                cornerRadius = zoomCornerRadius,
-                            ),
-                        )
-                    }
-                    longClick()
-                }
-            },
-        )
-}
-
-private fun androidx.compose.ui.layout.LayoutCoordinates.unclippedBoundsInRoot(): Rect {
-    val position = positionInRoot()
-    return Rect(
-        left = position.x,
-        top = position.y,
-        right = position.x + size.width,
-        bottom = position.y + size.height,
-    )
-}

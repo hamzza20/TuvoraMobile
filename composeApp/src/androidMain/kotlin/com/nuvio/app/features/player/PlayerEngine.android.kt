@@ -89,7 +89,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 
@@ -343,31 +342,23 @@ private fun ExoPlayerSurface(
     var fallbackStartPositionMs by remember(playerSourceKey) { mutableStateOf<Long?>(null) }
     val effectiveDecoderPriority = decoderPriorityOverride ?: playerSettings.decoderPriority
 
-    val initialMediaItem = remember(playerSourceKey, externalSubtitles) {
-        val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
-            val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
-            MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
-                .setMimeType(mimeType)
-                .setLanguage(subtitle.language)
-                .setLabel(subtitle.name ?: subtitle.language)
-                .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
-                .build()
-        }
-        playbackMediaItemFromUrl(
-            url = sourceUrl,
-            responseHeaders = sanitizedSourceResponseHeaders,
-            streamType = normalizedStreamType,
-        ).buildUpon()
-            .setMediaId(sourceUrl)
-            .apply {
-                if (subtitleConfigs.isNotEmpty()) {
-                    setSubtitleConfigurations(subtitleConfigs)
+    var resolvedMediaItem by remember(playerSourceKey, externalSubtitles) {
+        mutableStateOf(
+            playbackMediaItemFromUrl(
+                url = sourceUrl,
+                responseHeaders = sanitizedSourceResponseHeaders,
+                streamType = normalizedStreamType,
+            ).buildUpon()
+                .setMediaId(sourceUrl)
+                .apply {
+                    val subtitleConfigs = startupSubtitleConfigurations(externalSubtitles)
+                    if (subtitleConfigs.isNotEmpty()) {
+                        setSubtitleConfigurations(subtitleConfigs)
+                    }
                 }
-            }
-            .build()
+                .build(),
+        )
     }
-
-    var resolvedMediaItem by remember(playerSourceKey) { mutableStateOf(initialMediaItem) }
     var probeAttempted by remember(playerSourceKey) { mutableStateOf(false) }
 
     val extractorsFactory = remember {
@@ -538,7 +529,7 @@ private fun ExoPlayerSurface(
     }
 
     LaunchedEffect(exoPlayer, resolvedMediaItem, initialPositionRequestKey) {
-        val mediaItem = resolvedMediaItem ?: return@LaunchedEffect
+        val mediaItem = resolvedMediaItem
         val requestedStartPositionMs = fallbackStartPositionMs
             ?: initialPositionMs?.takeIf { it > 0L }
         playbackDiagnostics.attempt += 1
@@ -660,7 +651,9 @@ private fun ExoPlayerSurface(
                             .setMediaId(sourceUrl)
                             .apply {
                                 val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
-                                    val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
+                                    // Upstream dropped the blocking header probe (subtitle formats now resolve off Main);
+                                    // the retry uses the same URL-derived type as the primary path.
+                                    val mimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
                                     MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
                                         .setMimeType(mimeType)
                                         .setLanguage(subtitle.language)
@@ -797,7 +790,8 @@ private fun ExoPlayerSurface(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            exoPlayer.release()
+            playerViewRef?.releaseLibassOverlay()
+            exoPlayer.releaseWithAssSupportCompat()
         }
     }
 
@@ -880,6 +874,14 @@ private fun ExoPlayerSurface(
                     exoPlayer.selectTrackByIndex(C.TRACK_TYPE_AUDIO, index)
                 }
 
+                override fun applyAudioLanguagePreferences(languages: List<String>) {
+                    exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                        .buildUpon()
+                        .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                        .setPreferredAudioLanguages(*languages.toTypedArray())
+                        .build()
+                }
+
                 override fun selectSubtitleTrack(index: Int) {
                     Log.d(TAG, "selectSubtitleTrack: index=$index")
                     if (index < 0) {
@@ -910,9 +912,7 @@ private fun ExoPlayerSurface(
                             return@launch
                         }
                         preserveAudioSelectionForReload("setSubtitleUri")
-                        val resolvedMime = withContext(Dispatchers.IO) {
-                            resolveSubtitleMimeType(url)
-                        }
+                        val resolvedMime = PlayerSubtitleUtils.mimeTypeFromUrl(url)
                         selectedExternalSubtitleMimeType = resolvedMime
                         Log.d(TAG, "setSubtitleUri: currentPosition=$currentPosition, wasPlaying=$wasPlaying")
                         val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))
@@ -1840,6 +1840,8 @@ private class NuvioLibmpvView(
         applyRequestHeaders(currentRequestHeaders)
         obsPaused = !playWhenReady
         mpv.setPropertyBoolean("pause", !playWhenReady)
+        // Upstream (original-audio-language fix): let mpv re-pick the audio track per source.
+        mpv.setPropertyString("aid", "auto")
         if (startOption != null) {
             mpv.command("loadfile", sourceUrl.toMpvSource(), "replace", "-1", startOption)
         } else {
@@ -1850,7 +1852,7 @@ private class NuvioLibmpvView(
         }
         currentExternalSubtitles.forEachIndexed { index, subtitle ->
             val flag = if (index == 0) "auto" else "cached"
-            mpv.command("sub-add", subtitle.url, flag)
+            mpv.command("sub-add", subtitle.url.toMpvSource(), flag, subtitle.name ?: subtitle.language, subtitle.language)
         }
         mpv.setPropertyBoolean("pause", !playWhenReady)
     }
@@ -2062,6 +2064,16 @@ private class NuvioLibmpvView(
                 }
             }
 
+            override fun applyAudioLanguagePreferences(languages: List<String>) {
+                ctl {
+                    mpv.setPropertyString("alang", languages.joinToString(","))
+                    mpv.getPropertyString("aid")?.takeIf { it.toIntOrNull() != null }?.let { currentId ->
+                        mpv.setPropertyString("aid", currentId)
+                    }
+                    mpv.setPropertyString("aid", "auto")
+                }
+            }
+
             override fun selectSubtitleTrack(index: Int) {
                 if (index < 0) {
                     ctl { mpv.setPropertyString("sid", "no") }
@@ -2082,6 +2094,38 @@ private class NuvioLibmpvView(
 
             override fun clearExternalSubtitleAndSelect(trackIndex: Int) {
                 selectSubtitleTrack(trackIndex)
+            }
+
+            override fun applySubtitlePreferences(
+                preferredLanguage: String,
+                secondaryPreferredLanguage: String?,
+                useForcedSubtitles: Boolean,
+                autoSelectionApplied: Boolean,
+                hasActiveSubtitle: Boolean,
+                useCustomSubtitles: Boolean,
+            ) = ctl {
+                if ((hasActiveSubtitle || useCustomSubtitles) && autoSelectionApplied) {
+                    return@ctl
+                }
+                val languages = listOfNotNull(
+                    preferredLanguage.takeIf { language ->
+                        language.isNotBlank() &&
+                            !language.equals(SubtitleLanguageOption.NONE, ignoreCase = true) &&
+                            !language.equals(SubtitleLanguageOption.FORCED, ignoreCase = true)
+                    },
+                    secondaryPreferredLanguage?.takeIf { language ->
+                        language.isNotBlank() &&
+                            !language.equals(SubtitleLanguageOption.NONE, ignoreCase = true) &&
+                            !language.equals(SubtitleLanguageOption.FORCED, ignoreCase = true)
+                    },
+                )
+                if (languages.isEmpty()) {
+                    mpv.setPropertyString("sid", "no")
+                    return@ctl
+                }
+                runCatching {
+                    mpv.setPropertyString("slang", languages.joinToString(","))
+                }
             }
 
             override fun applySubtitleStyle(style: SubtitleStyleState) = ctl {
@@ -2485,6 +2529,14 @@ private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
     return false
 }
 
+private fun PlayerView.releaseLibassOverlay() {
+    findViewById<android.widget.FrameLayout>(R.id.libass_overlay_container)
+        ?.removeAssOverlayChildren()
+    findViewById<android.widget.FrameLayout>(R.id.libass_overlay_container_gl)
+        ?.removeAssOverlayChildren()
+    setTag(R.id.libass_overlay_bound_player, null)
+}
+
 private fun android.widget.FrameLayout.removeAssOverlayChildren() {
     for (index in childCount - 1 downTo 0) {
         if (getChildAt(index) is AssSubtitleView) {
@@ -2537,6 +2589,56 @@ private fun ExoPlayer.extractAudioTracks(context: Context): List<AudioTrack> {
         idx++
     }
     return tracks
+}
+
+private fun ExoPlayer.applySubtitleTrackPreferences(
+    preferredLanguage: String,
+    useForcedSubtitles: Boolean,
+    autoSelectionApplied: Boolean,
+    hasActiveSubtitle: Boolean,
+    useCustomSubtitles: Boolean,
+) {
+    if ((hasActiveSubtitle || useCustomSubtitles) && autoSelectionApplied) {
+        return
+    }
+
+    val builder = trackSelectionParameters.buildUpon()
+    val resolvedPreferred = exoPreferredTextLanguage(preferredLanguage)
+
+    if (resolvedPreferred == null) {
+        builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+        builder.setPreferredTextLanguage(null)
+    } else {
+        val userDisabledSubtitles = autoSelectionApplied && !hasActiveSubtitle
+        val shouldSuppressExoAutoSelect = useForcedSubtitles && !autoSelectionApplied
+        if (!userDisabledSubtitles && !shouldSuppressExoAutoSelect) {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+        }
+        if (!shouldSuppressExoAutoSelect) {
+            builder.setPreferredTextLanguage(resolvedPreferred)
+        }
+    }
+
+    val currentFlags = trackSelectionParameters.ignoredTextSelectionFlags
+    val newFlags = if (!useForcedSubtitles) {
+        currentFlags or C.SELECTION_FLAG_FORCED
+    } else {
+        currentFlags and C.SELECTION_FLAG_FORCED.inv()
+    }
+    builder.setIgnoredTextSelectionFlags(newFlags)
+    trackSelectionParameters = builder.build()
+}
+
+private fun exoPreferredTextLanguage(preferredLanguage: String): String? {
+    val normalized = normalizeLanguageCode(preferredLanguage) ?: return null
+    return when (normalized) {
+        SubtitleLanguageOption.NONE,
+        SubtitleLanguageOption.FORCED,
+        -> null
+        SubtitleLanguageOption.DEVICE ->
+            DeviceLanguagePreferences.preferredLanguageCodes().firstOrNull()
+        else -> normalized
+    }
 }
 
 private fun ExoPlayer.extractSubtitleTracks(context: Context): List<SubtitleTrack> {
@@ -2802,82 +2904,6 @@ private class SubtitleOffsetRenderer(
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
         val adjustedPositionUs = (positionUs - subtitleDelayUsProvider()).coerceAtLeast(0L)
         super.render(adjustedPositionUs, elapsedRealtimeUs)
-    }
-}
-
-private fun resolveSubtitleMimeType(url: String, headers: Map<String, String>? = null): String {
-    probeSubtitleHeaders(url, headers)?.let { (contentType, contentDisposition) ->
-        mapSubtitleMime(contentType)?.let { return it }
-        filenameFromContentDisposition(contentDisposition)?.let(::guessSubtitleMime)?.let { return it }
-    }
-    return guessSubtitleMime(url)
-}
-
-private fun probeSubtitleHeaders(url: String, headers: Map<String, String>? = null): Pair<String?, String?>? {
-    val methods = listOf("HEAD", "GET")
-    methods.forEach { method ->
-        runCatching {
-            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = method
-                connectTimeout = 5_000
-                readTimeout = 5_000
-                instanceFollowRedirects = true
-                setRequestProperty("Accept", "*/*")
-                headers?.forEach { (key, value) ->
-                    setRequestProperty(key, value)
-                }
-            }
-            try {
-                connection.responseCode
-                connection.contentType to connection.getHeaderField("Content-Disposition")
-            } finally {
-                connection.disconnect()
-            }
-        }.getOrNull()?.let { return it }
-    }
-    return null
-}
-
-private fun mapSubtitleMime(contentType: String?): String? {
-    val normalized = contentType
-        ?.substringBefore(';')
-        ?.trim()
-        ?.lowercase()
-        ?: return null
-
-    return when (normalized) {
-        "application/x-subrip",
-        "application/srt",
-        "text/srt",
-        "text/plain" -> MimeTypes.APPLICATION_SUBRIP
-        "text/vtt",
-        "application/vtt" -> MimeTypes.TEXT_VTT
-        "text/x-ssa",
-        "text/ssa",
-        "text/ass",
-        "application/x-ssa" -> MimeTypes.TEXT_SSA
-        "application/ttml+xml",
-        "text/xml",
-        "application/xml" -> MimeTypes.APPLICATION_TTML
-        else -> null
-    }
-}
-
-private fun filenameFromContentDisposition(contentDisposition: String?): String? =
-    contentDisposition
-        ?.substringAfter("filename=", missingDelimiterValue = "")
-        ?.trim()
-        ?.trim('"')
-        ?.takeIf { it.isNotEmpty() }
-
-private fun guessSubtitleMime(url: String): String {
-    val lower = url.lowercase()
-    return when {
-        lower.contains(".srt") -> MimeTypes.APPLICATION_SUBRIP
-        lower.contains(".vtt") || lower.contains(".webvtt") -> MimeTypes.TEXT_VTT
-        lower.contains(".ass") || lower.contains(".ssa") -> MimeTypes.TEXT_SSA
-        lower.contains(".ttml") || lower.contains(".dfxp") || lower.contains(".xml") -> MimeTypes.APPLICATION_TTML
-        else -> MimeTypes.TEXT_VTT
     }
 }
 

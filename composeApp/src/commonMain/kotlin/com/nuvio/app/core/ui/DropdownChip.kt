@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -160,6 +161,7 @@ private fun NuvioDropdownOptionsSheet(
                         NuvioBottomSheetActionRow(
                             title = option.label,
                             onClick = { onSelected(option) },
+                            selected = option.key == selectedKey,
                             trailingContent = {
                                 if (option.key == selectedKey) {
                                     Icon(

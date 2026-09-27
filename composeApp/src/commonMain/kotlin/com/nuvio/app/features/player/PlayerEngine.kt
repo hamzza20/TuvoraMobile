@@ -33,6 +33,7 @@ interface PlayerEngineController {
      * the UI thread when the user opens the panel.
      */
     fun getStreamInfo(): PlayerStreamInfo = PlayerStreamInfo()
+    fun applyAudioLanguagePreferences(languages: List<String>)
     fun selectAudioTrack(index: Int)
     fun selectSubtitleTrack(index: Int)
     fun setSubtitleUri(url: String)

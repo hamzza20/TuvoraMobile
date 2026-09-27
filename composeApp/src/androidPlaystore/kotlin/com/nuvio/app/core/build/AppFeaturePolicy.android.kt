@@ -21,5 +21,6 @@ actual object AppFeaturePolicy {
     // Donate row via DONATIONS_DONATE_URL); kept off.
     actual val donationActionsEnabled: Boolean = false
     actual val donationProgressEnabled: Boolean = false
+    actual val downloadForegroundServiceEnabled: Boolean = false
     actual val customServerConnectionsEnabled: Boolean = false
 }

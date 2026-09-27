@@ -130,6 +130,7 @@ internal fun PlayerScreenRuntime.showBrightnessFeedback(level: Float) {
             messageRes = Res.string.compose_player_brightness_level,
             messageArgs = listOf("$percentage%"),
             icon = GestureFeedbackIcon.Brightness,
+            level = level.coerceIn(0f, 1f),
         ),
     )
 }
@@ -146,6 +147,7 @@ internal fun PlayerScreenRuntime.showVolumeFeedback(level: PlayerAudioLevel) {
             messageArgs = if (level.isMuted) emptyList() else listOf("$percentage%"),
             icon = if (level.isMuted) GestureFeedbackIcon.VolumeMuted else GestureFeedbackIcon.Volume,
             isDanger = level.isMuted,
+            level = if (level.isMuted) 0f else level.fraction.coerceIn(0f, 1f),
         ),
     )
 }
@@ -165,6 +167,10 @@ internal fun PlayerScreenRuntime.togglePlayback() {
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
+    val fromMs = playbackSnapshot.positionMs
+    val targetMs = (fromMs + offsetMs).coerceAtLeast(0L)
+        .let { if (playbackSnapshot.durationMs > 0L) it.coerceAtMost(playbackSnapshot.durationMs) else it }
+    lastManualSkipSeekPositions = fromMs to targetMs
     playerController?.seekBy(offsetMs)
     scheduleProgressSyncAfterSeek()
     controlsVisible = true
@@ -198,6 +204,7 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
             maxDurationMs?.let { unclamped.coerceAtMost(it) } ?: unclamped
         }
     }
+    lastManualSkipSeekPositions = currentPositionMs to targetPositionMs
     playerController?.seekTo(targetPositionMs)
     scheduleProgressSyncAfterSeek()
     showSeekFeedback(direction, nextState.amountMs)
@@ -310,6 +317,7 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
         currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
         commitHorizontalSeek = rememberUpdatedState { targetPositionMs: Long ->
+            lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs
             playerController?.seekTo(targetPositionMs)
             scheduleProgressSyncAfterSeek()
         },

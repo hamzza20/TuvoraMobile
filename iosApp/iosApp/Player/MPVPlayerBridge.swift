@@ -171,6 +171,9 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     }
 
     func selectAudioTrack(trackId: Int32) { playerVC?.selectAudio(Int(trackId)) }
+    func applyAudioLanguagePreferences(languages: [String]) {
+        ensurePlayerViewController().applyAudioLanguagePreferences(languages)
+    }
     func selectSubtitleTrack(trackId: Int32) { playerVC?.selectSubtitle(Int(trackId)) }
     func setSubtitleUrl(url: String) { playerVC?.addSubtitleUrl(url) }
     func clearExternalSubtitle() { playerVC?.removeExternalSubtitles() }
@@ -305,6 +308,7 @@ final class MPVPlayerViewController: UIViewController {
     private lazy var eventQueue = DispatchQueue(label: "mpv-events", qos: .userInitiated)
     private var recentPlaybackLogs: [String] = []
     var activeRequestHeaders: [String: String] = [:]
+    private var preferredAudioLanguages: [String] = []
     var isLiveStream = false
 
     /// mpv `pause` / `eof-reached`, sampled on the 250ms poll. See refreshPlaybackState.
@@ -475,12 +479,25 @@ final class MPVPlayerViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        SystemUI.shared.playerDidBecomeVisible(self)
         refreshImmersiveSystemUI()
         becomeFirstResponder()
         UIApplication.shared.beginReceivingRemoteControlEvents()
         publishCachedNowPlayingInfoIfNeeded()
         syncVideoSurfaceLayout()
         attemptStartPendingLoad()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        SystemUI.shared.playerDidBecomeHidden(self)
+        super.viewWillDisappear(animated)
+    }
+
+    override func didMove(toParent parent: UIViewController?) {
+        super.didMove(toParent: parent)
+        if parent == nil {
+            SystemUI.shared.playerDidBecomeHidden(self)
+        }
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -641,6 +658,7 @@ final class MPVPlayerViewController: UIViewController {
         checkError(mpv_set_option_string(mpv, "video-rotate", "no"))
         checkError(mpv_set_option_string(mpv, "subs-match-os-language", "yes"))
         checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
+        configureBundledSubtitleFont()
         checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
         // keep-open parks the core on the last frame at EOF, which is right for a file and wrong
         // for a live channel: an IPTV panel closing the socket mid-stream reads as a clean EOF,
@@ -663,6 +681,7 @@ final class MPVPlayerViewController: UIViewController {
         checkError(mpv_set_option_string(mpv, "hdr-compute-peak", "yes"))
 
         checkError(mpv_initialize(mpv))
+        applyAudioLanguagePreferences(preferredAudioLanguages)
 
         // Observe properties
         mpv_observe_property(mpv, 0, "pause", MPV_FORMAT_FLAG)
@@ -670,7 +689,8 @@ final class MPVPlayerViewController: UIViewController {
         mpv_observe_property(mpv, 0, "core-idle", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "eof-reached", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "seeking", MPV_FORMAT_FLAG)
-        mpv_observe_property(mpv, 0, "track-list/count", MPV_FORMAT_INT64)
+        mpv_observe_property(mpv, 0, "track-list", MPV_FORMAT_NODE)
+        mpv_observe_property(mpv, 0, "aid", MPV_FORMAT_INT64)
 
         mpv_set_wakeup_callback(mpv, { ctx in
             let vc = unsafeBitCast(ctx, to: MPVPlayerViewController.self)
@@ -682,6 +702,24 @@ final class MPVPlayerViewController: UIViewController {
     // MPVPlayerViewController+PictureInPicture.swift, because backgrounding is exactly the moment
     // PiP has to decide whether to keep the video track alive or suspend it. Our live-edge rejoin
     // is preserved there — see the LOCAL block in enterForeground().
+
+    private func configureBundledSubtitleFont() {
+        guard let fontURL = Bundle.main.url(
+            forResource: "NotoSansCJKsc-Regular",
+            withExtension: "otf"
+        ) else {
+            print("[MPV] Bundled CJK subtitle font is missing")
+            return
+        }
+
+        let fontDirectory = fontURL.deletingLastPathComponent().path
+        fontDirectory.withCString { path in
+            checkError(mpv_set_option_string(mpv, "sub-fonts-dir", path))
+        }
+        checkError(mpv_set_option_string(mpv, "sub-font", "Noto Sans CJK SC"))
+        print("[MPV] Using bundled CJK subtitle font: \(fontURL.lastPathComponent)")
+    }
+
 
     // MARK: - Playback API
 
@@ -735,6 +773,7 @@ final class MPVPlayerViewController: UIViewController {
         isPlayerEnded = false
         // A resume opens the file AT the position (`start=`): a seek sent before playback is
         // initialised is rejected by mpv and left the player stuck at 0:00 (B59b).
+        applyAudioLanguagePreferences(preferredAudioLanguages)
         if let startOption = request.startOption {
             command("loadfile", args: [request.urlString, "replace", "-1", startOption])
         } else {
@@ -895,6 +934,16 @@ final class MPVPlayerViewController: UIViewController {
         mpv_set_property(mpv, "aid", MPV_FORMAT_INT64, &id)
     }
 
+    func applyAudioLanguagePreferences(_ languages: [String]) {
+        preferredAudioLanguages = languages
+        guard mpv != nil else { return }
+        setStringProperty("alang", languages.joined(separator: ","))
+        if let currentId = getString("aid"), Int(currentId) != nil {
+            setStringProperty("aid", currentId)
+        }
+        setStringProperty("aid", "auto")
+    }
+
     func selectSubtitle(_ trackId: Int) {
         guard mpv != nil else { return }
         if trackId < 0 {
@@ -1019,7 +1068,7 @@ final class MPVPlayerViewController: UIViewController {
     private func activateAudioSessionForPlayback() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .moviePlayback)
+            try session.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
             try session.setActive(true)
         } catch {
             print("[NowPlaying] Failed to activate audio session: \(error)")

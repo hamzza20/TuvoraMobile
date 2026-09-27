@@ -1,5 +1,9 @@
 package com.nuvio.app.features.home
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.MutatePriority
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +32,7 @@ import com.nuvio.app.core.ui.LiveRecentActionTarget
 import com.nuvio.app.core.contracts.IptvContentClassifierAccess
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.NuvioLiveRecentActionSheet
+import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
@@ -36,6 +41,7 @@ import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.addons.firstEnabledManifestError
 import com.nuvio.app.features.cloud.CloudLibraryContentType
 import com.nuvio.app.features.cloud.CloudLibraryRepository
 import com.nuvio.app.features.cloud.CloudLibraryUiState
@@ -59,6 +65,7 @@ import com.nuvio.app.features.tracking.TrackingSettingsRepository
 import com.nuvio.app.features.tracking.WatchProgressSource
 import com.nuvio.app.features.watched.WatchedItem
 import com.nuvio.app.features.watched.WatchedRepository
+import com.nuvio.app.features.watched.WatchedUiState
 import com.nuvio.app.features.watched.episodePlaybackId
 import com.nuvio.app.features.watched.resolveWatchedBadgesBulk
 import com.nuvio.app.features.watched.watchedItemKey
@@ -87,6 +94,7 @@ import com.nuvio.app.features.watchprogress.continueWatchingEntries
 import com.nuvio.app.features.watchprogress.toContinueWatchingItem
 import com.nuvio.app.features.watchprogress.toUpNextContinueWatchingItem
 import com.nuvio.app.core.ui.DisintegrationRequest
+import com.nuvio.app.core.poster.withCustomPosterUrls
 import com.nuvio.app.features.watching.application.WatchingState
 import com.nuvio.app.features.watching.domain.WatchingContentRef
 import com.nuvio.app.features.watching.domain.isReleasedBy
@@ -150,6 +158,13 @@ fun HomeScreen(
     val homeListState = rememberLazyListState()
     val continueWatchingListState = rememberLazyListState()
     val upcomingListState = rememberLazyListState()
+    ScreenActivityEffect(homeListState, continueWatchingListState, upcomingListState) { active ->
+        if (!active) {
+            homeListState.stopScroll(MutatePriority.PreventUserInput)
+            continueWatchingListState.stopScroll(MutatePriority.PreventUserInput)
+            upcomingListState.stopScroll(MutatePriority.PreventUserInput)
+        }
+    }
     val collections by CollectionRepository.collections.collectAsStateWithLifecycle()
     val continueWatchingPreferences by ContinueWatchingPreferencesRepository.uiState.collectAsStateWithLifecycle()
     val watchedUiState by WatchedRepository.uiState.collectAsStateWithLifecycle()
@@ -164,13 +179,15 @@ fun HomeScreen(
     }.collectAsStateWithLifecycle()
     var observedOfflineState by remember { mutableStateOf(false) }
 
-    LaunchedEffect(scrollToTopRequests) {
+    ScreenActivityEffect(scrollToTopRequests) { active ->
+        if (!active) return@ScreenActivityEffect
         scrollToTopRequests.collect {
             homeListState.animateScrollToItem(0)
         }
     }
 
-    LaunchedEffect(networkStatusUiState.condition) {
+    ScreenActivityEffect(networkStatusUiState.condition) { active ->
+        if (!active) return@ScreenActivityEffect
         when (networkStatusUiState.condition) {
             NetworkCondition.NoInternet,
             NetworkCondition.ServersUnreachable,
@@ -274,7 +291,8 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(visibleContinueWatchingEntries) {
+    ScreenActivityEffect(visibleContinueWatchingEntries) { active ->
+        if (!active) return@ScreenActivityEffect
         if (visibleContinueWatchingEntries.any(WatchProgressEntry::isCloudLibraryProgressEntry)) {
             CloudLibraryRepository.ensureLoaded()
         }
@@ -336,11 +354,27 @@ fun HomeScreen(
         processedNextUpContentIds = emptySet()
     }
 
-    val cachedSnapshots = remember(activeProfileId, effectiveWatchProgressSource, cwCacheGeneration) {
-        ContinueWatchingEnrichmentCache.getSnapshots(
+    var cachedSnapshots by remember(activeProfileId, effectiveWatchProgressSource, cwCacheGeneration) {
+        mutableStateOf(
+            ContinueWatchingEnrichmentCache.getSnapshots(
+                profileId = activeProfileId,
+                source = effectiveWatchProgressSource,
+            ),
+        )
+    }
+    var cachedProjectionGeneration by remember(activeProfileId, effectiveWatchProgressSource, cwCacheGeneration) {
+        mutableStateOf(0)
+    }
+    ScreenActivityEffect(activeProfileId, effectiveWatchProgressSource, cwCacheGeneration) { active ->
+        if (!active) return@ScreenActivityEffect
+        cachedSnapshots = ContinueWatchingEnrichmentCache.getSnapshots(
             profileId = activeProfileId,
             source = effectiveWatchProgressSource,
         )
+        cachedProjectionGeneration += 1
+    }
+    val cachedNextUpReleases = remember(cachedSnapshots.first) {
+        cachedSnapshots.first.map(::CachedNextUpRelease)
     }
     val shouldValidateMissingNextUpSeeds = remember(
         watchProgressUiState.hasLoadedRemoteProgress,
@@ -356,7 +390,8 @@ fun HomeScreen(
         )
     }
     val cachedNextUpItems = remember(
-        cachedSnapshots.first,
+        cachedNextUpReleases,
+        cachedProjectionGeneration,
         continueWatchingPreferences.dismissedNextUpKeys,
         activeNextUpSeedContentIds,
         currentNextUpSeedByContentId,
@@ -369,7 +404,9 @@ fun HomeScreen(
         watchedUiState.isLoaded,
         watchProgressUiState.hiddenContentIds,
     ) {
-        cachedSnapshots.first.mapNotNull { cached ->
+        val nowEpochMs = WatchProgressClock.nowEpochMs()
+        cachedNextUpReleases.mapNotNull { cachedRelease ->
+            val cached = cachedRelease.item
             if (
                 shouldValidateMissingNextUpSeeds &&
                 cached.contentId !in activeNextUpSeedContentIds
@@ -401,7 +438,11 @@ fun HomeScreen(
             if (nextUpDismissKey(cached.contentId, cached.seedSeason, cached.seedEpisode) in continueWatchingPreferences.dismissedNextUpKeys) {
                 return@mapNotNull null
             }
-            if (!cachedNextUpHasAired(cached) && !continueWatchingPreferences.showUnairedNextUp) {
+            val releaseEpochMs = cachedRelease.epochMs()
+            if (
+                !cachedNextUpHasAired(cached, nowEpochMs, releaseEpochMs) &&
+                !continueWatchingPreferences.showUnairedNextUp
+            ) {
                 return@mapNotNull null
             }
             if (
@@ -410,9 +451,9 @@ fun HomeScreen(
             ) {
                 return@mapNotNull null
             }
-            val item = cached.toContinueWatchingItem() ?: return@mapNotNull null
+            val item = cached.toContinueWatchingItem(releaseEpochMs, nowEpochMs)
             val sortTimestamp = if (item.isReleaseAlert) {
-                com.nuvio.app.features.watchprogress.parseReleaseDateToEpochMs(item.released) ?: cached.lastWatched
+                releaseEpochMs ?: cached.lastWatched
             } else {
                 cached.lastWatched
             }
@@ -463,6 +504,13 @@ fun HomeScreen(
         )
     }
 
+    val cwPosterPattern by com.nuvio.app.core.poster.CustomPosterUrlRepository.let { repo ->
+        repo.ensureLoaded()
+        kotlinx.coroutines.flow.combine(repo.pattern, repo.enabledScreens) { pattern, screens ->
+            if (com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING in screens) pattern else ""
+        }
+    }.collectAsStateWithLifecycle(initialValue = com.nuvio.app.core.poster.CustomPosterUrlRepository.patternForScreen(com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING))
+
     val allContinueWatchingItems = remember(
         visibleContinueWatchingEntries,
         cachedInProgressItems,
@@ -470,6 +518,7 @@ fun HomeScreen(
         nextUpSuppressedSeriesIds,
         continueWatchingPreferences.sortMode,
         cloudLibraryUiState,
+        cwPosterPattern,
     ) {
         buildHomeContinueWatchingItems(
             visibleEntries = visibleContinueWatchingEntries,
@@ -479,7 +528,9 @@ fun HomeScreen(
             sortMode = continueWatchingPreferences.sortMode,
             todayIsoDate = CurrentDateProvider.todayIsoDate(),
             cloudLibraryUiState = cloudLibraryUiState,
-        )
+        ).let { items ->
+            items.withCustomPosterUrls(cwPosterPattern)
+        }
     }
     // Live channels don't record watch progress, so recently-watched channels feed the Live TV
     // row of the split Continue Watching UI.
@@ -494,18 +545,29 @@ fun HomeScreen(
     )
     // Long-pressing a Live TV card opens the same kind of remove sheet the Movies/Series cards have.
     var liveRecentActionTarget by remember { mutableStateOf<LiveRecentActionTarget?>(null) }
+    val shuffleCandidates = remember(completedSeriesCandidates, continueWatchingPreferences.dismissedNextUpKeys) {
+        completedSeriesCandidates.filter { candidate ->
+            nextUpDismissKey(candidate.content.id, candidate.seasonNumber, candidate.episodeNumber) !in
+                continueWatchingPreferences.dismissedNextUpKeys
+        }
+    }
+    val shuffledContinueWatchingItems = rememberShuffleHomeItems(
+        activeProfileId, allContinueWatchingItems, shuffleCandidates,
+        watchProgressUiState.entries, watchedUiState.watchedKeys, visibleContinueWatchingEntries,
+    ).withCustomPosterUrls(cwPosterPattern)
     val (continueWatchingItems, upcomingItems) = remember(
-        allContinueWatchingItems,
+        shuffledContinueWatchingItems,
         continueWatchingPreferences.sortMode,
     ) {
         splitUpcomingItems(
-            items = allContinueWatchingItems,
+            items = shuffledContinueWatchingItems,
             mode = continueWatchingPreferences.sortMode,
         )
     }
     val hasContinueWatchingRows = continueWatchingItems.isNotEmpty() || upcomingItems.isNotEmpty()
 
-    LaunchedEffect(activeProfileId, continueWatchingItems.isNotEmpty(), hasUserScrolledContinueWatching) {
+    ScreenActivityEffect(activeProfileId, continueWatchingItems.isNotEmpty(), hasUserScrolledContinueWatching) { active ->
+        if (!active) return@ScreenActivityEffect
         if (!hasUserScrolledContinueWatching && continueWatchingItems.isNotEmpty()) {
             snapshotFlow {
                 continueWatchingListState.firstVisibleItemIndex to
@@ -521,7 +583,8 @@ fun HomeScreen(
             }
         }
     }
-    LaunchedEffect(activeProfileId, upcomingItems.isNotEmpty(), hasUserScrolledUpcoming) {
+    ScreenActivityEffect(activeProfileId, upcomingItems.isNotEmpty(), hasUserScrolledUpcoming) { active ->
+        if (!active) return@ScreenActivityEffect
         if (!hasUserScrolledUpcoming && upcomingItems.isNotEmpty()) {
             snapshotFlow {
                 upcomingListState.firstVisibleItemIndex to
@@ -572,25 +635,14 @@ fun HomeScreen(
         mutableStateOf(0)
     }
 
-    val catalogRefreshKey = remember(enabledAddons) {
-        buildHomeCatalogRefreshSignature(enabledAddons)
-    }
-
-    LaunchedEffect(catalogRefreshKey) {
-        if (catalogRefreshKey.isEmpty()) return@LaunchedEffect
-        HomeCatalogSettingsRepository.syncCatalogs(enabledAddons)
-        HomeRepository.refresh(enabledAddons)
-    }
-
-    LaunchedEffect(collections, enabledAddons) {
+    ScreenActivityEffect(activeProfileId, collections) { active ->
+        if (!active) return@ScreenActivityEffect
         HomeCatalogSettingsRepository.syncCollections(collections)
-        HomeRepository.applyCurrentSettings()
-        if (collections.any { it.folders.isNotEmpty() }) {
-            HomeRepository.refresh(enabledAddons, force = true)
-        }
     }
 
-    LaunchedEffect(
+    val preparedProjectionGeneration = cachedProjectionGeneration
+    ScreenActivityEffect(
+        preparedProjectionGeneration,
         completedSeriesCandidates,
         metaProviderKey,
         metaProviderReadinessKey,
@@ -608,7 +660,8 @@ fun HomeScreen(
         activeProfileId,
         effectiveWatchProgressSource,
         cwCacheGeneration,
-    ) {
+    ) { active ->
+        if (!active || preparedProjectionGeneration != cachedProjectionGeneration) return@ScreenActivityEffect
         if (
             !isHomeNextUpSeedSourceLoaded(
                 providerOwnsCompletedHistory = progressProviderOwnsCompletedHistory,
@@ -617,7 +670,7 @@ fun HomeScreen(
                 hasLoadedRemoteWatchedItems = watchedUiState.hasLoadedRemoteItems,
             )
         ) {
-            return@LaunchedEffect
+            return@ScreenActivityEffect
         }
 
         if (completedSeriesCandidates.isEmpty()) {
@@ -632,7 +685,7 @@ fun HomeScreen(
                 todayIsoDate = CurrentDateProvider.todayIsoDate(),
                 seedLastWatchedMap = emptyMap(),
             )
-            return@LaunchedEffect
+            return@ScreenActivityEffect
         }
 
         withContext(Dispatchers.Default) {
@@ -832,11 +885,9 @@ fun HomeScreen(
     }
 
     val hasActiveAddons = enabledAddons.any { it.manifest != null }
-    val showHeroSlot = homeSettingsUiState.heroEnabled
-    val isResolvingHeroSources = enabledAddons.any { it.isRefreshing } || homeUiState.isLoading
-    val showHeroSkeleton = showHeroSlot &&
-        homeUiState.heroItems.isEmpty() &&
-        isResolvingHeroSources
+    val addonManifestsLoading = enabledAddons.any { it.isRefreshing }
+    val addonManifestErrorMessage = enabledAddons.firstEnabledManifestError()
+    val isResolvingHeroSources = addonManifestsLoading || homeUiState.isLoading
     var firstCatalogReported by remember { mutableStateOf(false) }
 
     LaunchedEffect(homeUiState.sections.firstOrNull()?.key, onFirstCatalogRendered) {
@@ -860,25 +911,58 @@ fun HomeScreen(
     val keyedEnabledHomeItems = remember(enabledHomeItems) {
         enabledHomeItems.withDuplicateSafeLazyKeys(HomeCatalogSettingsItem::key)
     }
-    LaunchedEffect(
-        watchedUiState.items,
+    val resolvedBadgeInputs = remember(activeProfileId, effectiveWatchProgressSource) {
+        mutableStateOf<Triple<WatchedUiState, List<WatchProgressEntry>, String>?>(null)
+    }
+    ScreenActivityEffect(
+        activeProfileId,
+        effectiveWatchProgressSource,
+        watchedUiState,
         watchProgressUiState.entries,
-    ) {
-        resolveWatchedBadgesBulk(
-            watchedItems = watchedUiState.items,
-            progressEntries = watchProgressUiState.entries,
-        )
+    ) { active ->
+        if (!active) return@ScreenActivityEffect
+        val inputs = Triple(watchedUiState, watchProgressUiState.entries, CurrentDateProvider.todayIsoDate())
+        if (resolvedBadgeInputs.value == inputs) return@ScreenActivityEffect
+        if (
+            resolveWatchedBadgesBulk(
+                watchedItems = watchedUiState.items,
+                progressEntries = watchProgressUiState.entries,
+                todayIsoDate = inputs.third,
+            )
+        ) {
+            resolvedBadgeInputs.value = inputs
+        }
     }
     val hasRenderableCollectionRows = remember(enabledHomeItems, collectionsMap) {
         enabledHomeItems.any { item ->
             item.isCollection && collectionsMap[item.key] != null
         }
     }
+    val hasRenderableHomeRows = homeUiState.sections.isNotEmpty() || hasRenderableCollectionRows
+    val showHeroSlot = shouldShowHomeHeroSlot(
+        heroEnabled = homeSettingsUiState.heroEnabled,
+        hasHeroItems = homeUiState.heroItems.isNotEmpty(),
+        isResolvingHeroSources = isResolvingHeroSources,
+        hasRenderableHomeRows = hasRenderableHomeRows,
+    )
+    MaintainHomeScrollPosition(
+        listState = homeListState,
+        profileId = activeProfileId,
+        showHeroSlot = showHeroSlot,
+    )
+    val showHeroSkeleton = showHeroSlot &&
+        homeUiState.heroItems.isEmpty() &&
+        isResolvingHeroSources
+    val isInitialHomeContentLoading = shouldShowInitialHomeLoading(
+        hasRenderableHomeRows = hasRenderableHomeRows,
+        addonManifestsLoading = addonManifestsLoading,
+        homeCatalogLoading = homeUiState.isLoading,
+    )
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val homeSectionPadding = homeSectionHorizontalPaddingForWidth(maxWidth.value)
-        val continueWatchingLayout = rememberContinueWatchingLayout(maxWidth.value)
         val posterCardStyle = rememberPosterCardStyleUiState()
+        val continueWatchingLayout = rememberContinueWatchingLayout(maxWidth.value, posterCardStyle)
         val nativeBottomNavigationOverlayHeight =
             if (LocalNuvioBottomNavigationOverlayPadding.current > 0.dp) {
                 nuvioSafeBottomPadding()
@@ -923,29 +1007,35 @@ fun HomeScreen(
             listState = homeListState,
         ) {
             if (showHeroSlot) {
-                item {
-                    when {
-                        showHeroSkeleton -> HomeSkeletonHero(
-                            modifier = Modifier,
-                            viewportHeight = maxHeight,
-                            mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                        )
+                item(key = "home_hero", contentType = "hero") {
+                    Crossfade(
+                        targetState = showHeroSkeleton,
+                        animationSpec = tween(320),
+                        label = "HomeHeroLoading",
+                    ) { isLoading ->
+                        when {
+                            isLoading -> HomeSkeletonHero(
+                                modifier = Modifier,
+                                viewportHeight = maxHeight,
+                                mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                            )
 
-                        homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
-                            items = homeUiState.heroItems,
-                            modifier = Modifier,
-                            viewportHeight = maxHeight,
-                            mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                            listState = homeListState,
-                            stretchPx = { heroStretchState.stretchPx },
-                            onItemClick = onPosterClick,
-                        )
+                            homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
+                                items = homeUiState.heroItems,
+                                modifier = Modifier,
+                                viewportHeight = maxHeight,
+                                mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                                listState = homeListState,
+                                stretchPx = { heroStretchState.stretchPx },
+                                onItemClick = onPosterClick,
+                            )
 
-                        else -> HomeHeroReservedSpace(
-                            modifier = Modifier,
-                            viewportHeight = maxHeight,
-                            mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                        )
+                            else -> HomeHeroReservedSpace(
+                                modifier = Modifier,
+                                viewportHeight = maxHeight,
+                                mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                            )
+                        }
                     }
                 }
             }
@@ -962,6 +1052,34 @@ fun HomeScreen(
             }
 
             when {
+                isInitialHomeContentLoading -> {
+                    homeContinueWatchingSections(
+                        preferences = continueWatchingPreferences,
+                        continueWatchingItems = continueWatchingItems,
+                        upcomingItems = upcomingItems,
+                        liveRecents = effectiveLiveRecents,
+                        dataSourceKey = effectiveWatchProgressSource,
+                        sectionPadding = homeSectionPadding,
+                        layout = continueWatchingLayout,
+                        continueWatchingListState = continueWatchingListState,
+                        upcomingListState = upcomingListState,
+                        onItemClick = onContinueWatchingClick,
+                        onItemLongPress = onContinueWatchingLongPress,
+                        onLivePosterClick = { onPosterClick?.invoke(it) },
+                        onLivePosterLongPress = { liveRecentActionTarget = it.toLiveRecentActionTarget() },
+                        disintegrationRequest = continueWatchingDisintegrationRequest,
+                    )
+                    items(
+                        count = 3,
+                        key = { "home_skeleton_$it" },
+                        contentType = { "skeleton" },
+                    ) {
+                        HomeSkeletonRow(
+                            horizontalPadding = homeSectionPadding,
+                        )
+                    }
+                }
+
                 !hasActiveAddons && !hasRenderableCollectionRows -> {
                     homeContinueWatchingSections(
                         preferences = continueWatchingPreferences,
@@ -979,51 +1097,56 @@ fun HomeScreen(
                         onLivePosterLongPress = { liveRecentActionTarget = it.toLiveRecentActionTarget() },
                         disintegrationRequest = continueWatchingDisintegrationRequest,
                     )
-                    item {
-                        // Store builds hide the addon system, so point at IPTV setup instead.
-                        HomeEmptyStateCard(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            title = stringResource(
-                                if (AppFeaturePolicy.addonsEnabled) Res.string.compose_search_empty_no_active_addons_title
-                                else Res.string.home_empty_iptv_hint_title
-                            ),
-                            message = stringResource(
-                                if (AppFeaturePolicy.addonsEnabled) Res.string.home_empty_no_active_addons_message
-                                else Res.string.home_empty_iptv_hint_message
-                            ),
-                        )
-                    }
-                }
+                    item(key = "home_empty", contentType = "empty") {
+                        when {
+                            networkStatusUiState.isOfflineLike && addonManifestErrorMessage != null -> {
+                                NuvioNetworkOfflineCard(
+                                    condition = networkStatusUiState.condition,
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    onRetry = {
+                                        NetworkStatusRepository.requestRefresh(force = true)
+                                        AddonRepository.refreshAll()
+                                    },
+                                )
+                            }
 
-                homeUiState.isLoading && homeUiState.sections.isEmpty() && !hasRenderableCollectionRows -> {
-                    homeContinueWatchingSections(
-                        preferences = continueWatchingPreferences,
-                        continueWatchingItems = continueWatchingItems,
-                        upcomingItems = upcomingItems,
-                        liveRecents = effectiveLiveRecents,
-                        dataSourceKey = effectiveWatchProgressSource,
-                        sectionPadding = homeSectionPadding,
-                        layout = continueWatchingLayout,
-                        continueWatchingListState = continueWatchingListState,
-                        upcomingListState = upcomingListState,
-                        onItemClick = onContinueWatchingClick,
-                        onItemLongPress = onContinueWatchingLongPress,
-                        onLivePosterClick = { onPosterClick?.invoke(it) },
-                        onLivePosterLongPress = { liveRecentActionTarget = it.toLiveRecentActionTarget() },
-                        disintegrationRequest = continueWatchingDisintegrationRequest,
-                    )
-                    items(3) {
-                        HomeSkeletonRow(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
+                            addonManifestErrorMessage != null -> {
+                                HomeEmptyStateCard(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    title = stringResource(Res.string.home_load_failed_title),
+                                    message = addonManifestErrorMessage,
+                                    actionLabel = stringResource(Res.string.action_retry),
+                                    onActionClick = {
+                                        NetworkStatusRepository.requestRefresh(force = true)
+                                        AddonRepository.refreshAll()
+                                    },
+                                )
+                            }
+
+                            else -> {
+                                // Store builds hide the addon system, so point at IPTV setup instead.
+                                HomeEmptyStateCard(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    title = stringResource(
+                                        if (AppFeaturePolicy.addonsEnabled) Res.string.compose_search_empty_no_active_addons_title
+                                        else Res.string.home_empty_iptv_hint_title
+                                    ),
+                                    message = stringResource(
+                                        if (AppFeaturePolicy.addonsEnabled) Res.string.home_empty_no_active_addons_message
+                                        else Res.string.home_empty_iptv_hint_message
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
 
                 homeUiState.sections.isEmpty() && homeUiState.heroItems.isEmpty() &&
                     (!continueWatchingPreferences.isVisible || (!hasContinueWatchingRows && effectiveLiveRecents.isEmpty())) &&
                     !hasRenderableCollectionRows -> {
-                    item {
-                        if (networkStatusUiState.isOfflineLike) {
+                    item(key = "home_empty", contentType = "empty") {
+                        val loadFailed = !homeUiState.errorMessage.isNullOrBlank()
+                        if (networkStatusUiState.isOfflineLike && loadFailed) {
                             NuvioNetworkOfflineCard(
                                 condition = networkStatusUiState.condition,
                                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -1035,9 +1158,24 @@ fun HomeScreen(
                         } else {
                             HomeEmptyStateCard(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                title = stringResource(Res.string.home_empty_no_rows_title),
+                                title = stringResource(
+                                    if (loadFailed) {
+                                        Res.string.home_load_failed_title
+                                    } else {
+                                        Res.string.home_empty_no_rows_title
+                                    },
+                                ),
                                 message = homeUiState.errorMessage
                                     ?: stringResource(Res.string.home_empty_no_rows_message),
+                                actionLabel = if (loadFailed) stringResource(Res.string.action_retry) else null,
+                                onActionClick = if (loadFailed) {
+                                    {
+                                        NetworkStatusRepository.requestRefresh(force = true)
+                                        HomeRepository.refresh(addonsUiState.addons.enabledAddons(), force = true)
+                                    }
+                                } else {
+                                    null
+                                },
                             )
                         }
                     }
@@ -1066,7 +1204,7 @@ fun HomeScreen(
                         if (settingsItem.isCollection) {
                             val collection = collectionsMap[settingsItem.key]
                             if (collection != null) {
-                                item(key = keyedSettingsItem.lazyKey) {
+                                item(key = keyedSettingsItem.lazyKey, contentType = "collection") {
                                     HomeCollectionRowSection(
                                         collection = collection,
                                         modifier = Modifier.padding(bottom = 12.dp),
@@ -1079,7 +1217,7 @@ fun HomeScreen(
                         } else {
                             val section = sectionsMap[settingsItem.key]
                             if (section != null && section.items.isNotEmpty()) {
-                                item(key = keyedSettingsItem.lazyKey) {
+                                item(key = keyedSettingsItem.lazyKey, contentType = "catalog") {
                                     HomeCatalogRowSection(
                                         section = section,
                                         entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
@@ -1133,7 +1271,7 @@ private fun LazyListScope.homeContinueWatchingSections(
     if (!preferences.isVisible) return
 
     if (continueWatchingItems.isNotEmpty() || liveRecents.isNotEmpty()) {
-        item(key = HOME_CONTINUE_WATCHING_SECTION_KEY) {
+        item(key = HOME_CONTINUE_WATCHING_SECTION_KEY, contentType = "continue_watching") {
             HomeContinueWatchingSplit(
                 items = continueWatchingItems,
                 liveRecents = liveRecents,
@@ -1154,7 +1292,7 @@ private fun LazyListScope.homeContinueWatchingSections(
     }
 
     if (upcomingItems.isNotEmpty()) {
-        item(key = HOME_UPCOMING_SECTION_KEY) {
+        item(key = HOME_UPCOMING_SECTION_KEY, contentType = "continue_watching") {
             HomeContinueWatchingSection(
                 items = upcomingItems,
                 dataSourceKey = dataSourceKey,
@@ -1294,9 +1432,9 @@ internal fun isHomeNextUpSeedSourceLoaded(
 internal fun cachedNextUpHasAired(
     cached: CachedNextUpItem,
     nowEpochMs: Long = WatchProgressClock.nowEpochMs(),
+    releaseEpochMs: Long? = com.nuvio.app.features.watchprogress.parseReleaseDateToEpochMs(cached.released),
 ): Boolean =
-    com.nuvio.app.features.watchprogress.parseReleaseDateToEpochMs(cached.released)
-        ?.let { releaseEpochMs -> nowEpochMs >= releaseEpochMs }
+    releaseEpochMs?.let { nowEpochMs >= it }
         ?: cached.hasAired
 
 internal fun hasHomeNextUpSeedChangedFromCache(
@@ -1753,7 +1891,7 @@ internal fun buildHomeInProgressCacheSnapshot(
     }
 }
 
-private fun CompletedSeriesCandidate.toContinueWatchingSeed(meta: com.nuvio.app.features.details.MetaDetails) =
+internal fun CompletedSeriesCandidate.toContinueWatchingSeed(meta: com.nuvio.app.features.details.MetaDetails) =
     WatchProgressEntry(
         contentType = content.type,
         parentMetaId = content.id,
@@ -1774,12 +1912,17 @@ private fun CompletedSeriesCandidate.toContinueWatchingSeed(meta: com.nuvio.app.
 private fun ContinueWatchingItem.shouldDisplayInContinueWatching(): Boolean =
     isNextUp || progressFraction < 0.995f
 
-private fun CachedNextUpItem.toContinueWatchingItem(): ContinueWatchingItem? {
+private fun CachedNextUpItem.toContinueWatchingItem(
+    releaseEpochMs: Long?,
+    nowEpochMs: Long,
+): ContinueWatchingItem {
     val alertState = com.nuvio.app.features.watchprogress.calculateReleaseAlertState(
         seedLastUpdatedEpochMs = lastWatched,
         seedSeasonNumber = seedSeason,
         nextSeasonNumber = season,
         releasedIso = released,
+        releaseEpochMs = releaseEpochMs,
+        nowEpochMs = nowEpochMs,
     )
     val resolvedPoster = poster.nonBlankOrNull()
     val resolvedBackdrop = backdrop.nonBlankOrNull()

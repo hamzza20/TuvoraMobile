@@ -16,6 +16,7 @@ fun readXcconfigValue(file: File, key: String): String? {
 
 plugins {
     alias(libs.plugins.androidApplication)
+    alias(libs.plugins.composeCompiler)
     alias(libs.plugins.sentry.android.gradle)
     id("com.posthog.android") version "1.4.0"
 }
@@ -101,6 +102,7 @@ android {
                 abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
             }
         }
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     flavorDimensions += "distribution"
@@ -134,6 +136,10 @@ android {
         }
     }
 
+    androidResources {
+        noCompress += "cvr"
+    }
+
     splits {
         abi {
             isEnable = abiSplitsEnabled
@@ -147,8 +153,11 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            val minifyRelease = providers.gradleProperty("releaseMinifyEnabled")
+                .map(String::toBooleanStrict)
+                .getOrElse(true)
+            isMinifyEnabled = minifyRelease
+            isShrinkResources = minifyRelease
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "../composeApp/proguard-rules.pro",
@@ -198,6 +207,13 @@ sentry {
 dependencies {
     implementation(project(":composeApp"))
     implementation(libs.androidx.appcompat)
+    implementation(libs.compose.runtime)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     debugImplementation(libs.compose.uiTooling)
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test:core:1.7.0")
+    androidTestImplementation(libs.androidx.testExt.junit)
+    androidTestImplementation(libs.androidx.activity.compose)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:${libs.versions.composeMultiplatform.get()}")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:${libs.versions.composeMultiplatform.get()}")
 }

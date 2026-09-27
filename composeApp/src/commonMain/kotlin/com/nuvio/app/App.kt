@@ -123,6 +123,8 @@ import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.platformExitApp
 import com.nuvio.app.core.ui.configurePlatformImageLoader
+import com.nuvio.app.core.ui.platformProvidesImageLoader
+import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
 import com.nuvio.app.core.ui.NuvioToastHost
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.NuvioFloatingPrompt
@@ -299,7 +301,7 @@ private val navigationSavedStateConfiguration = SavedStateConfiguration {
             subclass(HomescreenSettingsRoute::class, HomescreenSettingsRoute.serializer())
             subclass(MetaScreenSettingsRoute::class, MetaScreenSettingsRoute.serializer())
             subclass(ContinueWatchingSettingsRoute::class, ContinueWatchingSettingsRoute.serializer())
-            subclass(DownloadsSettingsRoute::class, DownloadsSettingsRoute.serializer())
+            subclass(DownloadsRoute::class, DownloadsRoute.serializer())
             subclass(DownloadShowRoute::class, DownloadShowRoute.serializer())
             subclass(AddonsSettingsRoute::class, AddonsSettingsRoute.serializer())
             subclass(PluginsSettingsRoute::class, PluginsSettingsRoute.serializer())
@@ -458,6 +460,62 @@ private object NativeAppGateRequests {
     }
 }
 
+/**
+ * The app's one Coil [ImageLoader]. Built here (the composition root) and used either by the
+ * composable singleton factory in [App] or, on Android, by `NuvioApplication` (which implements
+ * `SingletonImageLoader.Factory` so the loader exists before Coil's first request).
+ */
+internal fun buildAppImageLoader(context: coil3.PlatformContext): ImageLoader =
+    ImageLoader.Builder(context)
+        .crossfade(true)
+        .diskCachePolicy(CachePolicy.ENABLED)
+        .memoryCachePolicy(CachePolicy.ENABLED)
+        .components {
+            // Upstream custom poster URL patterns: falls back to the original poster when the
+            // pattern URL fails to load.
+            add(CustomPosterFallbackInterceptor())
+            add(SvgDecoder.Factory())
+            add(
+                coil3.network.ktor3.KtorNetworkFetcherFactory(
+                    cacheStrategy = { coil3.network.cachecontrol.CacheControlCacheStrategy() },
+                )
+            )
+        }
+        // TEMPORARY field diagnosis (HubTrace): is a poster request even ISSUED, does it hit
+        // the memory/disk cache, how long does the network leg take, and does it fail? No-op
+        // unless HubTrace.enabled (debug builds only).
+        .eventListener(object : coil3.EventListener() {
+            private val startedAt = mutableMapOf<String, Long>()
+            private fun key(request: coil3.request.ImageRequest) = request.data.toString().takeLast(60)
+            override fun onStart(request: coil3.request.ImageRequest) {
+                if (!com.nuvio.app.core.diag.HubTrace.enabled) return
+                startedAt[key(request)] = com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs()
+                com.nuvio.app.core.diag.HubTrace.log("image", "start") { key(request) }
+            }
+            override fun onSuccess(request: coil3.request.ImageRequest, result: coil3.request.SuccessResult) {
+                if (!com.nuvio.app.core.diag.HubTrace.enabled) return
+                val k = key(request)
+                val t0 = startedAt.remove(k)
+                com.nuvio.app.core.diag.HubTrace.log("image", "success") {
+                    "src=${result.dataSource} took=${t0?.let { com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs() - it }}ms $k"
+                }
+            }
+            override fun onError(request: coil3.request.ImageRequest, result: coil3.request.ErrorResult) {
+                if (!com.nuvio.app.core.diag.HubTrace.enabled) return
+                val k = key(request)
+                val t0 = startedAt.remove(k)
+                com.nuvio.app.core.diag.HubTrace.log("image", "ERROR") {
+                    "after=${t0?.let { com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs() - it }}ms err=${result.throwable::class.simpleName}: ${result.throwable.message?.take(120)} $k"
+                }
+            }
+            override fun onCancel(request: coil3.request.ImageRequest) {
+                if (!com.nuvio.app.core.diag.HubTrace.enabled) return
+                com.nuvio.app.core.diag.HubTrace.log("image", "cancel") { key(request) }
+            }
+        })
+        .configurePlatformImageLoader(context)
+        .build()
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
@@ -477,53 +535,8 @@ fun App(
     onTabTitles: ((home: String, search: String, library: String, iptv: String, sports: String, profile: String, switchProfile: String, addProfile: String) -> Unit)? = null,
     nativeProfileSwitcherController: NativeProfileSwitcherController? = null,
 ) {
-    setSingletonImageLoaderFactory { context ->
-        ImageLoader.Builder(context)
-            .crossfade(true)
-            .diskCachePolicy(CachePolicy.ENABLED)
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .components {
-                add(SvgDecoder.Factory())
-                add(
-                    coil3.network.ktor3.KtorNetworkFetcherFactory(
-                        cacheStrategy = { coil3.network.cachecontrol.CacheControlCacheStrategy() },
-                    )
-                )
-            }
-            // TEMPORARY field diagnosis (HubTrace): is a poster request even ISSUED, does it hit
-            // the memory/disk cache, how long does the network leg take, and does it fail? No-op
-            // unless HubTrace.enabled (debug builds only).
-            .eventListener(object : coil3.EventListener() {
-                private val startedAt = mutableMapOf<String, Long>()
-                private fun key(request: coil3.request.ImageRequest) = request.data.toString().takeLast(60)
-                override fun onStart(request: coil3.request.ImageRequest) {
-                    if (!com.nuvio.app.core.diag.HubTrace.enabled) return
-                    startedAt[key(request)] = com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs()
-                    com.nuvio.app.core.diag.HubTrace.log("image", "start") { key(request) }
-                }
-                override fun onSuccess(request: coil3.request.ImageRequest, result: coil3.request.SuccessResult) {
-                    if (!com.nuvio.app.core.diag.HubTrace.enabled) return
-                    val k = key(request)
-                    val t0 = startedAt.remove(k)
-                    com.nuvio.app.core.diag.HubTrace.log("image", "success") {
-                        "src=${result.dataSource} took=${t0?.let { com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs() - it }}ms $k"
-                    }
-                }
-                override fun onError(request: coil3.request.ImageRequest, result: coil3.request.ErrorResult) {
-                    if (!com.nuvio.app.core.diag.HubTrace.enabled) return
-                    val k = key(request)
-                    val t0 = startedAt.remove(k)
-                    com.nuvio.app.core.diag.HubTrace.log("image", "ERROR") {
-                        "after=${t0?.let { com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs() - it }}ms err=${result.throwable::class.simpleName}: ${result.throwable.message?.take(120)} $k"
-                    }
-                }
-                override fun onCancel(request: coil3.request.ImageRequest) {
-                    if (!com.nuvio.app.core.diag.HubTrace.enabled) return
-                    com.nuvio.app.core.diag.HubTrace.log("image", "cancel") { key(request) }
-                }
-            })
-            .configurePlatformImageLoader(context)
-            .build()
+    if (!platformProvidesImageLoader) {
+        setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
     }
     val selectedTheme by remember {
         ThemeSettingsRepository.ensureLoaded()
@@ -1334,8 +1347,8 @@ private fun MainAppContent(
                     DownloadsRepository.playableLocalFileUri(it) != null
                 }
                 if (hasPlayableDownload) {
-                    activateTab(AppScreenTab.Settings)
-                    navController.navigate(DownloadsSettingsRoute(downloadsSettingsTitle)) {
+                    activateTab(AppScreenTab.Library)
+                    navController.navigate(DownloadsRoute(downloadsSettingsTitle)) {
                         launchSingleTop = true
                     }
                 }
@@ -1620,8 +1633,8 @@ private fun MainAppContent(
                     }
 
                     AppDeepLink.Downloads -> {
-                        activateTab(AppScreenTab.Settings)
-                        navController.navigate(DownloadsSettingsRoute(downloadsSettingsTitle)) {
+                        activateTab(AppScreenTab.Library)
+                        navController.navigate(DownloadsRoute(downloadsSettingsTitle)) {
                             launchSingleTop = true
                         }
                         AppDeepLinkRepository.markConsumed(deepLink)
@@ -1953,6 +1966,7 @@ private fun MainAppContent(
             LibrarySourceMode.LOCAL -> stringResource(Res.string.compose_catalog_subtitle_library)
             LibrarySourceMode.TRAKT -> stringResource(Res.string.compose_catalog_subtitle_trakt_library)
             LibrarySourceMode.SIMKL -> stringResource(Res.string.compose_catalog_subtitle_simkl_library)
+            LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_title)
         }
 
         val onLibrarySectionViewAllClick: (LibrarySection, LibrarySortOption) -> Unit = { section, sortOption ->
@@ -2360,7 +2374,7 @@ private fun MainAppContent(
                                         onHomescreenSettingsClick = { navController.navigate(HomescreenSettingsRoute(homescreenSettingsTitle)) },
                                         onMetaScreenSettingsClick = { navController.navigate(MetaScreenSettingsRoute(metaScreenSettingsTitle)) },
                                         onContinueWatchingSettingsClick = { navController.navigate(ContinueWatchingSettingsRoute(continueWatchingSettingsTitle)) },
-                                        onDownloadsSettingsClick = { navController.navigate(DownloadsSettingsRoute(downloadsSettingsTitle)) },
+                                        onDownloadsSettingsClick = { navController.navigate(DownloadsRoute(downloadsSettingsTitle)) },
                                         onAddonsSettingsClick = { navController.navigate(AddonsSettingsRoute(addonsSettingsTitle)) },
                                         onPluginsSettingsClick = {
                                             if (AppFeaturePolicy.pluginsEnabled) {
@@ -3539,9 +3553,6 @@ private fun MainAppContent(
                         },
                         onExternalBack = onBack,
                         showInternalHeader = !useNativeNavigation,
-                        onDownloadsClick = {
-                            navController.navigate(DownloadsSettingsRoute(downloadsSettingsTitle))
-                        },
                         onCollectionsClick = {
                             navController.navigate(CollectionsRoute(collectionsTitle))
                         },
@@ -3564,7 +3575,7 @@ private fun MainAppContent(
                         },
                     )
                 }
-                entry<DownloadsSettingsRoute> { route ->
+                entry<DownloadsRoute> { route ->
                     val onBack = rememberGuardedPopBackStack(
                         navController = navController,
                         route = route,
@@ -4244,6 +4255,8 @@ private fun AppTabHost(
                         onCloudFilePlay = onCloudFilePlay,
                         onConnectCloudClick = onConnectCloudClick,
                         disintegrationRequest = libraryDisintegrationRequest,
+                        // Upstream moved Downloads out of Settings into the Library tab.
+                        onDownloadsClick = onDownloadsSettingsClick,
                     )
                 }
 
@@ -4287,7 +4300,6 @@ private fun AppTabHost(
                         onHomescreenClick = onHomescreenSettingsClick,
                         onMetaScreenClick = onMetaScreenSettingsClick,
                         onContinueWatchingClick = onContinueWatchingSettingsClick,
-                        onDownloadsClick = onDownloadsSettingsClick,
                         onAddonsClick = onAddonsSettingsClick,
                         onPluginsClick = onPluginsSettingsClick,
                         onAccountClick = onAccountSettingsClick,

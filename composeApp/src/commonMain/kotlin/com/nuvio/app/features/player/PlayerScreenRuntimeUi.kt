@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +21,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
+import com.nuvio.app.features.player.skip.internalSkipAction
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -111,6 +114,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         }
     }
     val gestureCallbacks = rememberSurfaceGestureCallbacks()
+    val playbackGesturesEnabled = initialLoadCompleted && errorMessage == null
 
     Box(
         modifier = Modifier
@@ -118,6 +122,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             .onSizeChanged { layoutSize = it }
             .playerSurfaceTapGestures(
                 layoutSize = layoutSize,
+                playbackGesturesEnabled = playbackGesturesEnabled,
                 playerControlsLockedState = gestureCallbacks.playerControlsLocked,
                 onSurfaceTap = gestureCallbacks.onSurfaceTap,
                 onSurfaceDoubleTap = gestureCallbacks.onSurfaceDoubleTap,
@@ -128,6 +133,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             .playerSurfaceDragGestures(
                 gestureController = gestureController,
                 layoutSize = layoutSize,
+                playbackGesturesEnabled = playbackGesturesEnabled,
                 sideGestureSystemEdgeExclusionPx = sideGestureSystemEdgeExclusionPx,
                 playerControlsLockedState = gestureCallbacks.playerControlsLocked,
                 touchGesturesEnabledState = gestureCallbacks.touchGesturesEnabled,
@@ -144,6 +150,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             ),
     ) {
         val playerSurfaceSourceUrl = if (isP2pPlaybackActive) p2pResolvedSourceUrl else activeSourceUrl
+        val playbackKey = activePlaybackKey
         val initialPositionRequestKey = currentInitialPositionRequestKey()
         // Live channels reached through the full player (rather than the docked Live TV screen)
         // can wedge the same way, with no error for any existing report path to see.
@@ -160,87 +167,98 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             }
         }
         if (playerSurfaceSourceUrl != null) {
-            PlatformPlayerSurface(
-                sourceUrl = playerSurfaceSourceUrl,
-                sourceAudioUrl = activeSourceAudioUrl,
-                sourceHeaders = activeSourceHeaders,
-                sourceResponseHeaders = activeSourceResponseHeaders,
-                externalSubtitles = externalSubtitles,
-                streamType = activeStreamType,
-                playbackSurface = LIVE_FREEZE_SURFACE_PLAYER,
-                modifier = Modifier.fillMaxSize(),
-                playWhenReady = shouldPlay,
-                initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
-                initialPositionRequestKey = initialPositionRequestKey,
-                resizeMode = resizeMode,
-                onInitialPositionHandled = { key, handled ->
-                    if (key == currentInitialPositionRequestKey()) {
-                        initialSeekApplied = handled
-                    }
-                },
-                onControllerReady = { controller ->
-                    playerController = controller
-                    playerControllerSourceUrl = activeSourceUrl
-                },
-                onSnapshot = { snapshot ->
-                    playbackSnapshot = snapshot
-                    if (!snapshot.isLoading) initialLoadCompleted = true
-                    // Re-arm the credential-refresh loop guard once the stream has genuinely recovered
-                    // (played continuously well past the refresh baseline). A short-TTL link that dies
-                    // ~5s after minting never reaches this threshold, so it cannot re-arm the loop.
-                    if (credentialRefreshAttempts > 0 &&
-                        PlayerCredentialRefreshPolicy.hasRecovered(snapshot.positionMs, credentialRefreshBaselinePositionMs)
-                    ) {
-                        credentialRefreshAttempts = 0
-                        credentialRefreshBaselinePositionMs = 0L
-                    }
-                    if (!playbackStartRecorded.value && (snapshot.positionMs > 0L || snapshot.isPlaying)) {
-                        playbackStartRecorded.value = true
-                        Breadcrumbs.playbackStarted(
-                            kind = if (isLiveStream) "live" else "vod",
-                            engine = playerController?.getStreamInfo()?.playerEngine?.lowercase() ?: "unknown",
-                            surface = LIVE_FREEZE_SURFACE_PLAYER,
-                            container = LivePlaybackFreezeReporter.streamContainerOf(playerSurfaceSourceUrl),
-                            nowMs = com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs(),
-                        )
-                    }
-                    if (isLiveStream) {
-                        freezeReporter.onLiveSnapshot(
-                            snapshot = snapshot,
-                            engine = { playerController?.getStreamInfo()?.playerEngine },
-                            streamUrl = playerSurfaceSourceUrl,
-                            contentId = activeVideoId,
-                            surface = LIVE_FREEZE_SURFACE_PLAYER,
-                            reconnector = freezeReconnector,
-                            reconnect = { playerController?.retry() },
-                            // Video-only freeze: the stream is still delivering audio, so reset
-                            // the decoder before spending a live link on a re-resolve.
-                            resetVideo = { playerController?.resetVideoPipeline() == true },
-                        )
-                    }
-                    // A live channel has no end: ENDED means the upstream closed, and the
-                    // reconnect above is what answers it. Pausing here would fight that, and
-                    // would leave the picture frozen if the reconnect ladder is still running.
-                    if (snapshot.isEnded && !isLiveStream) {
-                        shouldPlay = false
-                        controlsVisible = !playerControlsLocked
-                    }
-                },
-                onError = { message ->
-                    if (message != null && tryRefreshCredentialedSourceAfterError(message)) {
-                        return@PlatformPlayerSurface
-                    }
-                    errorMessage = message
-                    if (message != null) {
-                        controlsVisible = !playerControlsLocked
-                        removeFailedStreamFromCache()
-                    }
-                },
-            )
+            key(playbackKey) {
+                val active = remember { mutableStateOf(true) }
+                DisposableEffect(Unit) {
+                    onDispose { active.value = false }
+                }
+                PlatformPlayerSurface(
+                    sourceUrl = playerSurfaceSourceUrl,
+                    sourceAudioUrl = activeSourceAudioUrl,
+                    sourceHeaders = activeSourceHeaders,
+                    sourceResponseHeaders = activeSourceResponseHeaders,
+                    externalSubtitles = externalSubtitles,
+                    streamType = activeStreamType,
+                    playbackSurface = LIVE_FREEZE_SURFACE_PLAYER,
+                    modifier = Modifier.fillMaxSize(),
+                    playWhenReady = shouldPlay,
+                    initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
+                    initialPositionRequestKey = initialPositionRequestKey,
+                    resizeMode = resizeMode,
+                    onInitialPositionHandled = { key, handled ->
+                        if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
+                            initialSeekApplied = handled
+                        }
+                    },
+                    onControllerReady = { controller ->
+                        if (active.value && playbackKey == activePlaybackKey) {
+                            playerController = controller
+                            playerControllerSourceUrl = activeSourceUrl
+                        }
+                    },
+                    onSnapshot = { snapshot ->
+                        if (!active.value || !updatePlaybackSnapshot(snapshot, playbackKey)) return@PlatformPlayerSurface
+                        refreshAudioTracksIfChanged()
+                        if (!snapshot.isLoading) initialLoadCompleted = true
+                        // Re-arm the credential-refresh loop guard once the stream has genuinely recovered
+                        // (played continuously well past the refresh baseline). A short-TTL link that dies
+                        // ~5s after minting never reaches this threshold, so it cannot re-arm the loop.
+                        if (credentialRefreshAttempts > 0 &&
+                            PlayerCredentialRefreshPolicy.hasRecovered(snapshot.positionMs, credentialRefreshBaselinePositionMs)
+                        ) {
+                            credentialRefreshAttempts = 0
+                            credentialRefreshBaselinePositionMs = 0L
+                        }
+                        if (!playbackStartRecorded.value && (snapshot.positionMs > 0L || snapshot.isPlaying)) {
+                            playbackStartRecorded.value = true
+                            Breadcrumbs.playbackStarted(
+                                kind = if (isLiveStream) "live" else "vod",
+                                engine = playerController?.getStreamInfo()?.playerEngine?.lowercase() ?: "unknown",
+                                surface = LIVE_FREEZE_SURFACE_PLAYER,
+                                container = LivePlaybackFreezeReporter.streamContainerOf(playerSurfaceSourceUrl),
+                                nowMs = com.nuvio.app.features.trakt.TraktPlatformClock.nowEpochMs(),
+                            )
+                        }
+                        if (isLiveStream) {
+                            freezeReporter.onLiveSnapshot(
+                                snapshot = snapshot,
+                                engine = { playerController?.getStreamInfo()?.playerEngine },
+                                streamUrl = playerSurfaceSourceUrl,
+                                contentId = activeVideoId,
+                                surface = LIVE_FREEZE_SURFACE_PLAYER,
+                                reconnector = freezeReconnector,
+                                reconnect = { playerController?.retry() },
+                                // Video-only freeze: the stream is still delivering audio, so reset
+                                // the decoder before spending a live link on a re-resolve.
+                                resetVideo = { playerController?.resetVideoPipeline() == true },
+                            )
+                        }
+                        // A live channel has no end: ENDED means the upstream closed, and the
+                        // reconnect above is what answers it. Pausing here would fight that, and
+                        // would leave the picture frozen if the reconnect ladder is still running.
+                        if (snapshot.isEnded && !isLiveStream) {
+                            shouldPlay = false
+                            controlsVisible = !playerControlsLocked
+                        }
+                    },
+                    onError = { message ->
+                        if (!active.value || playbackKey != activePlaybackKey) return@PlatformPlayerSurface
+                        if (message != null && tryRefreshCredentialedSourceAfterError(message)) {
+                            return@PlatformPlayerSurface
+                        }
+                        errorMessage = message
+                        if (message != null) {
+                            scrubbingPositionMs = null
+                            controlsVisible = !playerControlsLocked
+                            removeFailedStreamFromCache()
+                        }
+                    },
+                )
+            }
         }
 
         AnimatedVisibility(
-            visible = pausedOverlayVisible && !controlsVisible && !playerControlsLocked,
+            visible = playerSettingsUiState.pauseOverlayEnabled && pausedOverlayVisible && !controlsVisible && !playerControlsLocked,
             enter = fadeIn(animationSpec = tween(durationMillis = 220)),
             exit = fadeOut(animationSpec = tween(durationMillis = 180)),
         ) {
@@ -314,6 +332,12 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             isLocked = playerControlsLocked,
             isLive = com.nuvio.app.features.streams.normalizeStreamType(activeStreamType) == "live" ||
                 contentType.equals("live", ignoreCase = true),
+            useLegacyLayout = playerSettingsUiState.useLegacyPlayerLayout,
+            showRemainingTime = showRemainingTime,
+            onRuntimeClick = { showRemainingTime = !showRemainingTime },
+            releaseInfo = metaUiState.meta?.takeIf { it.id == parentMetaId }?.releaseInfo,
+            hideDetails = activeSkipInterval != null && !skipIntervalDismissed,
+            onInteraction = { controlsActivityTick += 1 },
             showPlaybackControls = controlsVisible,
             onLockToggle = {
                 if (playerControlsLocked) unlockPlayerControls() else lockPlayerControls()
@@ -345,13 +369,18 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             },
             onSourcesClick = if (activeVideoId != null) { { openSourcesPanel() } } else null,
             onEpisodesClick = if (isSeries) { { openEpisodesPanel() } } else null,
-            onNextEpisodeClick = if (isSeries && nextEpisodeInfo?.hasAired == true) {
+            // One Next action for both layouts: the fork's manual flow (card shown, no countdown),
+            // gated like upstream so it can't race an auto-advance that is already resolving.
+            onNextEpisodeClick = if (
+                isSeries && nextEpisodeInfo?.hasAired == true &&
+                !nextEpisodeAutoPlaySearching && nextEpisodeAutoPlayCountdown == null
+            ) {
                 {
-                    nextEpisodeAutoPlayJob?.cancel()
+                    cancelNextEpisodeAutoPlay()
                     nextEpisodeFlowIsManual = true
                     nextEpisodeCardDismissed = false
                     showNextEpisodeCard = true
-                    playNextEpisode(manual = true)
+                    playNextEpisode()
                 }
             } else {
                 null
@@ -370,6 +399,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                                 lang = sub.language,
                             )
                         }
+                    PlayerStreamsRepository.pauseSearchForPlayback()
                     openExternal(
                         ExternalPlayerPlaybackRequest(
                             sourceUrl = activeSourceUrl,
@@ -377,6 +407,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                             streamTitle = activeStreamTitle,
                             sourceHeaders = activeSourceHeaders,
                             resumePositionMs = playbackSnapshot.positionMs,
+                            durationMs = playbackSnapshot.durationMs.takeIf { it > 0L },
+                            playbackSession = playbackSession,
                             subtitles = loadedSubtitles,
                             season = activeSeasonNumber,
                             episode = activeEpisodeNumber,
@@ -405,8 +437,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 scrubbingPositionMs = positionMs
             },
             onScrubFinished = { positionMs ->
-                isScrubbingTimeline = false
-                scrubbingPositionMs = null
+                finishTimelineScrub(positionMs)
                 playerController?.seekTo(positionMs)
                 scheduleProgressSyncAfterSeek()
             },
@@ -430,7 +461,9 @@ private fun BoxScope.RenderPlaybackOverlays(
     runtime.run {
         PlayerPlaybackOverlays(
             playerControlsLocked = playerControlsLocked,
+            useLegacyLayout = playerSettingsUiState.useLegacyPlayerLayout,
             lockedOverlayVisible = lockedOverlayVisible,
+            showRemainingTime = showRemainingTime,
             playbackSnapshot = playbackSnapshot,
         displayedPositionMs = displayedPositionMs,
         metrics = metrics,
@@ -444,7 +477,13 @@ private fun BoxScope.RenderPlaybackOverlays(
             flushWatchProgress()
             args.onBack()
         },
-        p2pInitialLoadingMessage = p2pInitialLoadingMessage,
+        openingLoadingMessage = if (playerSettingsUiState.showPlayerLoadingStatus) {
+            p2pInitialLoadingMessage ?: playerLoadingStatusMessage(
+                showStatus = true,
+                controllerReady = playerController != null,
+                buffering = playbackSnapshot.isLoading,
+            )
+        } else null,
         p2pInitialLoadingProgress = p2pInitialLoadingProgress,
         showP2pRebufferStats = showP2pRebufferStats,
         p2pRebufferMessage = p2pRebufferMessage,
@@ -454,15 +493,17 @@ private fun BoxScope.RenderPlaybackOverlays(
         initialLoadCompleted = initialLoadCompleted,
         pausedOverlayVisible = pausedOverlayVisible,
         activeSkipInterval = activeSkipInterval,
+        skipsToPostCredits = activeSkipInterval?.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.skipsToPostCredits == true,
         skipIntervalDismissed = skipIntervalDismissed,
         controlsVisible = controlsVisible,
         onSkipInterval = { interval ->
-            val rawMs = (interval.endTime * 1000.0).toLong()
-            val durationMs = playbackSnapshot.durationMs
-            val seekMs = if (durationMs > 0L) rawMs.coerceAtMost(durationMs - 1) else rawMs
-            playerController?.seekTo(seekMs)
-            scheduleProgressSyncAfterSeek()
-            skipIntervalDismissed = true
+            interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.let { action ->
+                val durationMs = playbackSnapshot.durationMs
+                val seekMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
+                playerController?.seekTo(seekMs)
+                scheduleProgressSyncAfterSeek()
+                skipIntervalDismissed = true
+            }
         },
         onDismissSkipInterval = { skipIntervalDismissed = true },
         sliderEdgePadding = sliderEdgePadding,
@@ -475,18 +516,16 @@ private fun BoxScope.RenderPlaybackOverlays(
         nextEpisodeAutoPlayCountdown = nextEpisodeAutoPlayCountdown,
         blurUnwatchedEpisodes = metaScreenSettingsUiState.blurUnwatchedEpisodes,
         onPlayNextEpisode = {
-            nextEpisodeAutoPlayJob?.cancel()
+            // Fork: a user tap supersedes a running auto-advance countdown and takes the manual path.
+            cancelNextEpisodeAutoPlay()
             nextEpisodeFlowIsManual = true
-            playNextEpisode(manual = true)
+            playNextEpisode()
         },
         onDismissNextEpisode = {
-            nextEpisodeAutoPlayJob?.cancel()
-            showNextEpisodeCard = false
+            cancelNextEpisodeAutoPlay()
             nextEpisodeCardDismissed = true
+            showNextEpisodeCard = false
             nextEpisodeFlowIsManual = false
-            nextEpisodeAutoPlaySearching = false
-            nextEpisodeAutoPlaySourceName = null
-            nextEpisodeAutoPlayCountdown = null
         },
         errorMessage = errorMessage,
             onDismissError = {
@@ -548,7 +587,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         },
         onAddonSubtitleSelected = { addon ->
             isUserExplicitSubtitleSelection = true
-            selectedAddonSubtitleId = addon.id
+            selectedAddonSubtitleId = addon.selectionKey
             selectedSubtitleIndex = -1
             useCustomSubtitles = true
             preferredSubtitleSelectionApplied = true
@@ -591,6 +630,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         },
         onSourcesPanelDismissed = {
             showSourcesPanel = false
+            PlayerStreamsRepository.stopSourcesLoading()
             controlsVisible = true
         },
         isSeries = isSeries,
