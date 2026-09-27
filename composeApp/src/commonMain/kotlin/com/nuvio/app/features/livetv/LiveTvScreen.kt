@@ -71,6 +71,7 @@ import com.nuvio.app.core.analytics.LivePlaybackFreezeReporter
 import com.nuvio.app.core.analytics.LivePlaybackReconnector
 import androidx.compose.ui.unit.IntSize
 import com.nuvio.app.features.player.EnterImmersivePlayerMode
+import com.nuvio.app.features.player.HidePlayerSystemBars
 import com.nuvio.app.features.player.ManagePlayerPictureInPicture
 import com.nuvio.app.features.player.LIVE_FREEZE_SURFACE_DOCKED
 import com.nuvio.app.features.player.LiveReplayLaunch
@@ -523,6 +524,9 @@ fun LiveTvScreen(
         if (fullscreen || !LiveTvFullscreenFollowsWindowAspect) {
             EnterImmersivePlayerMode(keepScreenAwake = snapshot.isPlaying || snapshot.isLoading)
         }
+        // Upstream split system-bar hiding out of EnterImmersivePlayerMode (a no-op on Android now);
+        // fullscreen live still has to hide the bars itself.
+        if (fullscreen) HidePlayerSystemBars()
 
         // Live TV hosts its own player surface rather than going through PlayerScreenContent, so it
         // never inherited PiP — pressing home on a live channel just backgrounded the app while

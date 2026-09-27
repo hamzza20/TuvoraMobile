@@ -945,6 +945,13 @@ private fun MainAppContent(
         val iptvScrollToTopRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val settingsRootActionRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val currentRoute = navBackStack.lastOrNull() as? AppRoute
+        // Upstream moved the player's landscape lock + system-bar hiding out of the player screen and
+        // into its App shell, keyed on the route (which also keeps landscape while the player exits).
+        // The fork's composition root is this file, so the same route rule lives here.
+        if (wantsPlayerChrome(currentRoute)) {
+            com.nuvio.app.features.player.LockPlayerToLandscape()
+            com.nuvio.app.features.player.HidePlayerSystemBars()
+        }
         // Crash-context breadcrumbs: the route/tab name is what "screen" means to a person —
         // autocaptured $screen only ever names the host Activity or hosting controller, which
         // left every process-death report unattributable to a feature.
