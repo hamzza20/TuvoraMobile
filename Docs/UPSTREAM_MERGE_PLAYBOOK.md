@@ -84,6 +84,16 @@ provider-credential *seed* wiring (privacy call — stays OFF).
 - Upstream's off-main mpv executor (`executeMpv {}`) can auto-merge into `PlayerEngine.android.kt`;
   the fork has one queue — rewrite to `ctl {}`.
 
+**App shell (since 2026-09-27): the fork uses upstream's split shell** (App.kt → AppGate,
+MainAppContent, MainTabsDestination, AppShellComponents, *Destination files, RootTabHost). Resolve
+shell conflicts per hunk like any shared file — do NOT restore a monolithic App.kt. Fork-owned
+pieces to keep when resolving: Iptv/Sports in `AppScreenTab` + both nav bars + `AppTabHost`,
+`LiveTvRoute` (serializer, disposal, entry), ProfileSwitchController in `AppGate`, live-channel launch
++ realtime + IPTV refresh in `MainAppContent`, playback gate in `PlayerDestination`, Stalker mint in
+`StreamDestination`. Also check `libs.versions.toml`: `material3` must be the version upstream pairs
+with `composeMultiplatform` (a mismatch compiles but crashes every OutlinedTextField at runtime —
+`Material3CompatibilityTest` guards it).
+
 **mpv rule**: never reintroduce `mpv.*` on the main thread. Route seek/property writes through the
 `ctl {}` queue; keep `snapshot()` reading the property shadow (`obs*`).
 
