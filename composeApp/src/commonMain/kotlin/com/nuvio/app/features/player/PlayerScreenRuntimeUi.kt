@@ -167,7 +167,8 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             }
         }
         if (playerSurfaceSourceUrl != null) {
-            key(playbackKey) {
+            // startOverGeneration: "Start from beginning" re-mounts the surface to reopen at 0:00.
+            key(playbackKey, startOverGeneration) {
                 val active = remember { mutableStateOf(true) }
                 DisposableEffect(Unit) {
                     onDispose { active.value = false }
@@ -459,6 +460,7 @@ private fun BoxScope.RenderPlaybackOverlays(
     p2pRebufferProgress: Float?,
 ) {
     runtime.run {
+        val resumeUi = resumeLoadingUi()
         PlayerPlaybackOverlays(
             playerControlsLocked = playerControlsLocked,
             useLegacyLayout = playerSettingsUiState.useLegacyPlayerLayout,
@@ -477,13 +479,15 @@ private fun BoxScope.RenderPlaybackOverlays(
             flushWatchProgress()
             args.onBack()
         },
-        openingLoadingMessage = if (playerSettingsUiState.showPlayerLoadingStatus) {
+        openingLoadingMessage = resumeUi.message ?: if (playerSettingsUiState.showPlayerLoadingStatus) {
             p2pInitialLoadingMessage ?: playerLoadingStatusMessage(
                 showStatus = true,
                 controllerReady = playerController != null,
                 buffering = playbackSnapshot.isLoading,
             )
         } else null,
+        startOverLabel = resumeUi.startOverLabel,
+        onStartOver = resumeUi.onStartOver,
         p2pInitialLoadingProgress = p2pInitialLoadingProgress,
         showP2pRebufferStats = showP2pRebufferStats,
         p2pRebufferMessage = p2pRebufferMessage,
