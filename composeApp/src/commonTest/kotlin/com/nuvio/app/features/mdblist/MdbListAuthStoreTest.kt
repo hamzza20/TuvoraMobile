@@ -26,6 +26,26 @@ class MdbListAuthStoreTest {
     }
 
     @Test
+    fun `an unreadable credential store loads as signed out instead of failing construction`() {
+        // Regression (2026-09-27): iOS Keychain reads can fail (errSecNotAvailable -25291 in the
+        // simulator runner, errSecInteractionNotAllowed while the device is locked). The store is
+        // built inside the MdbListTracker singleton, so a throwing read poisoned that object — and
+        // every repository reaching it (Library via the tracking bootstrap) — for the whole process.
+        val unreadable = object : MdbListAuthPersistence {
+            override fun read(profileId: Int): String? = error("Unable to read protected credentials (OSStatus -25291)")
+            override fun write(profileId: Int, value: String?) = Unit
+            override fun clear() = Unit
+        }
+
+        val store = MdbListAuthStore(unreadable)
+
+        assertFalse(store.state.value.isAuthenticated)
+        assertNull(store.authorization())
+        store.selectProfile(2)
+        assertFalse(store.state.value.isAuthenticated)
+    }
+
+    @Test
     fun `credentials survive process restart through persistence`() {
         val harness = MdbListTestHarness()
         harness.connected()

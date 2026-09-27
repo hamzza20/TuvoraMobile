@@ -1,11 +1,16 @@
 package com.nuvio.app.features.mdblist
 
 import kotlinx.coroutines.test.runTest
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class MdbListPlatformPersistenceTest {
+    // Needs a real Keychain: Gradle's iosSimulatorArm64Test spawns a bare test binary (no app bundle,
+    // no entitlements), where every Keychain call returns errSecNotAvailable (-25291). Run it from an
+    // Xcode test host to exercise it. (Kotlin/Native @Ignore takes no message.)
+    @Ignore
     @Test
     fun keychainUpdatesAndDeletesOnlyTheRequestedProfile() {
         val storage = PlatformMdbListAuthPersistence

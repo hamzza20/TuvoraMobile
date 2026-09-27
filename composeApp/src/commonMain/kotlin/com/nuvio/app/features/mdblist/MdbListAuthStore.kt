@@ -1,5 +1,6 @@
 package com.nuvio.app.features.mdblist
 
+import co.touchlab.kermit.Logger
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
@@ -117,11 +118,22 @@ class MdbListAuthStore(
         true
     }
 
-    private fun load(profileId: Int): MdbListStoredAuth = persistence.read(profileId)?.let { value ->
+    // A failed read (iOS Keychain unavailable or locked) loads as signed out: this runs inside the
+    // MdbListTracker singleton's initialiser, where a throw would poison it for the whole process.
+    private fun load(profileId: Int): MdbListStoredAuth = readOrNull(profileId)?.let { value ->
         runCatching { json.decodeFromString<MdbListStoredAuth>(value) }.getOrNull()
     }?.takeIf { value ->
         value.tokens == null || (value.tokens.accessToken.isNotBlank() && value.tokens.refreshToken.isNotBlank())
     } ?: MdbListStoredAuth()
+
+    private fun readOrNull(profileId: Int): String? = try {
+        persistence.read(profileId)
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        Logger.withTag("MdbListAuthStore").w { "credentials unreadable for profile $profileId, treating as signed out: ${error.message}" }
+        null
+    }
 
     private fun publish(error: MdbListAuthError? = null) {
         mutableState.value = stateFor(error)
