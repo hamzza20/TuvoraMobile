@@ -54,6 +54,30 @@ class PlaybackAvailabilityTest {
         ))
     }
 
+    @Test
+    fun `iptv items are playable with no addons or plugins`() {
+        // Regression (2026-09-27): upstream's play-disable check greyed out Play/Resume for every
+        // Xtream/Stalker/M3U item for IPTV-only users (store builds hide addons). The IPTV resolver
+        // plays these ids directly, so they never need an addon or scraper. TV twin: 96324df71.
+        val none = PlaybackAvailability(addons = emptyList(), plugins = PluginsUiState(pluginsEnabled = false))
+        assertTrue(none.canStream("movie", "xtream:acc1:vod:42"), "xtream vod")
+        assertTrue(none.canStream("series", "xtream:acc1:episode:7"), "xtream episode")
+        assertFalse(none.canStream("movie", "tt123"), "a plain catalog id still needs a source")
+    }
+
+    @Test
+    fun `iptv source lane counts as a source only for the content types it serves`() {
+        // An IPTV account with movies enabled supplies streams for addon-catalog titles (tt/tmdb ids)
+        // through the IPTV source lane, the same way a scraper supporting "movie" does.
+        val moviesOnly = PlaybackAvailability(
+            addons = emptyList(),
+            plugins = PluginsUiState(pluginsEnabled = false),
+            iptvSourceTypes = setOf("movie"),
+        )
+        assertTrue(moviesOnly.canStream("movie", "tt123"), "movie via iptv lane")
+        assertFalse(moviesOnly.canStream("series", "tt123:1:1"), "series not served")
+    }
+
     private fun available(
         addons: List<ManagedAddon> = emptyList(),
         plugins: PluginsUiState = PluginsUiState(),

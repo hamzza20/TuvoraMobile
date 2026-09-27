@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.build.AppFeaturePolicy
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.nuvio.app.core.contracts.IptvCatalogAccess
 import com.nuvio.app.features.addons.AddonManifest
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.ManagedAddon
@@ -31,9 +33,16 @@ internal fun hasCompatiblePlaybackSource(
 internal class PlaybackAvailability(
     private val addons: List<ManagedAddon>,
     private val plugins: PluginsUiState,
+    /**
+     * Fork: Stremio content types the user's IPTV accounts serve through the IPTV source lane — a
+     * source like a scraper, so an IPTV-only user can still play catalog titles.
+     */
+    private val iptvSourceTypes: Set<String> = emptySet(),
 ) {
     fun canStream(type: String, videoId: String): Boolean =
-        hasCompatiblePlaybackSource(addons, plugins, type, videoId) ||
+        isIptvId(videoId) ||
+            type in iptvSourceTypes ||
+            hasCompatiblePlaybackSource(addons, plugins, type, videoId) ||
             MetaDetailsRepository.findEmbeddedStreams(videoId).isNotEmpty()
 
     fun canPlay(
@@ -50,6 +59,12 @@ internal class PlaybackAvailability(
     ) != null
 
     companion object {
+        // Fork: IPTV items (Xtream/Stalker/M3U all carry "xtream:") are played by the IPTV resolver
+        // directly and never need an addon or scraper. Without this, upstream's play-disable check
+        // greys out Play/Resume for IPTV-only users (store builds hide addons). TV twin: 96324df71.
+        private const val IPTV_ID_PREFIX = "xtream:"
+        fun isIptvId(id: String): Boolean = id.startsWith(IPTV_ID_PREFIX)
+
         fun current(): PlaybackAvailability = PlaybackAvailability(
             addons = AddonRepository.uiState.value.addons,
             plugins = if (AppFeaturePolicy.pluginsEnabled) {
@@ -57,6 +72,7 @@ internal class PlaybackAvailability(
             } else {
                 PluginsUiState(pluginsEnabled = false)
             },
+            iptvSourceTypes = IptvCatalogAccess.catalogOrNull?.servedStreamTypes?.value.orEmpty(),
         )
     }
 }
@@ -80,7 +96,10 @@ internal fun rememberPlaybackAvailability(): PlaybackAvailability {
         DownloadsRepository.ensureLoaded()
         DownloadsRepository.uiState
     }.collectAsStateWithLifecycle()
-    return remember(addons, plugins, downloads) {
-        PlaybackAvailability(addons.addons, plugins)
+    val iptvSourceTypes by remember {
+        IptvCatalogAccess.catalogOrNull?.servedStreamTypes ?: MutableStateFlow(emptySet())
+    }.collectAsStateWithLifecycle()
+    return remember(addons, plugins, downloads, iptvSourceTypes) {
+        PlaybackAvailability(addons.addons, plugins, iptvSourceTypes)
     }
 }
