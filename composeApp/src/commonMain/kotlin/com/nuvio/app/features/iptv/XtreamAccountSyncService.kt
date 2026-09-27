@@ -191,7 +191,8 @@ object XtreamAccountSyncService {
         saveState = { p, s -> XtreamAccountStorage.savePlaylistSyncStateJson(p, encodePlaylistSyncState(s)) },
         currentAccounts = { XtreamRepository.uiState.value.accounts },
         canPush = { XtreamRepository.canPushFullReplace() },
-        applyLocal = { p, accounts -> XtreamRepository.applyFromRemote(p, reconcileLocalIds(accounts, XtreamRepository.uiState.value.accounts)) },
+        // Keeps this device's file-playlist ids and local-only catch-up/guide prefs (B60 part c).
+        applyLocal = { p, accounts -> XtreamRepository.applyFromRemote(p, v2ApplyLocal(accounts, XtreamRepository.uiState.value.accounts)) },
         stillActive = { ProfileRepository.activeProfileId == it },
         newMutationId = { newPlaylistMutationId() },
     )
