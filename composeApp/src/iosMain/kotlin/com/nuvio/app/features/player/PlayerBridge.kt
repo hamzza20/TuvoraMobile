@@ -9,11 +9,13 @@ import platform.UIKit.UIViewController
 interface NuvioPlayerBridge {
     fun createPlayerViewController(): UIViewController
     fun loadFile(url: String)
+    // startOption: mpv per-file `start=` (see MpvStartPosition) or null. Hand-mirrored in Swift.
     fun loadFileWithAudio(
         videoUrl: String,
         audioUrl: String?,
         headersJson: String?,
-        subtitlesJson: String? = null
+        subtitlesJson: String?,
+        startOption: String?,
     )
     fun play()
     fun pause()
