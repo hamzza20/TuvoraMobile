@@ -136,6 +136,7 @@ import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
 import com.nuvio.app.core.ui.localizedContinueWatchingSubtitle
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.auth.AccountSessionPrompts
 import com.nuvio.app.features.auth.AuthScreen
 import com.nuvio.app.features.addons.AddAddonResult
 import com.nuvio.app.features.addons.AddonRepository
@@ -864,6 +865,9 @@ fun App(
                 }
             }
         }
+
+        // D1: "signed out, data kept — sign in again" and "different account over kept data" prompts.
+        if (ownsAppRuntime) AccountSessionPrompts()
     }
 }
 
