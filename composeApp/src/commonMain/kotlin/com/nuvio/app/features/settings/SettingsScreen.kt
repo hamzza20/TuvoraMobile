@@ -782,6 +782,7 @@ private fun MobileSettingsScreen(
                     useEpisodeThumbnails = continueWatchingPreferencesUiState.useEpisodeThumbnails,
                     showUnairedNextUp = continueWatchingPreferencesUiState.showUnairedNextUp,
                     blurNextUp = continueWatchingPreferencesUiState.blurNextUp,
+                    splitByType = continueWatchingPreferencesUiState.splitByType,
                     showResumePromptOnLaunch = continueWatchingPreferencesUiState.showResumePromptOnLaunch,
                     sortMode = continueWatchingPreferencesUiState.sortMode,
                 )
@@ -1224,6 +1225,7 @@ private fun TabletSettingsScreen(
                         useEpisodeThumbnails = continueWatchingPreferencesUiState.useEpisodeThumbnails,
                         showUnairedNextUp = continueWatchingPreferencesUiState.showUnairedNextUp,
                         blurNextUp = continueWatchingPreferencesUiState.blurNextUp,
+                        splitByType = continueWatchingPreferencesUiState.splitByType,
                         showResumePromptOnLaunch = continueWatchingPreferencesUiState.showResumePromptOnLaunch,
                         sortMode = continueWatchingPreferencesUiState.sortMode,
                     )
