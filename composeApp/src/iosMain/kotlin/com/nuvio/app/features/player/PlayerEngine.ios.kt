@@ -73,6 +73,9 @@ actual fun PlatformPlayerSurface(
     PlayerSettingsRepository.ensureLoaded()
     val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
     val latestPlayerSettings = rememberUpdatedState(playerSettings)
+    val latestInitialPositionMs = rememberUpdatedState(initialPositionMs)
+    val latestInitialPositionRequestKey = rememberUpdatedState(initialPositionRequestKey)
+    val latestOnInitialPositionHandled = rememberUpdatedState(onInitialPositionHandled)
 
     val bridge = remember {
         NuvioPlayerBridgeFactory.create()
@@ -296,13 +299,20 @@ actual fun PlatformPlayerSurface(
         bridge.applyIosVideoOutputSettings(latestPlayerSettings.value)
         // A replay must NOT reload-to-live-edge on foreground: it would skip the viewer to the
         // end of the recording they were part-way through.
-        bridge.setIsLiveStream(LivePlaybackRejoinPolicy.rejoinsLiveEdge(streamType, isCatchUpPlayback))
+        val isLive = LivePlaybackRejoinPolicy.rejoinsLiveEdge(streamType, isCatchUpPlayback)
+        bridge.setIsLiveStream(isLive)
+        // The resume rides the load (mpv `start=`), not a post-load seek mpv can reject (B59b).
+        val startOption = MpvStartPosition.loadOption(latestInitialPositionMs.value, isLive)
         bridge.loadFileWithAudio(
             videoUrl = sourceUrl,
             audioUrl = sourceAudioUrl,
             headersJson = encodePlaybackHeadersForBridge(sourceHeaders),
             subtitlesJson = encodeExternalSubtitlesForBridge(externalSubtitles),
+            startOption = startOption,
         )
+        if (startOption != null) {
+            latestInitialPositionRequestKey.value?.let { key -> latestOnInitialPositionHandled.value(key, true) }
+        }
         if (playWhenReady) {
             bridge.play()
         } else {

@@ -26,12 +26,13 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     }
 
     func loadFile(url: String) { ensurePlayerViewController().loadFile(url) }
-    func loadFileWithAudio(videoUrl: String, audioUrl: String?, headersJson: String?, subtitlesJson: String?) {
+    func loadFileWithAudio(videoUrl: String, audioUrl: String?, headersJson: String?, subtitlesJson: String?, startOption: String?) {
         ensurePlayerViewController().loadFile(
             videoUrl,
             audioUrl: audioUrl,
             requestHeaders: parseRequestHeaders(headersJson),
-            subtitles: parseSubtitles(subtitlesJson)
+            subtitles: parseSubtitles(subtitlesJson),
+            startOption: startOption
         )
     }
 
@@ -274,6 +275,8 @@ private struct PendingLoadRequest {
     let audioUrl: String?
     let requestHeaders: [String: String]
     let subtitles: [PluginSubtitle]
+    /// mpv per-file `start=` option for a resume (see Kotlin MpvStartPosition), or nil.
+    let startOption: String?
     let queuedAtUptime: TimeInterval
 }
 
@@ -682,12 +685,13 @@ final class MPVPlayerViewController: UIViewController {
 
     // MARK: - Playback API
 
-    func loadFile(_ urlString: String, audioUrl: String? = nil, requestHeaders: [String: String] = [:], subtitles: [PluginSubtitle] = []) {
+    func loadFile(_ urlString: String, audioUrl: String? = nil, requestHeaders: [String: String] = [:], subtitles: [PluginSubtitle] = [], startOption: String? = nil) {
         let request = PendingLoadRequest(
             urlString: urlString,
             audioUrl: audioUrl,
             requestHeaders: requestHeaders,
             subtitles: subtitles,
+            startOption: startOption,
             queuedAtUptime: ProcessInfo.processInfo.systemUptime
         )
 
@@ -729,7 +733,13 @@ final class MPVPlayerViewController: UIViewController {
         applyRequestHeaders(sanitizedHeaders)
         isPlayerLoading = true
         isPlayerEnded = false
-        command("loadfile", args: [request.urlString, "replace"])
+        // A resume opens the file AT the position (`start=`): a seek sent before playback is
+        // initialised is rejected by mpv and left the player stuck at 0:00 (B59b).
+        if let startOption = request.startOption {
+            command("loadfile", args: [request.urlString, "replace", "-1", startOption])
+        } else {
+            command("loadfile", args: [request.urlString, "replace"])
+        }
         if let audioUrl = request.audioUrl, !audioUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                 self?.command("audio-add", args: [audioUrl, "select"], checkForErrors: false)
@@ -798,9 +808,12 @@ final class MPVPlayerViewController: UIViewController {
             clearPlaybackError()
             applyRequestHeaders(activeRequestHeaders)
             let pos = getDouble("time-pos")
-            command("loadfile", args: [path, "replace"])
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.command("seek", args: [String(format: "%.3f", pos), "absolute"])
+            // Reopen AT the position rather than seeking 0.5 s later — mpv drops a seek that lands
+            // before playback is initialised, so the retry used to restart from 0:00 (B59b).
+            if pos > 0 {
+                command("loadfile", args: [path, "replace", "-1", String(format: "start=%.3f", pos)])
+            } else {
+                command("loadfile", args: [path, "replace"])
             }
         }
     }

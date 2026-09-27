@@ -225,11 +225,6 @@ actual fun PlatformPlayerSurface(
             },
         )
         ResolvedAndroidPlaybackEngine.Libmpv -> {
-            LaunchedEffect(initialPositionRequestKey) {
-                initialPositionRequestKey?.let { key ->
-                    onInitialPositionHandled(key, false)
-                }
-            }
             LibmpvPlayerSurface(
                 sourceUrl = sourceUrl,
                 sourceAudioUrl = sourceAudioUrl,
@@ -241,6 +236,9 @@ actual fun PlatformPlayerSurface(
                 // recording: the first throws away the viewer's position, the second hides the
                 // timeline the replay actually has.
                 isLiveStream = LivePlaybackRejoinPolicy.rejoinsLiveEdge(streamType, isCatchUpPlayback),
+                initialPositionMs = initialPositionMs,
+                initialPositionRequestKey = initialPositionRequestKey,
+                onInitialPositionHandled = onInitialPositionHandled,
                 modifier = modifier,
                 playWhenReady = playWhenReady,
                 resizeMode = resizeMode,
@@ -1041,6 +1039,10 @@ private fun LibmpvPlayerSurface(
     sourceHeaders: Map<String, String>,
     externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
     isLiveStream: Boolean,
+    /** Resume target, delivered as mpv's load-time `start=` ([MpvStartPosition]), not a later seek. */
+    initialPositionMs: Long?,
+    initialPositionRequestKey: String?,
+    onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     modifier: Modifier,
     playWhenReady: Boolean,
     resizeMode: PlayerResizeMode,
@@ -1058,6 +1060,9 @@ private fun LibmpvPlayerSurface(
     val latestOnSnapshot = rememberUpdatedState(onSnapshot)
     val latestOnError = rememberUpdatedState(onError)
     val latestPlayWhenReady = rememberUpdatedState(playWhenReady)
+    val latestInitialPositionMs = rememberUpdatedState(initialPositionMs)
+    val latestInitialPositionRequestKey = rememberUpdatedState(initialPositionRequestKey)
+    val latestOnInitialPositionHandled = rememberUpdatedState(onInitialPositionHandled)
     val coroutineScope = rememberCoroutineScope()
     val playbackDiagnostics = remember { PlaybackDiagnostics() }
     val sanitizedSourceHeaders = remember(sourceHeaders) {
@@ -1249,13 +1254,22 @@ private fun LibmpvPlayerSurface(
         val snapshot = PlayerPlaybackSnapshot()
         latestOnSnapshot.value(snapshot)
         nowPlayingController?.syncPlayback(snapshot)
+        // The resume rides the load (mpv `start=`); a post-load seek before playback is
+        // initialised is rejected by mpv and restarted the title at 0:00 (B59b).
+        val startOption = MpvStartPosition.loadOption(latestInitialPositionMs.value, isLiveStream)
         view.loadSource(
             sourceUrl = sourceUrl,
             sourceAudioUrl = sourceAudioUrl,
             requestHeaders = sanitizedSourceHeaders,
             externalSubtitles = externalSubtitles,
             playWhenReady = latestPlayWhenReady.value,
+            startOption = startOption,
         )
+        // Handled only when the load carried the position; otherwise the runtime's post-load
+        // seek stays the fallback (e.g. a progress-fraction resume with no position yet).
+        latestInitialPositionRequestKey.value?.let { key ->
+            latestOnInitialPositionHandled.value(key, startOption != null)
+        }
     }
 
     LaunchedEffect(playerViewRef, playWhenReady) {
@@ -1797,6 +1811,7 @@ private class NuvioLibmpvView(
         requestHeaders: Map<String, String>,
         externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
         playWhenReady: Boolean,
+        startOption: String? = null,
     ) {
         val sameSource =
             currentSourceUrl == sourceUrl &&
@@ -1808,7 +1823,7 @@ private class NuvioLibmpvView(
         currentRequestHeaders = requestHeaders
         currentExternalSubtitles = externalSubtitles
         if (!sameSource) {
-            ctl { loadCurrentSource(playWhenReady = playWhenReady) }
+            ctl { loadCurrentSource(playWhenReady = playWhenReady, startOption = startOption) }
         } else {
             obsPaused = !playWhenReady
             ctl {
@@ -1819,13 +1834,17 @@ private class NuvioLibmpvView(
     }
 
     // Runs on the mpv-ctl thread only.
-    private fun loadCurrentSource(playWhenReady: Boolean) {
+    private fun loadCurrentSource(playWhenReady: Boolean, startOption: String? = null) {
         val sourceUrl = currentSourceUrl ?: return
         recordMpvStage("load_source")
         applyRequestHeaders(currentRequestHeaders)
         obsPaused = !playWhenReady
         mpv.setPropertyBoolean("pause", !playWhenReady)
-        mpv.command("loadfile", sourceUrl.toMpvSource(), "replace")
+        if (startOption != null) {
+            mpv.command("loadfile", sourceUrl.toMpvSource(), "replace", "-1", startOption)
+        } else {
+            mpv.command("loadfile", sourceUrl.toMpvSource(), "replace")
+        }
         currentSourceAudioUrl?.takeIf { it.isNotBlank() }?.let { sourceAudioUrl ->
             mpv.command("audio-add", sourceAudioUrl.toMpvSource(), "auto")
         }
