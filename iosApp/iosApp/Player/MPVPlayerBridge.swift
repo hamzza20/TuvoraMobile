@@ -373,6 +373,7 @@ final class MPVPlayerViewController: UIViewController {
     var automaticPictureInPictureTimeoutWorkItem: DispatchWorkItem?
     var automaticPictureInPictureBackgroundTask: UIBackgroundTaskIdentifier = .invalid
     var videoTrackSuspendedForBackground = false
+    private var detachedVideoLayerIndex: UInt32?
     var resumePlaybackAfterPictureInPictureRestore = false
     var pipRestoreResumeWorkItem: DispatchWorkItem?
     var preservePlaybackDuringPictureInPictureStart = false
@@ -579,6 +580,43 @@ final class MPVPlayerViewController: UIViewController {
             targetFrame.size = size
             view.frame = targetFrame
         }
+    }
+
+    // ---- LOCAL (not in the upstream fork) ----
+    // The video layer leaves the window tree while mpv tears its vo down. MoltenVK writes layer
+    // properties from the vo thread (swapchain destroy sets drawableSize and friends), and that
+    // thread has no run loop, so its implicit CATransaction commits when the thread exits. With the
+    // layer still on screen, that commit lays out and displays the WINDOW's tree off the main
+    // thread, and Compose's SurfaceMetalRedrawer.draw aborts on its main-thread check (TestFlight
+    // crash: enterBackground → vid=no → vo_destroy → pthread_join). Detached, the commit touches
+    // no on-screen context. Main thread only; every vo teardown is preceded by this and every vo
+    // re-creation by [reattachVideoLayerAfterVoTeardown].
+    func detachVideoLayerForVoTeardown(reason: String) {
+        guard Thread.isMainThread else {
+            InAppLogBridge.shared.warn(tag: "MPV/iOS", message: "Video layer detach skipped off main reason=\(reason)")
+            return
+        }
+        guard let superlayer = metalLayer.superlayer else { return }
+        // Remember the z-position: the PiP sample-buffer view sits BELOW the video layer and keeps
+        // showing its last captured frame, so reattaching at the bottom freezes the picture.
+        detachedVideoLayerIndex = superlayer.sublayers?.firstIndex(of: metalLayer).map { UInt32($0) }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        metalLayer.removeFromSuperlayer()
+        CATransaction.commit()
+        InAppLogBridge.shared.debug(tag: "MPV/iOS", message: "Video layer detached for vo teardown reason=\(reason)")
+    }
+
+    func reattachVideoLayerAfterVoTeardown(reason: String) {
+        guard Thread.isMainThread, isViewLoaded, metalLayer.superlayer == nil else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let count = UInt32(view.layer.sublayers?.count ?? 0)
+        view.layer.insertSublayer(metalLayer, at: min(detachedVideoLayerIndex ?? count, count))
+        detachedVideoLayerIndex = nil
+        CATransaction.commit()
+        layoutMetalLayer()
+        InAppLogBridge.shared.debug(tag: "MPV/iOS", message: "Video layer reattached reason=\(reason)")
     }
 
     private func layoutMetalLayer() {
@@ -1072,6 +1110,7 @@ final class MPVPlayerViewController: UIViewController {
         deactivateAudioSession()
         guard let ctx = mpv else { return }
         mpv = nil  // nil first so event loop stops reading
+        detachVideoLayerForVoTeardown(reason: "destroy")
         mpv_terminate_destroy(ctx)
     }
 

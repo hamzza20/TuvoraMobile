@@ -234,6 +234,7 @@ extension MPVPlayerViewController {
             return
         }
         pausePlayback()
+        detachVideoLayerForVoTeardown(reason: "background")
         setStringProperty("vid", "no")
     }
 
@@ -254,6 +255,7 @@ extension MPVPlayerViewController {
             }
             return
         }
+        reattachVideoLayerAfterVoTeardown(reason: "foreground")
         setStringProperty("vid", "auto")
         // ---- LOCAL (not in the upstream fork) ----
         // A live stream paused in the background goes stale (dead socket, old buffer): unpausing
@@ -431,6 +433,7 @@ extension MPVPlayerViewController {
         }
         pausePlayback()
         guard !videoTrackSuspendedForBackground else { return }
+        detachVideoLayerForVoTeardown(reason: reason)
         setStringProperty("vid", "no")
         videoTrackSuspendedForBackground = true
         InAppLogBridge.shared.info(
@@ -442,6 +445,7 @@ extension MPVPlayerViewController {
     func restoreVideoTrackAfterBackgroundIfNeeded(reloadDecoder: Bool = true) {
         guard videoTrackSuspendedForBackground else { return }
         videoTrackSuspendedForBackground = false
+        reattachVideoLayerAfterVoTeardown(reason: "restore-after-background")
         setStringProperty("vid", "auto")
         if reloadDecoder {
             command("video-reload", checkForErrors: false)
