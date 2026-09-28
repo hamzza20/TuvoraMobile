@@ -40,7 +40,7 @@ object SyncDeviceReporter {
                 SupabaseProvider.client.postgrest.rpc("report_device", buildJsonObject {
                     put("p_client_id", clientId)
                     put("p_device_name", syncDeviceName())
-                    put("p_platform", "mobile")
+                    put("p_platform", MOBILE_SYNC_PLATFORM)
                 })
                 log.d { "reported device name" }
             }.onFailure { e ->

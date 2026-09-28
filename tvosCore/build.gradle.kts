@@ -44,6 +44,8 @@ val tvosExcludedCommon = listOf(
     "com/nuvio/app/features/announcements/internal/AnnouncementsRepository.kt", "com/nuvio/app/features/home/HomeEpisodeShuffle.kt",
     // In-app APK updater: App Store builds update through the store.
     "com/nuvio/app/features/updater/**",
+    // Platform key: Apple TV supplies its own ("tvos") in tvosCore/src/commonMain/.../SyncPlatform.tvos.kt.
+    "com/nuvio/app/core/sync/SyncPlatform.kt",
     // Trailer surface: Compose player host.
     "com/nuvio/app/features/trailer/TrailerPlaybackState.kt",
     // The Compose player runtime. Phase 1 extracts its decisions into PlayerSessionController, which tvOS uses.
