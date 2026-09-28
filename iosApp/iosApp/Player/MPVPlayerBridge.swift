@@ -1492,6 +1492,9 @@ final class MPVPlayerViewController: UIViewController {
                     DispatchQueue.main.async {
                         self.updateState()
                         self.publishNowPlayingForPlaybackSession()
+                        // LOCAL: prepare the PiP source as soon as video is playing, not only after a
+                        // foreground return — otherwise the first minimise has nothing to show.
+                        self.prewarmAutomaticPictureInPictureSource(reason: "playback-restart")
                     }
                 case MPV_EVENT_END_FILE:
                     if let data = eventPtr.pointee.data {

@@ -45,6 +45,12 @@ final class MPVPictureInPictureFrameCapture {
     private var lastCaptureTime: CFTimeInterval = 0
     private var enqueuedFrameCount: UInt64 = 0
     private var loggedUnsupportedFormat = false
+    // A blit the GPU refused (e.g. background execution not permitted) never reaches the display
+    // layer, and PiP shows a frozen window with nothing in any log. Count and surface those.
+    private var failedBlitCount: UInt64 = 0
+    #if DEBUG
+    private var heartbeat: Timer?
+    #endif
 
     init?(
         displayLayer: AVSampleBufferDisplayLayer,
@@ -131,7 +137,42 @@ final class MPVPictureInPictureFrameCapture {
         if active { isPriming = false }
         stateLock.unlock()
         updateArmedState()
+        #if DEBUG
+        DispatchQueue.main.async { [weak self] in self?.setHeartbeat(active) }
+        #endif
     }
+
+    #if DEBUG
+    private func rendererStatusDescription() -> String {
+        if #available(iOS 18.0, *) {
+            let r = displayLayer.sampleBufferRenderer
+            return "\(r.status.rawValue) flushNeeded=\(r.requiresFlushToResumeDecoding) " +
+                "error=\(r.error?.localizedDescription ?? "none") recoveries=\(displayLayerRecoveryCount)"
+        }
+        return "\(displayLayer.status.rawValue) error=\(displayLayer.error?.localizedDescription ?? "none") " +
+            "recoveries=\(displayLayerRecoveryCount)"
+    }
+
+    private func setHeartbeat(_ on: Bool) {
+        heartbeat?.invalidate()
+        heartbeat = nil
+        guard on else { return }
+        heartbeat = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.stateLock.lock()
+            let failed = self.failedBlitCount
+            self.stateLock.unlock()
+            InAppLogBridge.shared.info(
+                tag: "PiP/iOS",
+                message: "PiP heartbeat appState=\(UIApplication.shared.applicationState.rawValue) " +
+                    "drawablesRequested=\(self.metalLayer.nextDrawableCallCount) " +
+                    "captured=\(self.metalLayer.capturedDrawableCount) enqueued=\(self.enqueuedFrames) " +
+                    "failedBlits=\(failed) suspended=\(self.metalLayer.isSuspended) " +
+                    "layerStatus=\(self.rendererStatusDescription())"
+            )
+        }
+    }
+    #endif
 
     func startPictureInPicturePriming(onFirstFrame: @escaping () -> Void) {
         beginPriming(stopAfterFirstFrame: true, reason: "manual", onFirstFrame: onFirstFrame)
@@ -264,10 +305,39 @@ final class MPVPictureInPictureFrameCapture {
             destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0)
         )
         blit.endEncoding()
-        commandBuffer.addCompletedHandler { [weak self] _ in
-            self?.enqueueSampleBuffer(for: pixelBuffer)
+        commandBuffer.addCompletedHandler { [weak self] buffer in
+            guard let self else { return }
+            guard buffer.status == .completed else {
+                self.stateLock.lock()
+                self.failedBlitCount &+= 1
+                let failed = self.failedBlitCount
+                self.stateLock.unlock()
+                if failed <= 3 || failed % 100 == 0 {
+                    InAppLogBridge.shared.error(
+                        tag: "PiP/iOS",
+                        message: "PiP frame blit failed status=\(buffer.status.rawValue) count=\(failed) " +
+                            "error=\(buffer.error?.localizedDescription ?? "none")"
+                    )
+                }
+                return
+            }
+            self.enqueueSampleBuffer(for: pixelBuffer)
         }
         commandBuffer.commit()
+    }
+
+    private var displayLayerRecoveryCount: UInt64 = 0
+
+    /// Main thread only (called from the enqueue block).
+    private func logDisplayLayerRecovery(error: Error?) {
+        displayLayerRecoveryCount &+= 1
+        let count = displayLayerRecoveryCount
+        guard count <= 3 || count % 50 == 0 else { return }
+        InAppLogBridge.shared.warn(
+            tag: "PiP/iOS",
+            message: "PiP display layer failed; flushing to resume count=\(count) " +
+                "error=\(error?.localizedDescription ?? "none")"
+        )
     }
 
     private func videoRegion(in texture: MTLTexture) -> (origin: MTLOrigin, size: MTLSize) {
@@ -354,11 +424,23 @@ final class MPVPictureInPictureFrameCapture {
 
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            // The system interrupts the display layer when the app backgrounds into PiP (status
+            // .failed, "Operation Interrupted" — seen on an iPad Pro, iPadOS 26). A failed layer
+            // silently drops every buffer: the PiP window keeps audio and a frozen/black picture.
+            // Flushing is the documented way back; do it before the next enqueue.
             if #available(iOS 18.0, *) {
                 let renderer = self.displayLayer.sampleBufferRenderer
+                if renderer.status == .failed || renderer.requiresFlushToResumeDecoding {
+                    self.logDisplayLayerRecovery(error: renderer.error)
+                    renderer.flush()
+                }
                 guard renderer.isReadyForMoreMediaData else { return }
                 renderer.enqueue(sampleBuffer)
             } else {
+                if self.displayLayer.status == .failed || self.displayLayer.requiresFlushToResumeDecoding {
+                    self.logDisplayLayerRecovery(error: self.displayLayer.error)
+                    self.displayLayer.flush()
+                }
                 guard self.displayLayer.isReadyForMoreMediaData else { return }
                 self.displayLayer.enqueue(sampleBuffer)
             }

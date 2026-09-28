@@ -36,7 +36,14 @@ extension MPVPlayerViewController {
         primaryRenderSurface = renderSurface
         sampleBufferDisplayView.alpha = 1.0
         view.insertSubview(sampleBufferDisplayView, at: 0)
-        sampleBufferDisplayView.pictureInPictureController?.setAutomaticStartEnabled(false)
+        // ---- LOCAL (differs from the upstream fork) ----
+        // The fork keeps the system's automatic start OFF and starts PiP from its own bottom-edge
+        // pan recognizer. On device that recognizer never sees the Home swipe (the system gesture
+        // and the Compose overlay above this view both take it first), so PiP was hit-or-miss:
+        // most minimises fell through to "background-without-pip". Let AVKit start PiP when the
+        // app backgrounds while playing — Apple's supported path — and keep the recognizer only as
+        // a secondary trigger. The source is prewarmed on playback start so it is possible by then.
+        sampleBufferDisplayView.pictureInPictureController?.setAutomaticStartEnabled(true)
     }
 
     func layoutExperimentalPictureInPictureSurfaces(in bounds: CGRect) {
@@ -228,6 +235,18 @@ extension MPVPlayerViewController {
                     tag: "PiP/iOS",
                     message: "Entering background while manually-started PiP is pending; keeping primary libmpv pipeline alive"
                 )
+                return
+            }
+            // With automatic start on, AVKit may still be bringing PiP up as we background (willStart
+            // can land after didEnterBackground). Suspending now would pull the video track out
+            // from under a PiP window that is opening — audio, no picture. Give it a moment.
+            if sampleBufferDisplayView.pictureInPictureController?.isPossible == true, !cachedPaused {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                    guard let self, self.mpv != nil else { return }
+                    guard UIApplication.shared.applicationState == .background else { return }
+                    guard !self.isPictureInPictureActive(), !self.isPictureInPictureStarting else { return }
+                    self.suspendVideoTrackForBackground(reason: "background-without-pip")
+                }
                 return
             }
             suspendVideoTrackForBackground(reason: "background-without-pip")
