@@ -27,7 +27,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
+import com.nuvio.app.core.ui.rememberSafeUriOpener
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
@@ -191,7 +191,7 @@ internal fun LazyListScope.settingsRootContent(
     }
     if (showAboutSection) {
         item {
-            val uriHandler = LocalUriHandler.current
+            val openUri = rememberSafeUriOpener()
             SettingsSection(
                 title = stringResource(Res.string.compose_settings_root_about_section),
                 isTablet = isTablet,
@@ -218,7 +218,7 @@ internal fun LazyListScope.settingsRootContent(
                             description = stringResource(Res.string.settings_donate_description),
                             icon = Icons.Rounded.Favorite,
                             isTablet = isTablet,
-                            onClick = { uriHandler.openUri(donateUrl) },
+                            onClick = { openUri(donateUrl) },
                         )
                         SettingsGroupDivider(isTablet = isTablet)
                     }
@@ -227,7 +227,7 @@ internal fun LazyListScope.settingsRootContent(
                         description = stringResource(Res.string.compose_settings_root_discord_description),
                         icon = Icons.Rounded.Forum,
                         isTablet = isTablet,
-                        onClick = { uriHandler.openUri(DISCORD_URL) },
+                        onClick = { openUri(DISCORD_URL) },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
@@ -235,7 +235,7 @@ internal fun LazyListScope.settingsRootContent(
                         description = stringResource(Res.string.compose_settings_root_privacy_policy_description),
                         icon = Icons.Rounded.Policy,
                         isTablet = isTablet,
-                        onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) },
+                        onClick = { openUri(PRIVACY_POLICY_URL) },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
