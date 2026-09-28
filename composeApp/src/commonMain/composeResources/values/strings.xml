@@ -2499,4 +2499,5 @@
     <string name="stream_info_channels_other">%1$dch</string>
     <string name="settings_donate_description">Support the development of Tuvora</string>
     <string name="announcement_dismiss">Dismiss announcement</string>
+    <string name="external_link_open_failed_copied">Couldn't open a browser. Link copied: %1$s</string>
 </resources>
