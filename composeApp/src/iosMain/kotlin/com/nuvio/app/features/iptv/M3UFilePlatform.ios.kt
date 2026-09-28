@@ -10,77 +10,21 @@ import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
-import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.writeToFile
 import platform.posix.memcpy
-import platform.UIKit.UIApplication
-import platform.UIKit.UIDocumentPickerDelegateProtocol
-import platform.UIKit.UIDocumentPickerViewController
-import platform.UniformTypeIdentifiers.UTType
-import platform.UniformTypeIdentifiers.UTTypePlainText
-import platform.darwin.NSObject
 
 /**
- * iOS file-source platform (compile-by-inspection — needs Xcode to run). The picker presents a
- * UIDocumentPickerViewController for M3U/text documents; the chosen security-scoped URL is read and
+ * iOS file-source platform. The picker (UIDocumentPickerViewController) lives in M3UFilePicker.ios.kt,
+ * iPhone/iPad only; this file is UIKit-free so the Apple TV build reuses it. The chosen file is read and
  * copied into Application Support at `playlists/{id}.m3u`. File IO uses NSData + POSIX line reading so
  * the ingest stays bounded-memory. Twin of the Android actual.
  */
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun pickM3UFile(onPicked: (PickedM3UFile?) -> Unit) {
-    val root = UIApplication.sharedApplication.keyWindow?.rootViewController
-    if (root == null) {
-        onPicked(null)
-        return
-    }
-    // Accept M3U UTIs when available (declared by many players) plus plain text as the safe fallback.
-    val types = buildList {
-        UTType.typeWithFilenameExtension("m3u")?.let { add(it) }
-        UTType.typeWithFilenameExtension("m3u8")?.let { add(it) }
-        add(UTTypePlainText)
-    }
-    val picker = UIDocumentPickerViewController(forOpeningContentTypes = types, asCopy = true)
-    val delegate = M3UPickerDelegate(onPicked)
-    // Retain the delegate for the picker's lifetime (the picker holds only a weak ref).
-    retainedDelegate = delegate
-    picker.delegate = delegate
-    root.presentViewController(picker, animated = true, completion = null)
-}
-
-// Strong ref so the delegate outlives the suspend/callback; cleared when the pick resolves.
-private var retainedDelegate: M3UPickerDelegate? = null
-
-private class M3UPickerDelegate(
-    private val onPicked: (PickedM3UFile?) -> Unit,
-) : NSObject(), UIDocumentPickerDelegateProtocol {
-
-    override fun documentPicker(controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>) {
-        retainedDelegate = null
-        val url = didPickDocumentsAtURLs.firstOrNull() as? NSURL
-        if (url == null) {
-            onPicked(null)
-            return
-        }
-        val name = url.lastPathComponent ?: "playlist.m3u"
-        val path = url.path
-        onPicked(PickedM3UFile(fileName = name, readBytes = {
-            // asCopy = true delivers a temp copy in our sandbox, so a plain read works (no security scope).
-            withContext(Dispatchers.Default) { readFileBytes(path) }
-        }))
-    }
-
-    override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
-        retainedDelegate = null
-        onPicked(null)
-    }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private fun readFileBytes(path: String?): ByteArray {
+internal fun readFileBytes(path: String?): ByteArray {
     if (path == null) error("Selected file has no path")
     val data = NSData.dataWithContentsOfFile(path) ?: error("Could not read the selected file")
     return data.toByteArray()
