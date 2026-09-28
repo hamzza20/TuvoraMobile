@@ -373,6 +373,7 @@ final class MPVPlayerViewController: UIViewController {
     var automaticPictureInPictureTimeoutWorkItem: DispatchWorkItem?
     var automaticPictureInPictureBackgroundTask: UIBackgroundTaskIdentifier = .invalid
     var videoTrackSuspendedForBackground = false
+    var automaticPictureInPictureStartOffered = false
     private var detachedVideoLayerIndex: UInt32?
     var resumePlaybackAfterPictureInPictureRestore = false
     var pipRestoreResumeWorkItem: DispatchWorkItem?
@@ -1158,6 +1159,14 @@ final class MPVPlayerViewController: UIViewController {
         // 250ms of staleness is irrelevant to "may PiP start"; a watchdog kill is not.
         cachedPaused = paused
         cachedEofReached = eofReached
+        // LOCAL: AVKit's automatic start ignores the playback delegate's paused answer on iPadOS 26
+        // and would PiP a paused video (device-observed). Offer automatic start only while playing.
+        let automaticStartWanted = experimentalSinglePrimaryPictureInPictureEnabled && !paused && !eofReached
+        if automaticStartWanted != automaticPictureInPictureStartOffered {
+            automaticPictureInPictureStartOffered = automaticStartWanted
+            sampleBufferDisplayView.pictureInPictureController?.setAutomaticStartEnabled(automaticStartWanted)
+            InAppLogBridge.shared.info(tag: "PiP/iOS", message: "Automatic PiP start offered=\(automaticStartWanted)")
+        }
         durationMs = Int64(duration * 1000)
         positionMs = Int64(max(position, 0) * 1000)
         bufferedMs = Int64(max(position + cached, 0) * 1000)

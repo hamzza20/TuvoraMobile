@@ -12,6 +12,7 @@
 // adaptations are confined to InAppLogBridge.swift (our logging shim) and the bridge wiring.
 
 import AVFoundation
+import UIKit
 import AVKit
 import CoreMedia
 import ComposeApp
@@ -185,6 +186,13 @@ final class PictureInPictureController: NSObject {
 extension PictureInPictureController: AVPictureInPictureControllerDelegate {
     func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         startTransitionBegan = true
+        InAppLogBridge.shared.info(
+            tag: "PiP/iOS",
+            message: "PiP will start source=\(currentStartSource ?? "system") " +
+                "autoFromInline=\(pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline) " +
+                "delegatePlaying=\(delegate?.pictureInPictureControllerIsPlaying(self) ?? false) " +
+                "appState=\(UIApplication.shared.applicationState.rawValue)"
+        )
         delegate?.pictureInPictureControllerWillStart(self)
     }
 

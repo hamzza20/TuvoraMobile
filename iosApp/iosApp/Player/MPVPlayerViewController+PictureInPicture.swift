@@ -43,7 +43,9 @@ extension MPVPlayerViewController {
         // most minimises fell through to "background-without-pip". Let AVKit start PiP when the
         // app backgrounds while playing — Apple's supported path — and keep the recognizer only as
         // a secondary trigger. The source is prewarmed on playback start so it is possible by then.
-        sampleBufferDisplayView.pictureInPictureController?.setAutomaticStartEnabled(true)
+        // Enabled from the 250ms state poll, only while actually playing (updateState).
+        automaticPictureInPictureStartOffered = false
+        sampleBufferDisplayView.pictureInPictureController?.setAutomaticStartEnabled(false)
     }
 
     func layoutExperimentalPictureInPictureSurfaces(in bounds: CGRect) {
