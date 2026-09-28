@@ -237,18 +237,10 @@ extension MPVPlayerViewController {
                 )
                 return
             }
-            // With automatic start on, AVKit may still be bringing PiP up as we background (willStart
-            // can land after didEnterBackground). Suspending now would pull the video track out
-            // from under a PiP window that is opening — audio, no picture. Give it a moment.
-            if sampleBufferDisplayView.pictureInPictureController?.isPossible == true, !cachedPaused {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                    guard let self, self.mpv != nil else { return }
-                    guard UIApplication.shared.applicationState == .background else { return }
-                    guard !self.isPictureInPictureActive(), !self.isPictureInPictureStarting else { return }
-                    self.suspendVideoTrackForBackground(reason: "background-without-pip")
-                }
-                return
-            }
+            // No grace period here: on device AVKit's automatic start reports willStart/didStart
+            // BEFORE didEnterBackground, so a start that is coming is already visible above. Waiting
+            // instead kept decoding and rendering in the background with no PiP, which iOS refuses
+            // (VideoToolbox session -12903, GPU work denied) and left the app stuck on return.
             suspendVideoTrackForBackground(reason: "background-without-pip")
             return
         }

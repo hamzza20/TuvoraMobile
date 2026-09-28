@@ -126,6 +126,11 @@ struct iOSApp: App {
     @UIApplicationDelegateAdaptor(OrientationLockAppDelegate.self) private var appDelegate
 
     init() {
+        #if DEBUG
+        // stdout is block-buffered when attached to `devicectl --console` (not a TTY), so the last
+        // few KB of logs — the ones that matter when the app hangs and gets SIGKILLed — were lost.
+        setvbuf(stdout, nil, _IOLBF, 0)
+        #endif
         // Public client-side key — safe to ship in the binary.
         let config = PostHogConfig(
             projectToken: "phc_o824qv3fcxKW9NvF4K6mYKX3rScK5CBQzrSx4RQ5b6ye",
