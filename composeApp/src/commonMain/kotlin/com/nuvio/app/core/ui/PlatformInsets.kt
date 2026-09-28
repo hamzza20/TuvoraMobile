@@ -3,6 +3,7 @@ package com.nuvio.app.core.ui
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -18,6 +19,13 @@ internal expect fun nuvioBottomNavigationBarInsets(): WindowInsets
 internal expect fun platformPhysicalTopInset(): Dp
 
 internal val LocalNuvioBottomNavigationOverlayPadding = staticCompositionLocalOf { 0.dp }
+
+/**
+ * Height of a navigation bar drawn OVER the top of tab content (the tablet floating tab-bar pill),
+ * status bar included; 0 when the tab bar is not at the top. Measured, so it changes once after
+ * first layout — hence a dynamic local, not a static one.
+ */
+internal val LocalNuvioTopNavigationOverlayPadding = compositionLocalOf { 0.dp }
 
 internal val LocalBottomInsetsConsumed = staticCompositionLocalOf { false }
 

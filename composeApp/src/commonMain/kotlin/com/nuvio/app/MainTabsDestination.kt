@@ -17,16 +17,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
+import com.nuvio.app.core.ui.LocalNuvioTopNavigationOverlayPadding
 import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationBar
@@ -81,6 +86,9 @@ internal fun MainTabsDestination(
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
+        // Measured height of the tablet top pill, exposed to tab content so it can clear it.
+        var tabletTopNavHeightPx by remember { mutableIntStateOf(0) }
+        val tabletTopNavHeight = with(LocalDensity.current) { tabletTopNavHeightPx.toDp() }
         val floatingNavigationItems = listOf(
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Home,
@@ -188,6 +196,8 @@ internal fun MainTabsDestination(
                 CompositionLocalProvider(
                     LocalNuvioBottomNavigationOverlayPadding provides if (useNativeBottomTabs) 49.dp else if (!isTabletLayout && navBarStyleSetting != NavBarStyle.CLASSIC) 72.dp else 0.dp,
                     LocalNuvioNavBarScrollState provides navBarScrollState,
+                    LocalNuvioTopNavigationOverlayPadding provides
+                        if (isTabletLayout && !useNativeBottomTabs) tabletTopNavHeight else 0.dp,
                 ) {
                     AppTabHost(
                         selectedTab = selectedTab,
@@ -205,7 +215,10 @@ internal fun MainTabsDestination(
                 if (isTabletLayout && !useNativeBottomTabs) {
                     val tabletNavBarScrollState = remember { NuvioNavBarScrollState().apply { collapse() } }
                     FloatingNavigationBar(
-                        modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 600.dp),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .widthIn(max = 600.dp)
+                            .onSizeChanged { tabletTopNavHeightPx = it.height },
                         scrollState = tabletNavBarScrollState,
                         hazeState = navBarHazeState,
                         contentPadding = PaddingValues(
