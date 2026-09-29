@@ -35,6 +35,7 @@ targets:
         OTHER_LDFLAGS: ["$(inherited)", "-framework", "TuvoraCore", "-lsqlite3", "-lc++", "-framework", "SystemConfiguration"]
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: TuvoraTV/TuvoraTV.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: App Icon & Top Shelf Image
       # Same bundle IDs as the iPhone app: Universal Purchase puts Apple TV on the same App Store record.
       configs:
         Debug: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.app }
