@@ -12,6 +12,7 @@ struct TitleDetailsScreen: View {
     @State private var season: Int32?
     @State private var sourcesFor: SourceTarget?
     @State private var saved = false
+    @State private var smokePressed = false
     @State private var watched = false
 
     private var meta: MetaDetails? { state?.meta }
@@ -30,6 +31,7 @@ struct TitleDetailsScreen: View {
                     }
                     .padding(.horizontal, dp(48))
                     .padding(.bottom, dp(48))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else if let error = state?.errorMessage {
                 NuvioStateMessage(title: "Couldn't load this title", message: error) { TvTitle.shared.load(type: preview.type, id: preview.id) }
@@ -43,6 +45,12 @@ struct TitleDetailsScreen: View {
             for await next in TvTitle.shared.details {
                 state = next
                 if let meta = next.meta { saved = TvTitle.shared.isSaved(meta: meta); watched = TvTitle.shared.isWatched(meta: meta) }
+                // Simulator smoke hook: `-smokePressPlay` presses Play once the title loads.
+                if let meta = next.meta, sourcesFor == nil, !smokePressed, ProcessInfo.processInfo.arguments.contains("-smokePressPlay") {
+                    smokePressed = true
+                    NSLog("SMOKE details loaded %@ videos=%d", meta.name, meta.videos.count)
+                    sourcesFor = SourceTarget(meta: meta, video: isSeries ? resumeEpisode(meta) : nil)
+                }
             }
         }
         .fullScreenCover(item: $sourcesFor) { target in
@@ -94,7 +102,7 @@ struct TitleDetailsScreen: View {
             if let rating = meta.imdbRating {
                 Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3))
                 ImdbBadge()
-                Text(rating).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary)
+                Text(ImdbBadge.format(rating)).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary)
             }
         }
     }
@@ -297,11 +305,14 @@ private struct EpisodeCard: View {
 struct StreamPickerScreen: View {
     let meta: MetaDetails
     let video: MetaVideo?
+    /// Set when presented through UIKit (PlaybackCoordinator.openSources); SwiftUI covers use dismiss().
+    var onClose: (() -> Void)? = nil
     @EnvironmentObject private var playback: PlaybackCoordinator
     @Environment(\.nuvio) private var colors
     @Environment(\.dismiss) private var dismiss
     @State private var streams: StreamsUiState?
     @State private var opening = false
+    @State private var smokePicked = false
 
     var body: some View {
         ZStack {
@@ -345,6 +356,13 @@ struct StreamPickerScreen: View {
             for await next in TvTitle.shared.streams {
                 streams = next
                 // Auto Stream Selection (phone parity): play the nominated source without the list.
+                // Simulator smoke hook: `-smokePickFirstSource` opens the first listed source.
+                if ProcessInfo.processInfo.arguments.contains("-smokePickFirstSource"), !opening, !smokePicked,
+                   let first = next.groups.first(where: { !$0.streams.isEmpty })?.streams.first {
+                    smokePicked = true
+                    NSLog("SMOKE sources loaded groups=%d; opening %@", next.groups.count, first.streamLabel)
+                    open(first)
+                }
                 if let pick = next.autoPlayStream, !opening {
                     TvTitle.shared.consumeAutoPlay()
                     open(pick)
@@ -391,7 +409,9 @@ struct StreamPickerScreen: View {
             }
             switch onEnum(of: result) {
             case .play(let play):
-                dismiss()
+                // Close the picker first, then present the player over whatever is underneath.
+                if let onClose { onClose() } else { dismiss() }
+                try? await Task.sleep(nanoseconds: 350_000_000)
                 playback.play(play.session)
             case .message(let message):
                 playback.notify(message.text)

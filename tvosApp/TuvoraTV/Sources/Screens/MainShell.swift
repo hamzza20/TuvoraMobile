@@ -94,12 +94,7 @@ struct MainShell: View {
         .environmentObject(playback)
         .ignoresSafeArea()
         .overlay(alignment: .bottom) { toast(colors) }
-        .fullScreenCover(item: $playback.session) { box in
-            TvPlayerScreen(session: box.session) { playback.stop() }.environment(\.nuvio, colors).environmentObject(playback)
-        }
-        .fullScreenCover(item: $playback.pendingPicker) { box in
-            StreamPickerScreen(meta: box.target.meta, video: box.target.video).environmentObject(playback).environment(\.nuvio, colors)
-        }
+        .onChange(of: theme.colors.secondary, initial: true) { _, _ in playback.palette = theme.colors }
         .fullScreenCover(item: $smokeDetails) { box in
             TitleDetailsScreen(preview: box.preview).environmentObject(playback).environment(\.nuvio, colors)
         }
@@ -118,7 +113,7 @@ struct MainShell: View {
         Task {
             if link.play, let meta = try? await MetaDetailsRepository.shared.fetch(type: link.type, id: link.id, cacheResult: true) {
                 let video = meta.videos.first { $0.id == link.videoId }
-                playback.pendingPicker = TvCwTargetBox(target: TvCwTarget(meta: meta, video: video))
+                playback.openSources(meta: meta, video: video)
             } else {
                 smokeDetails = PreviewBox(preview: MetaPreview(id: link.id, type: link.type, name: "", poster: nil, banner: nil, logo: nil,
                                                                posterShape: .poster, description: nil, releaseInfo: nil, rawReleaseDate: nil,

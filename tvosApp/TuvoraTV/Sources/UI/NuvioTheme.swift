@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import TuvoraCore
 
 // Apple TV translation of NuvioTV's design system (app/src/main/java/com/nuvio/tv/ui/theme):
@@ -190,39 +191,83 @@ enum NuvioType {
     static let labelSmall = inter(10, .semibold)
 }
 
-/// The one full-screen player. Any screen asks it to play; it presents over the whole app.
+/// The one full-screen player. Any screen asks it to play; it presents over whatever is on screen.
+///
+/// Presented through UIKit from the top-most view controller, not a SwiftUI `.fullScreenCover` on the
+/// shell: a cover on the shell cannot present while another screen (details from the IPTV hub, the
+/// source picker) is already covering it — SwiftUI silently drops the request, and playback never
+/// appeared (simulator, 2026-09-29).
 @MainActor
 final class PlaybackCoordinator: ObservableObject {
     @Published var session: TvPlayerSessionBox?
     @Published var message: String?
-
-    /// A source/episode picker to open once the player has closed (Next Episode, Episodes panel).
+    /// Kept for callers that observe it; the picker itself is presented through UIKit like the player.
     @Published var pendingPicker: TvCwTargetBox?
+    /// The palette the presented screens use (set by the shell as the theme changes).
+    var palette: NuvioPalette = .marigold
 
     /// Live channel zapping (NuvioTV fullscreen: D-pad up/down changes channel): opens the channel
     /// [offset] away in the list the viewer started from, or nil when there is none.
     var zapper: ((Int) async -> TvPlayerSession?)?
 
+    private weak var playerHost: UIViewController?
+    private weak var pickerHost: UIViewController?
+
     func play(_ session: TvPlayerSession, zapper: ((Int) async -> TvPlayerSession?)? = nil) {
         self.zapper = zapper
-        if let current = self.session?.session, current !== session { current.close() }   // switching source
-        self.session = TvPlayerSessionBox(session: session)
+        if let current = self.session?.session, current !== session { current.close() }   // switching source/channel
+        let box = TvPlayerSessionBox(session: session)
+        self.session = box
+        let screen = TvPlayerScreen(session: session) { [weak self] in self?.stop() }
+            .environment(\.nuvio, palette)
+            .environmentObject(self)
+        if let host = playerHost as? UIHostingController<AnyView> {
+            host.rootView = AnyView(screen)          // already on screen: swap the session in place
+            return
+        }
+        present(AnyView(screen)) { [weak self] in self?.playerHost = $0 }
     }
-    func stop() { session = nil }
+
+    func stop() {
+        session = nil
+        zapper = nil
+        playerHost?.dismiss(animated: true)
+        playerHost = nil
+    }
 
     /// Leave the player and open the source picker for [video] (next episode, or one chosen in the Episodes panel).
     func openSources(meta: MetaDetails, video: MetaVideo?) {
         session?.session.close()
         session = nil
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 450_000_000)   // let the player's cover finish dismissing
-            pendingPicker = TvCwTargetBox(target: TvCwTarget(meta: meta, video: video))
+        let picker = AnyView(StreamPickerScreen(meta: meta, video: video) { [weak self] in self?.pickerHost?.dismiss(animated: true) }
+            .environment(\.nuvio, palette).environmentObject(self))
+        if let host = playerHost {
+            playerHost = nil
+            host.dismiss(animated: true) { [weak self] in self?.present(picker) { self?.pickerHost = $0 } }
+        } else {
+            present(picker) { [weak self] in self?.pickerHost = $0 }
         }
     }
 
     func notify(_ text: String) {
         message = text
         Task { try? await Task.sleep(nanoseconds: 3_500_000_000); if message == text { message = nil } }
+    }
+
+    private func present(_ view: AnyView, onPresented: @escaping (UIViewController) -> Void) {
+        guard let top = Self.topViewController() else { return }
+        let host = UIHostingController(rootView: view)
+        host.modalPresentationStyle = .fullScreen
+        host.view.backgroundColor = .black
+        top.present(host, animated: true)
+        onPresented(host)
+    }
+
+    static func topViewController() -> UIViewController? {
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        var top = scene?.windows.first(where: \.isKeyWindow)?.rootViewController ?? scene?.windows.first?.rootViewController
+        while let presented = top?.presentedViewController, !presented.isBeingDismissed { top = presented }
+        return top
     }
 }
 

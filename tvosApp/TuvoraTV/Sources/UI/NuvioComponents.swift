@@ -214,6 +214,12 @@ enum NuvioCardSize {
 
 /// The IMDb badge NuvioTV draws beside ratings: yellow (#F5C518) rounded tag with bold black "IMDb".
 struct ImdbBadge: View {
+    /// NuvioTV shows one decimal ("7.8"); providers sometimes send "7.802".
+    static func format(_ rating: String) -> String {
+        guard let value = Double(rating) else { return rating }
+        return String(format: "%.1f", value)
+    }
+
     var body: some View {
         Text("IMDb").font(NuvioType.inter(10, .heavy)).foregroundStyle(.black)
             .padding(.horizontal, dp(4)).padding(.vertical, dp(1))

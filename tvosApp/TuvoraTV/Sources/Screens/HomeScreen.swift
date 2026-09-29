@@ -228,7 +228,7 @@ private struct HomeHero: View {
                         if let rating = content.rating {
                             if content.status != nil { Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3)) }
                             ImdbBadge()
-                            Text(rating).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
+                            Text(ImdbBadge.format(rating)).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
                         }
                     }
                 }

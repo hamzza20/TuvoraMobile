@@ -9,6 +9,7 @@ struct IptvHubScreen: View {
     @State private var hub: XtreamHubUiState?
     @State private var choosingPlaylist = false
     @State private var details: PreviewBox?
+    @State private var smokeOpened = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -35,7 +36,17 @@ struct IptvHubScreen: View {
         }
         .task {
             TvIptvBrowse.shared.open(section: hub?.section ?? .live)
-            for await next in TvIptvBrowse.shared.state { hub = next }
+            for await next in TvIptvBrowse.shared.state {
+                hub = next
+                // Simulator smoke hook: `-smokeIptvOpen <movies|series>` opens the first loaded title's details.
+                let args = ProcessInfo.processInfo.arguments
+                if details == nil, let i = args.firstIndex(of: "-smokeIptvOpen"), i + 1 < args.count {
+                    let want: XtreamHubSection = args[i + 1] == "series" ? .series : .movies
+                    if next.section != want { TvIptvBrowse.shared.open(section: want) }
+                    else if let first = next.categories.first(where: { !$0.items.isEmpty })?.items.first,
+                            !smokeOpened { smokeOpened = true; details = PreviewBox(preview: first) }
+                }
+            }
         }
         .sheet(isPresented: $choosingPlaylist) {
             if let hub { PlaylistDialog(hub: hub) { choosingPlaylist = false } }
