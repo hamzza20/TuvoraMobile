@@ -342,7 +342,14 @@ struct StreamPickerScreen: View {
         .task {
             TvTitle.shared.loadStreams(type: meta.type, videoId: video?.id ?? meta.id, parentMetaId: meta.id,
                                        season: video?.season?.int32Value ?? -1, episode: video?.episode?.int32Value ?? -1)
-            for await next in TvTitle.shared.streams { streams = next }
+            for await next in TvTitle.shared.streams {
+                streams = next
+                // Auto Stream Selection (phone parity): play the nominated source without the list.
+                if let pick = next.autoPlayStream, !opening {
+                    TvTitle.shared.consumeAutoPlay()
+                    open(pick)
+                }
+            }
         }
         .onDisappear { TvTitle.shared.cancelStreams() }
     }

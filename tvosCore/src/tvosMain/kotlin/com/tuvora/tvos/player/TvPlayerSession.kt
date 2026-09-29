@@ -91,7 +91,33 @@ class TvPlayerSession(
 
     private var bridge: NuvioPlayerBridge? = null
     private var escalated = false
-    private var languagesApplied = false
+    private var audioLanguagesApplied = false
+    private var subtitleLanguageApplied = false
+
+    /** The profile's audio/subtitle languages, resolved exactly as the phone does, applied once tracks appear. */
+    private fun applyLanguagePreferences(b: NuvioPlayerBridge) {
+        val settings = PlayerSettingsRepository.uiState.value
+        val device = com.nuvio.app.features.player.DeviceLanguagePreferences.preferredLanguageCodes()
+        if (!audioLanguagesApplied && b.getAudioTrackCount() > 1) {
+            audioLanguagesApplied = true
+            com.nuvio.app.features.player.resolvePreferredAudioLanguageTargets(
+                preferredAudioLanguage = settings.preferredAudioLanguage,
+                secondaryPreferredAudioLanguage = settings.secondaryPreferredAudioLanguage,
+                deviceLanguages = device,
+                contentOriginalLanguage = launch.contentLanguage,
+            ).takeIf { it.isNotEmpty() }?.let(b::applyAudioLanguagePreferences)
+        }
+        if (!subtitleLanguageApplied && b.getSubtitleTrackCount() > 0) {
+            subtitleLanguageApplied = true
+            val targets = com.nuvio.app.features.player.resolvePreferredSubtitleLanguageTargets(
+                preferredSubtitleLanguage = settings.preferredSubtitleLanguage,
+                secondaryPreferredSubtitleLanguage = settings.secondaryPreferredSubtitleLanguage,
+                deviceLanguages = device,
+            )
+            val isNone = settings.preferredSubtitleLanguage == com.nuvio.app.features.player.SubtitleLanguageOption.NONE
+            TvTrackLanguagePolicy.subtitleChoice(subtitleTracks(), targets, isNone)?.let(b::selectSubtitleTrack)
+        }
+    }
     private var wantsToPlay = true
     private var pollJob: Job? = null
     private var seekSaveJob: Job? = null
@@ -280,14 +306,7 @@ class TvPlayerSession(
         val lane = _state.value.lane
         if (error != null && handleFailure(lane, error)) return
         if (snapshot.isPlaying && snapshot.positionMs > 0L) TvLaneMemory.put(progressKey, lane)
-        if (!languagesApplied && b.getAudioTrackCount() > 1) {
-            languagesApplied = true
-            val settings = PlayerSettingsRepository.uiState.value
-            listOfNotNull(settings.preferredAudioLanguage, settings.secondaryPreferredAudioLanguage)
-                .filter { it.isNotBlank() && it != com.nuvio.app.features.player.AudioLanguageOption.DEVICE }
-                .takeIf { it.isNotEmpty() }
-                ?.let(b::applyAudioLanguagePreferences)
-        }
+        applyLanguagePreferences(b)
         val settings = PlayerSettingsRepository.uiState.value
         val showNext = _state.value.nextEpisode != null && snapshot.durationMs > 0 &&
             com.nuvio.app.features.player.skip.PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
@@ -395,9 +414,6 @@ class TvPlayerSession(
         const val SEEK_SAVE_DELAY_MS = 1_000L
     }
 }
-
-/** One audio or subtitle track as the player overlay lists it. */
-data class TvTrack(val id: Int, val label: String, val language: String, val selected: Boolean)
 
 /** A playable address: URL plus the request headers the provider needs. */
 data class TvResolvedSource(val url: String, val headers: Map<String, String>)

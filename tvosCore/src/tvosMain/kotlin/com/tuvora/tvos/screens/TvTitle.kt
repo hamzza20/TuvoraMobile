@@ -49,11 +49,16 @@ object TvTitle {
             parentMetaId = parentMetaId,
             season = season.takeIf { it >= 0 },
             episode = episode.takeIf { it >= 0 },
-            manualSelection = true,
+            // Not a manual pick: the repository then nominates autoPlayStream per the profile's
+            // Auto Stream Selection setting, as on the phone (Manual mode nominates nothing).
+            manualSelection = false,
         )
     }
 
     fun cancelStreams() = StreamsRepository.cancelLoading()
+
+    /** The auto-play pick has been acted on (StreamsRepository.consumeAutoPlay). */
+    fun consumeAutoPlay() = StreamsRepository.consumeAutoPlay()
 
     /**
      * The episode the series Play button targets — the phone's own rule (seriesPrimaryAction: the
