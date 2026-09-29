@@ -37,6 +37,8 @@ struct SearchScreen: View {
             .searchable(text: $query, prompt: "Search movies & series")
             .background(colors.background)
         }
+        // Keep the system keyboard row clear of the floating sidebar pill.
+        .padding(.leading, dp(24))
         .task {
             TvSearch.shared.start()
             for await next in TvSearch.shared.results {
