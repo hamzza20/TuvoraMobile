@@ -45,6 +45,8 @@
 "Bold" = "Fed";
 "Browse and play files already in your connected accounts." = "Gennemse og afspil filer, der allerede findes i dine tilknyttede konti.";
 "Cancel" = "Annuller";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Begræns gentagne 2160p-, 1080p- og 720p-resultater efter sortering.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Begræns gentagne BluRay-, WEB-DL- og REMUX-resultater efter sortering.";
 "Cast with photos, director, and writer from TMDB" = "Medvirkende med fotos, instruktør og manuskriptforfatter fra TMDB";
 "Catalog" = "Katalog";
 "Choose Avatar" = "Vælg avatar";
@@ -143,9 +145,11 @@
 "File" = "Fil";
 "Files" = "Filer";
 "Filter sources by video codec." = "Filtrer kilder efter videocodec.";
+"Filter streams by file size." = "Filtrer streams efter filstørrelse.";
 "Filters & Sorting" = "Filtre & Sortering";
 "Focus an avatar to view its name" = "Fokusér på en avatar for at se dens navn";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Glemt PIN? Nulstil den fra din Tuvora-konto på Tuvora-webstedet.";
+"Formatting" = "Formatering";
 "Friends" = "Venner";
 "General" = "Generelt";
 "Generating QR…" = "Genererer QR…";
@@ -233,6 +237,8 @@
 "PIN saved for %@." = "PIN gemt for %1$@.";
 "PRIMARY" = "PRIMÆR";
 "Password" = "Adgangskode";
+"Per quality limit" = "Grænse pr. kvalitet";
+"Per resolution limit" = "Grænse pr. opløsning";
 "Pick the accent color used across the app" = "Vælg accentfarven der bruges i hele appen";
 "Play" = "Afspil";
 "Play file" = "Afspil fil";
@@ -273,10 +279,12 @@
 "Required to fetch ratings from MDBList" = "Kræves for at hente bedømmelser fra MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Påkrævet for at hente spring-tidsstempler fra anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Kræver at TMDB-berigelse er aktiveret";
+"Reset formatting" = "Nulstil formatering";
 "Reset to Default" = "Nulstil til standard";
 "Resolve playable links" = "Aktivér afspilbare links";
 "Resolve playable links before playback starts." = "Løs afspilbare links op, inden afspilningen starter.";
 "Resolve with" = "Brug tjeneste";
+"Restore default source formatting." = "Gendan standardformatering af kilder.";
 "Resume" = "Genoptag";
 "Retry" = "Prøv igen";
 "Runtime, status, country, and language from TMDB" = "Varighed, status, land og sprog fra TMDB";
@@ -316,6 +324,7 @@
 "Sign Out" = "Log ud";
 "Signed in" = "Logget ind";
 "Size" = "Størrelse";
+"Size range" = "Størrelsesinterval";
 "Skip Intro" = "Spring intro over";
 "Smallest first" = "Mindst først";
 "Sort" = "Sorter";
@@ -383,3 +392,4 @@
 "tv:cw_min_left" = "%1$ldm tilbage";
 "tv:type_movie" = "Film";
 "tv:type_series" = "Serie";
+"tv:debrid_size_range_up_to" = "Op til %1$ldGB";

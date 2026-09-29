@@ -51,6 +51,8 @@
 "Bold" = "Negrita";
 "Browse and play files already in your connected accounts." = "Explora y reproduce archivos ya disponibles en tus cuentas conectadas.";
 "Cancel" = "Cancelar";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Limita resultados repetidos de 2160p, 1080p y 720p después del ordenamiento.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limita resultados repetidos de BluRay, WEB-DL y REMUX después del ordenamiento.";
 "Card" = "Tarjeta";
 "Cast with photos, director, and writer from TMDB" = "Elenco con fotos, director y escritor desde TMDB";
 "Catalog" = "Catálogo";
@@ -168,10 +170,12 @@
 "File" = "Archivo";
 "Files" = "Archivos";
 "Filter sources by video codec." = "Filtra fuentes por códec de video.";
+"Filter streams by file size." = "Filtra transmisiones por tamaño de archivo.";
 "Filters & Sorting" = "Filtros y orden";
 "Finish connection approval" = "Completar la aprobación de la conexión";
 "Focus an avatar to view its name" = "Enfoca un avatar para ver su nombre";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "¿Olvidaste el PIN? Restablécelo desde tu cuenta de Tuvora en el sitio web de Tuvora.";
+"Formatting" = "Formato";
 "Friends" = "Amigos";
 "Generating QR…" = "Generando QR…";
 "Genre" = "Género";
@@ -269,6 +273,8 @@
 "PIN saved for %@." = "PIN guardado para %1$@.";
 "PRIMARY" = "PRINCIPAL";
 "Password" = "Contraseña";
+"Per quality limit" = "Límite por calidad";
+"Per resolution limit" = "Límite por resolución";
 "Pick the accent color used across the app" = "Elige el color de acento usado en toda la app";
 "Play" = "Reproducir";
 "Play file" = "Reproducir archivo";
@@ -315,10 +321,12 @@
 "Required to fetch ratings from MDBList" = "Necesaria para obtener calificaciones desde MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Requerido para obtener marcas de tiempo de salto desde anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Requiere que el enriquecimiento de TMDB esté activado";
+"Reset formatting" = "Restablecer formato";
 "Reset to Default" = "Restablecer a Predeterminado";
 "Resolve playable links" = "Resolver enlaces reproducibles";
 "Resolve playable links before playback starts." = "Resolver enlaces reproducibles antes de iniciar la reproducción.";
 "Resolve with" = "Resolver con";
+"Restore default source formatting." = "Restaurar el formato predeterminado de las fuentes.";
 "Resume" = "Reanudar";
 "Retry" = "Reintentar";
 "Rose" = "Rosa";
@@ -366,6 +374,7 @@
 "Simkl features" = "Funciones de Simkl";
 "Simkl-specific settings" = "Configuraciones exclusivas de Simkl";
 "Size" = "Tamaño";
+"Size range" = "Rango de tamaño";
 "Skip Intro" = "Omitir Intro";
 "Smallest first" = "Más pequeños primero";
 "Sort" = "Ordenar";
@@ -452,3 +461,7 @@
 "tv:cw_hours_min_left" = "faltan %1$ldh %2$ldm";
 "tv:cw_min_left" = "faltan %1$ldm";
 "tv:type_movie" = "Película";
+"tv:debrid_stream_max_results_count" = "%1$ld transmisiones";
+"tv:debrid_size_range_up_to" = "Hasta %1$ld GB";
+"tv:debrid_size_range_min_plus" = "%1$ld GB+";
+"tv:debrid_size_range_min_max" = "%1$ld-%2$ld GB";

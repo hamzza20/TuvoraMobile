@@ -51,6 +51,8 @@
 "Bold" = "Trashë";
 "Browse and play files already in your connected accounts." = "Shfleto dhe luaj skedarët që tashmë gjenden në llogaritë e tua të lidhura.";
 "Cancel" = "Anulo";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Kufizo rezultatet e përsëritura 2160p, 1080p, 720p pas renditjes.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Kufizo rezultatet e përsëritura BluRay, WEB-DL, REMUX pas renditjes.";
 "Card" = "Kartë";
 "Cast with photos, director, and writer from TMDB" = "Aktorët me fotografi, regjisori dhe skenaristi nga TMDB";
 "Catalog" = "Katalogu";
@@ -164,10 +166,12 @@
 "File" = "Skedar";
 "Files" = "Skedarë";
 "Filter sources by video codec." = "Filtro burimet sipas kodekut të videos.";
+"Filter streams by file size." = "Filtro transmetimet sipas madhësisë së skedarit.";
 "Filters & Sorting" = "Filtrat dhe renditja";
 "Finish connection approval" = "Përfundo miratimin e lidhjes";
 "Focus an avatar to view its name" = "Fokuso një avatar për të parë emrin e tij";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Harrove PIN-in? Rivendose nga llogaria jote Nuvio në faqen e internetit të Nuvio.";
+"Formatting" = "Formatimi";
 "Friends" = "Miqtë";
 "General" = "Të përgjithshme";
 "Generating QR…" = "Duke gjeneruar QR-në…";
@@ -264,6 +268,8 @@
 "PIN saved for %@." = "PIN-i u ruajt për %1$@.";
 "PRIMARY" = "KRYESOR";
 "Password" = "Fjalëkalimi";
+"Per quality limit" = "Kufiri për cilësi";
+"Per resolution limit" = "Kufiri për rezolucion";
 "Pick the accent color used across the app" = "Zgjidh ngjyrën e theksit që përdoret në të gjithë aplikacionin";
 "Play" = "Luaj";
 "Play file" = "Luaj skedarin";
@@ -307,10 +313,12 @@
 "Required to fetch ratings from MDBList" = "Kërkohet për të marrë vlerësime nga MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Kërkohet për të marrë kohëshënuesit e kapërcimit nga anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Kërkon që pasurimi TMDB të jetë i aktivizuar";
+"Reset formatting" = "Rivendos formatimin";
 "Reset to Default" = "Rikthe në parazgjedhje";
 "Resolve playable links" = "Zgjidh lidhjet e luajtshme";
 "Resolve playable links before playback starts." = "Zgjidh lidhjet e luajtshme para se të fillojë riprodhimi.";
 "Resolve with" = "Zgjidh me";
+"Restore default source formatting." = "Rikthe formatimin e parazgjedhur të burimeve.";
 "Resume" = "Vazhdo";
 "Retry" = "Provo përsëri";
 "Rose" = "Rozë";
@@ -358,6 +366,7 @@
 "Simkl features" = "Veçoritë e Simkl";
 "Simkl-specific settings" = "Cilësimet specifike të Simkl";
 "Size" = "Madhësia";
+"Size range" = "Diapazoni i madhësisë";
 "Skip Intro" = "Kapërce hyrjen";
 "Smallest first" = "Më të voglat të parat";
 "Sort" = "Renditja";
@@ -444,3 +453,5 @@
 "tv:cw_min_left" = "kanë mbetur %1$ldm";
 "tv:type_movie" = "Film";
 "tv:type_series" = "Serial";
+"tv:debrid_stream_max_results_count" = "%1$ld transmetime";
+"tv:debrid_size_range_up_to" = "Deri në %1$ldGB";

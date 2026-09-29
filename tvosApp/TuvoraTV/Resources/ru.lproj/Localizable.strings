@@ -54,6 +54,8 @@
 "Bold" = "Жирный";
 "Browse and play files already in your connected accounts." = "Просматривайте и воспроизводите файлы, уже находящиеся в подключённых аккаунтах.";
 "Cancel" = "Отмена";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Ограничить повторяющиеся результаты 2160p, 1080p, 720p после сортировки.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ограничить повторяющиеся результаты BluRay, WEB-DL, REMUX после сортировки.";
 "Card" = "Карточка";
 "Cast with photos, director, and writer from TMDB" = "Актеры с фото, режиссер и сценарист из TMDB";
 "Catalog" = "Каталог";
@@ -106,6 +108,8 @@
 "Continue without account" = "Продолжить без аккаунта";
 "Control what appears on home and search." = "Управление тем, что отображается на главном экране и в поиске.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Определяет способ идентификации аниме-сериалов. Выбор MAL или Kitsu создаёт отдельную запись для каждого сезона вместо группировки по одному IMDB ID.";
+"Controls how result names appear. Leave blank to use the original result name." = "Управляет отображением названий результатов. Оставьте поле пустым, чтобы использовать исходное имя результата.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Управляет метаданными, отображаемыми под каждым результатом. Оставьте поле пустым, чтобы использовать исходные данные о результате.";
 "Core playback behavior." = "Основное поведение воспроизведения.";
 "Could not complete QR sign in" = "Не удалось завершить QR-вход";
 "Could not create profile. Try again." = "Не удалось создать профиль. Попробуйте ещё раз.";
@@ -124,6 +128,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Пользовательские URL аватаров можно настроить в веб-панели Tuvora.";
 "Default" = "Стандартный";
 "Default (media file)" = "По умолчанию (из медиафайла)";
+"Default format" = "Формат по умолчанию";
 "Delete" = "Удалить";
 "Delete Profile" = "Удалить профиль";
 "Delete Profile?" = "Удалить профиль?";
@@ -131,6 +136,7 @@
 "Delete this list?" = "Удалить этот список?";
 "Dense" = "Плотный";
 "Description" = "Описание";
+"Description template" = "Шаблон описания";
 "Description, genres, and rating from TMDB" = "Описание, жанры и рейтинг из TMDB";
 "Details" = "Детали";
 "Device language" = "Язык устройства";
@@ -170,11 +176,13 @@
 "Files" = "Файлы";
 "Fill" = "Заполнить";
 "Filter sources by video codec." = "Фильтровать источники по видеокодеку.";
+"Filter streams by file size." = "Фильтровать потоки по размеру файла.";
 "Filters & Sorting" = "Фильтры и сортировка";
 "Finish connection approval" = "Завершить подтверждение подключения";
 "Fit" = "Вписать";
 "Focus an avatar to view its name" = "Сфокусируйтесь на аватаре, чтобы увидеть его имя";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Забыли PIN? Сбросьте его в вашем аккаунте Tuvora на веб-сайте Tuvora.";
+"Formatting" = "Форматирование";
 "Friends" = "Для друзей";
 "General" = "Общие";
 "Generating QR…" = "Генерация QR…";
@@ -238,6 +246,7 @@
 "Movie" = "Фильм";
 "Movies" = "Фильмы";
 "Name" = "Название";
+"Name template" = "Шаблон имени";
 "Networks" = "Телесети";
 "Networks with logos from TMDB" = "Сети с логотипами из TMDB";
 "Next Episode" = "Следующий эпизод";
@@ -266,6 +275,7 @@
 "Open the Simkl verification page and enter this code." = "Откройте страницу подтверждения Simkl и введите этот код.";
 "Opening…" = "Открытие…";
 "Or go to %@ and enter" = "Или перейдите на %1$@ и введите";
+"Original format" = "Исходный формат";
 "Original language" = "Оригинальный язык";
 "Original order" = "Исходный порядок";
 "Outline" = "Обводка";
@@ -273,6 +283,8 @@
 "PIN saved for %@." = "PIN сохранён для профиля \"%1$@";
 "PRIMARY" = "ОСНОВНОЙ";
 "Password" = "Пароль";
+"Per quality limit" = "Лимит на качество";
+"Per resolution limit" = "Лимит на разрешение";
 "Pick the accent color used across the app" = "Выберите акцентный цвет приложения";
 "Play" = "Смотреть";
 "Play file" = "Воспроизвести файл";
@@ -318,10 +330,12 @@
 "Required to fetch ratings from MDBList" = "Требуется для получения рейтингов из MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Требуется для получения таймкодов с anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Требуется включенное обогащение TMDB";
+"Reset formatting" = "Сбросить форматирование";
 "Reset to Default" = "Сбросить по умолчанию";
 "Resolve playable links" = "Получать воспроизводимые ссылки";
 "Resolve playable links before playback starts." = "Получать воспроизводимые ссылки до начала воспроизведения.";
 "Resolve with" = "Получать через";
+"Restore default source formatting." = "Восстановить форматирование источников по умолчанию.";
 "Resume" = "Продолжить";
 "Retry" = "Повторить";
 "Rose" = "Розовый";
@@ -370,6 +384,7 @@
 "Simkl features" = "Функции Simkl";
 "Simkl-specific settings" = "Настройки, специфичные для Simkl";
 "Size" = "Размер";
+"Size range" = "Диапазон размеров";
 "Skip Intro" = "Пропуск заставки";
 "Smallest first" = "Наименьший";
 "Sort" = "Сортировка";
@@ -461,3 +476,7 @@
 "tv:cw_min_left" = "Осталось %1$ld мин";
 "tv:type_movie" = "Фильм";
 "tv:type_series" = "Сериал";
+"tv:debrid_stream_max_results_count" = "%1$ld потоков";
+"tv:debrid_size_range_up_to" = "До %1$ld ГБ";
+"tv:debrid_size_range_min_plus" = "%1$ld ГБ+";
+"tv:debrid_size_range_min_max" = "%1$ld–%2$ld ГБ";

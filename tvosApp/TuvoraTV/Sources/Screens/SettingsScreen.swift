@@ -108,6 +108,8 @@ struct SettingsScreen: View {
                     .padding(.vertical, dp(4))
                     .padding(.horizontal, dp(6))
             }
+            // Simulator smoke hook: `-smokeScrollBottom` opens the pane scrolled to its end.
+            .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-smokeScrollBottom") ? .bottom : .top)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .focusSection()
             // Menu in the detail goes back to its rail item (the detail's parent), as NuvioTV's Back.
@@ -171,6 +173,10 @@ struct SettingsScreen: View {
                 subtitle: "Choose the service Tuvora reads for resume and Continue Watching. Scrobbling remains active for every connected service.",
                 options: sources.map { SettingsPickerOption(id: $0.name, title: TrackingSettingsDetail.label($0)) },
                 selectedId: sources.first?.name ?? "", width: dp(660)) { _ in }))
+        case "debridTemplate":
+            dialogs.push(.custom(AnyView(KeyEntryDialog(title: "Name template",
+                subtitle: "Controls how result names appear. Leave blank to use the original result name.",
+                placeholder: "Name template", initial: TvDebrid.shared.defaultNameTemplate, dialogs: dialogs) { _ in })))
         case "debridKey":
             dialogs.push(.custom(AnyView(KeyEntryDialog(title: "Torbox API Key", subtitle: "Enter your Torbox API key.",
                                                         placeholder: "Enter Torbox API key", initial: "", dialogs: dialogs) { _ in })))

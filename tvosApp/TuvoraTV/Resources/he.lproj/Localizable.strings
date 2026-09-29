@@ -53,6 +53,8 @@
 "Bold" = "מודגש";
 "Browse and play files already in your connected accounts." = "עיין ונגן קבצים שכבר נמצאים בחשבונות המחוברים שלך.";
 "Cancel" = "ביטול";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "הגבלת תוצאות חוזרות של 2160p, 1080p, 720p אחרי המיון.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "הגבלת תוצאות חוזרות של BluRay, WEB-DL, REMUX אחרי המיון.";
 "Card" = "כרטיס";
 "Cast with photos, director, and writer from TMDB" = "שחקנים עם תמונות, במאי וכותב מ-TMDB";
 "Catalog" = "קטלוג";
@@ -170,11 +172,13 @@
 "Files" = "קבצים";
 "Fill" = "מילוי";
 "Filter sources by video codec." = "סנן מקורות לפי קודק וידאו.";
+"Filter streams by file size." = "סנן Streams לפי גודל קובץ";
 "Filters & Sorting" = "סינון ומיון";
 "Finish connection approval" = "השלם את אישור החיבור";
 "Fit" = "התאמה";
 "Focus an avatar to view its name" = "התמקד באווטאר כדי לראות את שמו";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "שכחת סיסמה? אפס אותה מחשבון ה-Tuvora באתר שלך Tuvora";
+"Formatting" = "עיצוב";
 "Friends" = "חברים";
 "General" = "כללי";
 "Generating QR…" = "מייצר קוד QR…";
@@ -272,6 +276,8 @@
 "PIN saved for %@." = "הסיסמה נשמרה עבור %1$@.";
 "PRIMARY" = "ראשי";
 "Password" = "סיסמה";
+"Per quality limit" = "הגבלה לפי איכות";
+"Per resolution limit" = "הגבלה לפי רזולוציה";
 "Pick the accent color used across the app" = "בחר את צבע ההדגשה שישמש בכל האפליקציה";
 "Play" = "הפעל";
 "Play file" = "הפעל קובץ";
@@ -318,10 +324,12 @@
 "Required to fetch ratings from MDBList" = "נדרש לאחזור דירוגים מ-MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "נדרש לאחזור חותמות זמן דילוג מ-anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "דורש הפעלה של העשרת מידע מ-TMDB";
+"Reset formatting" = "אפס עיצוב";
 "Reset to Default" = "אפס לברירת מחדל";
 "Resolve playable links" = "פענח קישורים ניתנים לצפייה";
 "Resolve playable links before playback starts." = "פענוח קישורים ניתנים להפעלה עוד לפני תחילת ההפעלה.";
 "Resolve with" = "פענח באמצעות";
+"Restore default source formatting." = "שחזר עיצוב מקור לברירת מחדל.";
 "Resume" = "המשך";
 "Retry" = "נסה שוב";
 "Rose" = "ורוד שושנה";
@@ -371,6 +379,7 @@
 "Simkl features" = "תכונות Simkl";
 "Simkl-specific settings" = "הגדרות ייעודיות ל-Simkl";
 "Size" = "גודל";
+"Size range" = "טווח גודל";
 "Skip Intro" = "דלג על הקדמה";
 "Smallest first" = "הקטן ביותר קודם";
 "Sort" = "מיון";
@@ -462,3 +471,5 @@
 "tv:cw_min_left" = "נותרו %1$ld דק׳";
 "tv:type_movie" = "סרט";
 "tv:type_series" = "סדרה";
+"tv:debrid_stream_max_results_count" = "%1$ld סטרימים";
+"tv:debrid_size_range_up_to" = "עד %1$ldGB";

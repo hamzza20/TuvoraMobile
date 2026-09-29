@@ -53,6 +53,8 @@
 "Bold" = "粗体";
 "Browse and play files already in your connected accounts." = "浏览并播放已连接账户中的文件。";
 "Cancel" = "取消";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "排序后限制重复的 2160p、1080p、720p 结果。";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "排序后限制重复的 BluRay、WEB-DL、REMUX 结果。";
 "Card" = "卡片";
 "Cast with photos, director, and writer from TMDB" = "来自 TMDB 的演员 (含照片)、导演和编剧";
 "Catalog" = "目录";
@@ -170,10 +172,12 @@
 "File" = "文件";
 "Files" = "文件";
 "Filter sources by video codec." = "按视频编解码器过滤来源。";
+"Filter streams by file size." = "按文件大小过滤流。";
 "Filters & Sorting" = "过滤器与排序";
 "Finish connection approval" = "完成连接批准";
 "Focus an avatar to view its name" = "聚焦头像以查看其名称";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "忘记 PIN？请从 nuvio 网站上的 Tuvora 账户重置。";
+"Formatting" = "格式设置";
 "Friends" = "好友";
 "General" = "常规";
 "Generating QR…" = "正在生成 QR…";
@@ -273,6 +277,8 @@
 "PIN saved for %@." = "已为 %1$@ 保存 PIN。";
 "PRIMARY" = "主要";
 "Password" = "密码";
+"Per quality limit" = "按品质限制";
+"Per resolution limit" = "按分辨率限制";
 "Pick the accent color used across the app" = "选择应用的主强调色";
 "Play" = "播放";
 "Play file" = "播放文件";
@@ -319,10 +325,12 @@
 "Required to fetch ratings from MDBList" = "从 MDBList 获取评分所需";
 "Required to fetch skip timestamps from anime-skip.com" = "从 anime-skip.com 获取跳过时间戳所需";
 "Requires TMDB enrichment to be enabled" = "需要启用 TMDB 增强";
+"Reset formatting" = "重置格式设置";
 "Reset to Default" = "重置为默认";
 "Resolve playable links" = "解析可播放链接";
 "Resolve playable links before playback starts." = "在播放开始前解析可播放链接。";
 "Resolve with" = "使用以下服务解析";
+"Restore default source formatting." = "还原默认来源格式。";
 "Resume" = "继续播放";
 "Retry" = "重试";
 "Rose" = "玫瑰";
@@ -372,6 +380,7 @@
 "Simkl features" = "Simkl 功能";
 "Simkl-specific settings" = "Simkl 专属设置";
 "Size" = "大小";
+"Size range" = "大小范围";
 "Skip Intro" = "跳过片头";
 "Smallest first" = "最小优先";
 "Sort" = "排序";
@@ -463,3 +472,5 @@
 "tv:cw_min_left" = "剩余 %1$ldm";
 "tv:type_movie" = "电影";
 "tv:type_series" = "剧集";
+"tv:debrid_stream_max_results_count" = "%1$ld 个流";
+"tv:debrid_size_range_up_to" = "最多 %1$ldGB";

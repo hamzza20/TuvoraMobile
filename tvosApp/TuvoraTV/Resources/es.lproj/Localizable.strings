@@ -52,6 +52,8 @@
 "Bold" = "Negrita";
 "Browse and play files already in your connected accounts." = "Explora y reproduce archivos que ya están en tus cuentas conectadas.";
 "Cancel" = "Cancelar";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Limita resultados repetidos de 2160p, 1080p, 720p tras ordenar.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limita resultados repetidos de BluRay, WEB-DL, REMUX tras ordenar.";
 "Card" = "Tarjeta";
 "Cast with photos, director, and writer from TMDB" = "Elenco con fotos, director y guionista de TMDB";
 "Catalog" = "Catálogo";
@@ -105,6 +107,8 @@
 "Continue without account" = "Continuar sin cuenta";
 "Control what appears on home and search." = "Controla qué aparece en inicio y búsqueda.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Controla cómo se identifican las series de anime. Elegir MAL o Kitsu da a cada temporada su propia entrada en lugar de agruparlas bajo un mismo ID de IMDB.";
+"Controls how result names appear. Leave blank to use the original result name." = "Controla cómo aparecen los nombres de los resultados. Déjelo en blanco para utilizar el nombre del resultado original.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Controla los metadatos que se muestran debajo de cada resultado. Déjelo en blanco para utilizar los detalles del resultado original.";
 "Core playback behavior." = "Comportamiento de reproducción central.";
 "Could not complete QR sign in" = "No se pudo completar el inicio de sesión con QR";
 "Could not create profile. Try again." = "No se pudo crear el perfil. Inténtalo de nuevo.";
@@ -123,6 +127,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Las URLs de avatar personalizado se pueden configurar desde el panel web de Tuvora.";
 "Default" = "Predeterminado";
 "Default (media file)" = "Predeterminado (archivo de medios)";
+"Default format" = "Formato predeterminado";
 "Delete" = "Eliminar";
 "Delete Profile" = "Eliminar perfil";
 "Delete Profile?" = "¿Eliminar perfil?";
@@ -130,6 +135,7 @@
 "Delete this list?" = "¿Eliminar esta lista?";
 "Dense" = "Denso";
 "Description" = "Descripción";
+"Description template" = "Plantilla de descripción";
 "Description, genres, and rating from TMDB" = "Descripción, géneros y calificación de TMDB";
 "Details" = "Detalles";
 "Device language" = "Idioma del dispositivo";
@@ -170,11 +176,13 @@
 "Files" = "Archivos";
 "Fill" = "Rellenar";
 "Filter sources by video codec." = "Filtra fuentes por códec de vídeo.";
+"Filter streams by file size." = "Filtra transmisiones por tamaño de archivo.";
 "Filters & Sorting" = "Filtros & ordenación";
 "Finish connection approval" = "Finalizar aprobación de conexión";
 "Fit" = "Ajustar";
 "Focus an avatar to view its name" = "Enfoca un avatar para ver su nombre";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "¿Olvidaste el PIN? Restablécelo desde tu cuenta de Tuvora en sitio web de nuvio.";
+"Formatting" = "Formato";
 "Friends" = "Amigos";
 "Generating QR…" = "Generando QR…";
 "Genre" = "Género";
@@ -239,6 +247,7 @@
 "Movie" = "Película";
 "Movies" = "Películas";
 "Name" = "Nombre";
+"Name template" = "Plantilla de nombre";
 "Networks" = "Redes";
 "Networks with logos from TMDB" = "Redes con logotipos de TMDB";
 "Next Episode" = "Siguiente episodio";
@@ -266,6 +275,7 @@
 "Open the Simkl verification page and enter this code." = "Abre la página de verificación de Simkl e introduce este código.";
 "Opening…" = "Abriendo…";
 "Or go to %@ and enter" = "O ve a %1$@ e introduce";
+"Original format" = "Formato original";
 "Original language" = "Idioma original";
 "Original order" = "Orden original";
 "Outline" = "Contorno";
@@ -273,6 +283,8 @@
 "PIN saved for %@." = "PIN guardado para %1$@.";
 "PRIMARY" = "PRINCIPAL";
 "Password" = "Contraseña";
+"Per quality limit" = "Límite por calidad";
+"Per resolution limit" = "Límite por resolución";
 "Pick the accent color used across the app" = "Elige el color de acento usado en toda la aplicación";
 "Play" = "Reproducir";
 "Play file" = "Reproducir archivo";
@@ -319,10 +331,12 @@
 "Required to fetch ratings from MDBList" = "Requerido para obtener calificaciones de MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Requerido para obtener marcas de tiempo de salto de anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Requiere que el enriquecimiento de TMDB esté activado";
+"Reset formatting" = "Restablecer formato";
 "Reset to Default" = "Restablecer predeterminado";
 "Resolve playable links" = "Resolver enlaces reproducibles";
 "Resolve playable links before playback starts." = "Resuelve enlaces reproducibles antes de que comience la reproducción.";
 "Resolve with" = "Resolver con";
+"Restore default source formatting." = "Restaura el formato de fuente predeterminado.";
 "Resume" = "Reanudar";
 "Retry" = "Reintentar";
 "Rose" = "Rosa";
@@ -372,6 +386,7 @@
 "Simkl features" = "Funciones de Simkl";
 "Simkl-specific settings" = "Ajustes específicos de Simkl";
 "Size" = "Tamaño";
+"Size range" = "Rango de tamaño";
 "Skip Intro" = "Saltar introducción";
 "Smallest first" = "Más pequeño primero";
 "Sort" = "Ordenar";
@@ -464,3 +479,5 @@
 "tv:cw_hours_min_left" = "%1$ldh %2$ldm restantes";
 "tv:cw_min_left" = "%1$ldm restantes";
 "tv:type_movie" = "Película";
+"tv:debrid_stream_max_results_count" = "%1$ld transmisiones";
+"tv:debrid_size_range_up_to" = "Hasta %1$ldGB";

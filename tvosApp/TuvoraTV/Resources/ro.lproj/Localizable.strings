@@ -34,6 +34,8 @@
 "Bold" = "Îngroșat";
 "Browse and play files already in your connected accounts." = "Răsfoiește și redă fișierele existente deja în conturile tale conectate.";
 "Cancel" = "Anulează";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Limitează rezultatele repetate de 2160p, 1080p, 720p după sortare.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limitează rezultatele repetate de BluRay, WEB-DL, REMUX după sortare.";
 "Card" = "Card peisaj";
 "Cast with photos, director, and writer from TMDB" = "Distribuție cu fotografii, regizor și scenarist de la TMDB";
 "Choose a discover catalog to browse" = "Alegeți un catalog de descoperire pentru a naviga";
@@ -70,6 +72,8 @@
 "Continue Watching Window" = "Fereastră de continuare a vizionării";
 "Continue without account" = "Continuă fără cont";
 "Control what appears on home and search." = "Controlați ce apare pe pagina principală și în căutare.";
+"Controls how result names appear. Leave blank to use the original result name." = "Controlează modul în care apar numele rezultatelor. Lasă gol pentru a folosi numele original al rezultatului.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Controlează metadatele afișate sub fiecare rezultat. Lasă gol pentru a folosi detaliile originale ale rezultatului.";
 "Core playback behavior." = "Comportament de redare de bază.";
 "Could not start sign-in." = "Nu s-a putut iniția autentificarea.";
 "Couldn't play this cloud file." = "Nu s-a putut reda acest fișier din cloud.";
@@ -81,11 +85,13 @@
 "Custom" = "Personalizat";
 "Default" = "Implicit";
 "Default (media file)" = "Implicit (fișier media)";
+"Default format" = "Format implicit";
 "Delete" = "Șterge";
 "Delete Profile" = "Șterge profilul";
 "Delete this list?" = "Ștergi această listă?";
 "Dense" = "Dens";
 "Description" = "Descriere";
+"Description template" = "Șablon descriere";
 "Description, genres, and rating from TMDB" = "Descriere, genuri și rating de la TMDB";
 "Details" = "Detalii";
 "Device language" = "Limba dispozitivului";
@@ -165,6 +171,7 @@
 "Movie" = "Film";
 "Movies" = "Filme";
 "Name" = "Nume";
+"Name template" = "Șablon nume";
 "Networks" = "Rețele";
 "Networks with logos from TMDB" = "Rețele cu logo-uri de la TMDB";
 "Next Episode" = "Următorul episod";
@@ -183,11 +190,14 @@
 "Nothing here yet" = "Nu este nimic aici încă";
 "Off" = "Oprit";
 "On" = "Activat";
+"Original format" = "Format original";
 "Original language" = "Limba originală";
 "Original order" = "Ordinea originală";
 "Outline" = "Contur";
 "PRIMARY" = "PRIMAR";
 "Password" = "Parolă";
+"Per quality limit" = "Limită per calitate";
+"Per resolution limit" = "Limită per rezoluție";
 "Play" = "Redă";
 "Play file" = "Redă fișierul";
 "Play the first available source automatically." = "Redă automat prima sursă disponibilă.";
@@ -217,6 +227,7 @@
 "Remove from library" = "Elimină din bibliotecă";
 "Required to fetch ratings from MDBList" = "Necesară pentru a obține ratinguri de la MDBList";
 "Requires TMDB enrichment to be enabled" = "Necesită activarea îmbunătățirii TMDB";
+"Reset formatting" = "Resetează formatarea";
 "Reset to Default" = "Resetează la implicit";
 "Resolve playable links" = "Rezolvă linkurile redate";
 "Resolve playable links before playback starts." = "Rezolvă linkurile redabile înainte ca redarea să înceapă.";
@@ -258,6 +269,7 @@
 "Sign Out" = "Deconectare";
 "Signed in" = "Autentificat";
 "Size" = "Dimensiune";
+"Size range" = "Interval dimensiune";
 "Skip Intro" = "Sari peste introducere";
 "Smallest first" = "Cele mai mici mai întâi";
 "Sort" = "Sortare";

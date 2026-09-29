@@ -53,6 +53,8 @@
 "Bold" = "粗體";
 "Browse and play files already in your connected accounts." = "瀏覽並播放已連線帳戶中的檔案。";
 "Cancel" = "取消";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "排序後限制重複的 2160p、1080p、720p 結果。";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "排序後限制重複的 BluRay、WEB-DL、REMUX 結果。";
 "Card" = "卡片";
 "Cast with photos, director, and writer from TMDB" = "來自 TMDB 的演員 (含照片)、導演和編劇";
 "Catalog" = "目錄";
@@ -170,10 +172,12 @@
 "File" = "檔案";
 "Files" = "檔案";
 "Filter sources by video codec." = "依影片編解碼器過濾來源。";
+"Filter streams by file size." = "依檔案大小過濾串流。";
 "Filters & Sorting" = "過濾器與排序";
 "Finish connection approval" = "完成連線批准";
 "Focus an avatar to view its name" = "聚焦頭像以檢視其名稱";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "忘記 PIN？請從 nuvio 網站上的 Tuvora 帳戶重設。";
+"Formatting" = "格式設定";
 "Friends" = "好友";
 "General" = "一般";
 "Generating QR…" = "正在產生 QR…";
@@ -273,6 +277,8 @@
 "PIN saved for %@." = "已為 %1$@ 儲存 PIN。";
 "PRIMARY" = "主要";
 "Password" = "密碼";
+"Per quality limit" = "依品質限制";
+"Per resolution limit" = "依解析度限制";
 "Pick the accent color used across the app" = "選擇應用程式的主要強調色";
 "Play" = "播放";
 "Play file" = "播放檔案";
@@ -319,10 +325,12 @@
 "Required to fetch ratings from MDBList" = "從 MDBList 獲取評分所需";
 "Required to fetch skip timestamps from anime-skip.com" = "從 anime-skip.com 獲取跳過時間戳所需";
 "Requires TMDB enrichment to be enabled" = "需要啟用 TMDB 增強";
+"Reset formatting" = "重設格式設定";
 "Reset to Default" = "重設為預設";
 "Resolve playable links" = "解析可播放連結";
 "Resolve playable links before playback starts." = "在播放開始前解析可播放連結。";
 "Resolve with" = "使用以下服務解析";
+"Restore default source formatting." = "還原預設來源格式。";
 "Resume" = "繼續播放";
 "Retry" = "重試";
 "Rose" = "玫瑰";
@@ -372,6 +380,7 @@
 "Simkl features" = "Simkl 功能";
 "Simkl-specific settings" = "Simkl 專屬設定";
 "Size" = "大小";
+"Size range" = "大小範圍";
 "Skip Intro" = "跳過片頭";
 "Smallest first" = "最小優先";
 "Sort" = "排序";
@@ -463,3 +472,5 @@
 "tv:cw_min_left" = "剩餘 %1$ldm";
 "tv:type_movie" = "電影";
 "tv:type_series" = "影集";
+"tv:debrid_stream_max_results_count" = "%1$ld 個串流";
+"tv:debrid_size_range_up_to" = "最多 %1$ldGB";

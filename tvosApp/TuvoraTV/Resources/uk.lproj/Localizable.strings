@@ -49,6 +49,8 @@
 "Bold" = "Жирний";
 "Browse and play files already in your connected accounts." = "Переглядайте та відтворюйте файли, що вже знаходяться в підключених акаунтах.";
 "Cancel" = "Скасувати";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Обмежити повторювані результати 2160p, 1080p, 720p після сортування.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Обмежити повторювані результати BluRay, WEB-DL, REMUX після сортування.";
 "Cast with photos, director, and writer from TMDB" = "Актори з фото, режисер та сценарист з TMDB";
 "Catalog" = "Каталог";
 "Choose Avatar" = "Обрати аватар";
@@ -152,9 +154,11 @@
 "File" = "Файл";
 "Files" = "Файли";
 "Filter sources by video codec." = "Фільтрувати джерела за відеокодеком.";
+"Filter streams by file size." = "Фільтрувати потоки за розміром файлу.";
 "Filters & Sorting" = "Фільтри та сортування";
 "Focus an avatar to view its name" = "Сфокусуйтесь на аватарі, щоб побачити його назву";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Забули PIN? Скиньте його у вашому акаунті Tuvora на веб-сайті Tuvora.";
+"Formatting" = "Форматування";
 "Friends" = "Для друзів";
 "General" = "Загальні";
 "Generating QR…" = "Генерація QR…";
@@ -246,6 +250,8 @@
 "PIN saved for %@." = "PIN збережено для профілю \"%1$@";
 "PRIMARY" = "ОСНОВНИЙ";
 "Password" = "Пароль";
+"Per quality limit" = "Ліміт на якість";
+"Per resolution limit" = "Ліміт на роздільну здатність";
 "Pick the accent color used across the app" = "Оберіть акцентний колір застосунку";
 "Play" = "Дивитися";
 "Play file" = "Відтворити файл";
@@ -286,10 +292,12 @@
 "Required to fetch ratings from MDBList" = "Потрібен для отримання рейтингів з MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Потрібен для отримання таймкодів з anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Потрібне увімкнене збагачення TMDB";
+"Reset formatting" = "Скинути форматування";
 "Reset to Default" = "Скинути за замовчуванням";
 "Resolve playable links" = "Отримувати відтворювані посилання";
 "Resolve playable links before playback starts." = "Отримувати відтворювані посилання до початку відтворення.";
 "Resolve with" = "Отримувати через";
+"Restore default source formatting." = "Відновити форматування джерел за замовчуванням.";
 "Resume" = "Продовжити";
 "Retry" = "Повторити";
 "Rose" = "Рожевий";
@@ -330,6 +338,7 @@
 "Sign Out" = "Вийти";
 "Signed in" = "Виконано вхід";
 "Size" = "Розмір";
+"Size range" = "Діапазон розмірів";
 "Skip Intro" = "Пропуск заставки";
 "Smallest first" = "Найменший";
 "Sort" = "Сортування";
@@ -404,3 +413,7 @@
 "tv:cw_min_left" = "Залишилось %1$ld хв";
 "tv:type_movie" = "Фільм";
 "tv:type_series" = "Серіал";
+"tv:debrid_stream_max_results_count" = "%1$ld потоків";
+"tv:debrid_size_range_up_to" = "До %1$ld ГБ";
+"tv:debrid_size_range_min_plus" = "%1$ld ГБ+";
+"tv:debrid_size_range_min_max" = "%1$ld–%2$ld ГБ";

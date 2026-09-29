@@ -54,6 +54,8 @@
 "Bold" = "Kalın";
 "Browse and play files already in your connected accounts." = "Bağlı hesaplarınızda zaten var olan dosyalara göz atın ve oynatın.";
 "Cancel" = "İptal";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Sıralamadan sonra tekrarlanan 2160p, 1080p, 720p sonuçlarını sınırlandırır.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Sıralamadan sonra tekrarlanan BluRay, WEB-DL, REMUX sonuçlarını sınırlandırır.";
 "Card" = "Kart";
 "Cast with photos, director, and writer from TMDB" = "TMDB'den fotoğraflı aktörler, yönetmen ve yazar";
 "Catalog" = "Katalog";
@@ -107,6 +109,8 @@
 "Continue without account" = "Hesapsız devam et";
 "Control what appears on home and search." = "Ana sayfada ve aramada nelerin görüneceğini kontrol edin.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Anime dizilerinin nasıl tanınacağını belirler. MAL veya Kitsu seçersen her sezon ayrı kayıt olur; IMDB'de hepsi tek kimlik altında toplanır.";
+"Controls how result names appear. Leave blank to use the original result name." = "Sonuç adlarının nasıl görüneceğini belirler.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Her sonucun altında gösterilen meta verileri belirler.";
 "Core playback behavior." = "Temel oynatma davranışı.";
 "Could not complete QR sign in" = "QR ile giriş tamamlanamadı";
 "Could not create profile. Try again." = "Profil oluşturulamadı. Tekrar deneyin.";
@@ -125,6 +129,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Özel avatar URL'leri Tuvora web panelinden yapılandırılabilir.";
 "Default" = "Varsayılan";
 "Default (media file)" = "Varsayılan (medya dosyası)";
+"Default format" = "Varsayılan biçim";
 "Delete" = "Sil";
 "Delete Profile" = "Profili Tamamen Sil";
 "Delete Profile?" = "Bu Profil Silinsin mi?";
@@ -132,6 +137,7 @@
 "Delete this list?" = "Listeyi silmek istediğinizden emin misiniz?";
 "Dense" = "Yoğun";
 "Description" = "Açıklama";
+"Description template" = "Açıklama şablonu";
 "Description, genres, and rating from TMDB" = "TMDB'den açıklama, türler ve derecelendirme";
 "Details" = "Detaylar";
 "Device language" = "Cihaz dili";
@@ -171,11 +177,13 @@
 "Files" = "Dosyalar";
 "Fill" = "Doldur";
 "Filter sources by video codec." = "Kaynakları video kodekine göre filtrele.";
+"Filter streams by file size." = "Yayınları dosya boyutuna göre filtreler.";
 "Filters & Sorting" = "Filtreleme ve Sıralama";
 "Finish connection approval" = "Bağlantı onayını tamamla";
 "Fit" = "Sığdır";
 "Focus an avatar to view its name" = "İsmini görmek için resmin üzerine gelin";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "PIN mi unuttunuz? Tuvora web sitesinden sıfırlayabilirsiniz.";
+"Formatting" = "Biçimlendirme";
 "Friends" = "Arkadaşlar";
 "General" = "Genel";
 "Generating QR…" = "QR oluşturuluyor…";
@@ -239,6 +247,7 @@
 "Movie" = "Film";
 "Movies" = "Filmler";
 "Name" = "Ad";
+"Name template" = "Ad şablonu";
 "Networks" = "Kanallar";
 "Networks with logos from TMDB" = "TMDB'den ağ/kanal logoları";
 "Next Episode" = "Sıradaki Bölüm";
@@ -265,6 +274,7 @@
 "Open the Simkl verification page and enter this code." = "Simkl doğrulama sayfasını aç ve bu kodu gir.";
 "Opening…" = "Açılıyor…";
 "Or go to %@ and enter" = "Veya %1$@ adresine gidin ve şunu girin";
+"Original format" = "Orijinal biçim";
 "Original language" = "Orijinal dil";
 "Original order" = "Orijinal sıralama";
 "Outline" = "Dış Çizgi";
@@ -272,6 +282,8 @@
 "PIN saved for %@." = "%1$@ için PIN kaydedildi.";
 "PRIMARY" = "YÖNETİCİ";
 "Password" = "Şifre";
+"Per quality limit" = "Kalite başına sınır";
+"Per resolution limit" = "Çözünürlük başına sınır";
 "Pick the accent color used across the app" = "Uygulamanın vurgu rengini değiştirin";
 "Play" = "Oynat";
 "Play file" = "Dosyayı oynat";
@@ -317,10 +329,12 @@
 "Required to fetch ratings from MDBList" = "MDBList'ten veri alabilmek için gerekli";
 "Required to fetch skip timestamps from anime-skip.com" = "Anime-skip.com sisteminden veri çekebilmek için gerekli geliştirici anahtarı";
 "Requires TMDB enrichment to be enabled" = "TMDB zenginleştirmesinin etkin olması gerekir";
+"Reset formatting" = "Biçimlendirmeyi sıfırla";
 "Reset to Default" = "Varsayılana Sıfırla";
 "Resolve playable links" = "Oynatılabilir bağlantıları çöz";
 "Resolve playable links before playback starts." = "Oynatma başlamadan önce oynatılabilir bağlantıları çözün.";
 "Resolve with" = "Şununla çöz:";
+"Restore default source formatting." = "Varsayılan kaynak biçimlendirmesini geri yükleyin.";
 "Resume" = "Devam Et";
 "Retry" = "Tekrar Dene";
 "Rose" = "Gül";
@@ -369,6 +383,7 @@
 "Simkl features" = "Simkl özellikleri";
 "Simkl-specific settings" = "Simkl'a özel ayarlar";
 "Size" = "Boyut";
+"Size range" = "Boyut aralığı";
 "Skip Intro" = "İntroyu Atla";
 "Smallest first" = "Önce en küçük";
 "Sort" = "Sırala";
@@ -458,3 +473,7 @@
 "tv:cw_min_left" = "%1$ld dk kaldı";
 "tv:type_movie" = "Film";
 "tv:type_series" = "Dizi";
+"tv:debrid_stream_max_results_count" = "%1$ld yayın";
+"tv:debrid_size_range_up_to" = "%1$ld GB'a kadar";
+"tv:debrid_size_range_min_plus" = "%1$ld GB+";
+"tv:debrid_size_range_min_max" = "%1$ld-%2$ld GB";

@@ -8,8 +8,10 @@ import TuvoraCore
 // apply locally for a signed-out or anonymous session instead of dropping the edit), and a failed save
 // keeps the editor open with the phone's message rather than closing as if it had worked.
 //
-// Not ported: "Copy settings from another profile" and the member-only profile background tab (the
-// inert membership subsystem). Colour: like NuvioTV and the phone, a profile's colour comes from the
+// Not ported: "Copy settings from another profile" — NuvioTV copies through the `sync_copy_profile_setup`
+// RPC, which exists only on Nuvio's cloud (not in nuvio-backend or NuvioMedia/self-host) and has no
+// shared-code path; and the member-only profile background tab (the inert membership subsystem).
+// Colour: like NuvioTV and the phone, a profile's colour comes from the
 // chosen avatar's background colour; neither offers a separate colour picker.
 
 /// AddProfileCard (ProfileSelectionScreen.kt:1253-1381): a ringed disc with a drawn plus, "Add Profile".

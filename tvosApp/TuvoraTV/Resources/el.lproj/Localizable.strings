@@ -54,6 +54,8 @@
 "Bold" = "Έντονα";
 "Browse and play files already in your connected accounts." = "Περιηγηθείτε και αναπαράγετε αρχεία που υπάρχουν ήδη στους συνδεδεμένους λογαριασμούς σας.";
 "Cancel" = "Ακύρωση";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Περιορισμός επαναλαμβανόμενων αποτελεσμάτων 2160p, 1080p, 720p μετά την ταξινόμηση.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Περιορισμός επαναλαμβανόμενων αποτελεσμάτων BluRay, WEB-DL, REMUX μετά την ταξινόμηση.";
 "Card" = "Κάρτα";
 "Cast with photos, director, and writer from TMDB" = "Ηθοποιοί με φωτογραφίες, σκηνοθέτης και σεναριογράφος από το TMDB";
 "Catalog" = "Κατάλογος";
@@ -106,6 +108,8 @@
 "Continue without account" = "Συνέχεια χωρίς λογαριασμό";
 "Control what appears on home and search." = "Έλεγχος τι εμφανίζεται στην αρχική οθόνη και στην αναζήτηση.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Ελέγχει πώς αναγνωρίζονται οι σειρές anime. Η επιλογή MAL ή Kitsu δίνει σε κάθε σεζόν δική της καταχώρηση αντί να ομαδοποιείται κάτω από ένα ID IMDb.";
+"Controls how result names appear. Leave blank to use the original result name." = "Ελέγχει πώς εμφανίζονται τα ονόματα αποτελεσμάτων. Αφήστε το κενό για να χρησιμοποιήσετε το αρχικό όνομα αποτελέσματος.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Ελέγχει τα μεταδεδομένα που εμφανίζονται κάτω από κάθε αποτέλεσμα. Αφήστε το κενό για να χρησιμοποιήσετε το αρχικό όνομα λεπτομερειών αποτελέσματος.";
 "Core playback behavior." = "Βασική συμπεριφορά αναπαραγωγής.";
 "Could not complete QR sign in" = "Δεν ήταν δυνατή η ολοκλήρωση της σύνδεσης QR";
 "Could not create profile. Try again." = "Δεν ήταν δυνατή η δημιουργία προφίλ. Δοκιμάστε ξανά.";
@@ -124,6 +128,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Οι URL προσαρμοσμένων avatar μπορούν να ρυθμιστούν από το web panel Tuvora.";
 "Default" = "Προεπιλογή";
 "Default (media file)" = "Προεπιλογή (αρχείο πολυμέσου)";
+"Default format" = "Default Μορφή";
 "Delete" = "Διαγραφή";
 "Delete Profile" = "Διαγραφή προφίλ";
 "Delete Profile?" = "Διαγραφή προφίλ;";
@@ -131,6 +136,7 @@
 "Delete this list?" = "Διαγραφή αυτής της λίστας;";
 "Dense" = "Πυκνό";
 "Description" = "Περιγραφή";
+"Description template" = "Πρότυπο περιγραφής";
 "Description, genres, and rating from TMDB" = "Περιγραφή, είδη και βαθμολογία από το TMDB";
 "Details" = "Λεπτομέρειες";
 "Device language" = "Γλώσσα συσκευής";
@@ -170,11 +176,13 @@
 "Files" = "Αρχεία";
 "Fill" = "Πλήρωση";
 "Filter sources by video codec." = "Φιλτράρισμα πηγών κατά codec βίντεο.";
+"Filter streams by file size." = "Φιλτράρισμα ροών βάσει μεγέθους αρχείου.";
 "Filters & Sorting" = "Φίλτρα & ταξινόμηση";
 "Finish connection approval" = "Ολοκλήρωση έγκρισης σύνδεσης";
 "Fit" = "Προσαρμογή";
 "Focus an avatar to view its name" = "Εστιάστε σε ένα avatar για να δείτε το όνομά του";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Ξεχάσατε το PIN; Επαναφέρετέ το από τον λογαριασμό Tuvora στην ιστοσελίδα nuvio.";
+"Formatting" = "Μορφοποίηση";
 "Friends" = "Φίλοι";
 "General" = "Γενικά";
 "Generating QR…" = "Δημιουργία QR…";
@@ -238,6 +246,7 @@
 "Movie" = "Ταινία";
 "Movies" = "Ταινίες";
 "Name" = "Όνομα";
+"Name template" = "Πρότυπο ονόματος";
 "Networks" = "Δίκτυα";
 "Networks with logos from TMDB" = "Δίκτυα με λογότυπα από το TMDB";
 "Next Episode" = "Επόμενο επεισόδιο";
@@ -266,6 +275,7 @@
 "Open the Simkl verification page and enter this code." = "Ανοίξτε τη σελίδα επαλήθευσης του Simkl και εισάγετε αυτόν τον κωδικό.";
 "Opening…" = "Άνοιγμα…";
 "Or go to %@ and enter" = "Ή μεταβείτε στο %1$@ και εισάγετε τον κωδικό";
+"Original format" = "Αρχική μορφή";
 "Original language" = "Αρχική γλώσσα";
 "Original order" = "Αρχική σειρά";
 "Outline" = "Περίγραμμα";
@@ -273,6 +283,8 @@
 "PIN saved for %@." = "Το PIN αποθηκεύτηκε για %1$@.";
 "PRIMARY" = "ΚΥΡΙΟ";
 "Password" = "Κωδικός πρόσβασης";
+"Per quality limit" = "Όριο ανά ποιότητα";
+"Per resolution limit" = "Όριο ανά ανάλυση";
 "Pick the accent color used across the app" = "Επιλέξτε το χρώμα έμφασης που χρησιμοποιείται στην εφαρμογή";
 "Play" = "Αναπαραγωγή";
 "Play file" = "Αναπαραγωγή αρχείου";
@@ -319,10 +331,12 @@
 "Required to fetch ratings from MDBList" = "Απαιτείται για λήψη βαθμολογιών από το MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Απαιτείται για λήψη χρονοσημάνσεων από το anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Απαιτείται ενεργοποίηση εμπλουτισμού TMDB";
+"Reset formatting" = "Επαναφορά μορφοποίησης";
 "Reset to Default" = "Επαναφορά σε προεπιλογή";
 "Resolve playable links" = "Επίλυση αναπαραγώγιμων συνδέσμων";
 "Resolve playable links before playback starts." = "Επίλυση των πρώτων πηγών πριν ξεκινήσει η αναπαραγωγή.";
 "Resolve with" = "Επίλυση με";
+"Restore default source formatting." = "Επαναφορά προεπιλεγμένης μορφοποίησης πηγών.";
 "Resume" = "Συνέχεια";
 "Retry" = "Δοκιμάστε ξανά";
 "Rose" = "Ροζ";
@@ -371,6 +385,7 @@
 "Simkl features" = "Δυνατότητες Simkl";
 "Simkl-specific settings" = "Ρυθμίσεις ειδικά για το Simkl";
 "Size" = "Μέγεθος";
+"Size range" = "Εύρος μεγέθους";
 "Skip Intro" = "Παράλειψη εισαγωγής";
 "Smallest first" = "Μικρότερα πρώτα";
 "Sort" = "Ταξινόμηση";
@@ -460,3 +475,5 @@
 "tv:cw_min_left" = "%1$ld λεπ. απομένουν";
 "tv:type_movie" = "Ταινία";
 "tv:type_series" = "Σειρά";
+"tv:debrid_stream_max_results_count" = "%1$ld ροές";
+"tv:debrid_size_range_up_to" = "Έως %1$ldGB";

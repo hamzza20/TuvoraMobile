@@ -53,6 +53,8 @@
 "Bold" = "In đậm";
 "Browse and play files already in your connected accounts." = "Duyệt và phát các tệp đã có sẵn trong tài khoản đã kết nối.";
 "Cancel" = "Huỷ";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Giới hạn số kết quả 2160p, 1080p và 720p trùng nhau sau khi sắp xếp.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Giới hạn số kết quả trùng nhau theo nguồn BluRay, WEB-DL và REMUX sau khi sắp xếp";
 "Card" = "Thẻ";
 "Cast with photos, director, and writer from TMDB" = "Diễn viên kèm ảnh, đạo diễn và biên kịch từ TMDB";
 "Catalog" = "Danh mục";
@@ -105,6 +107,8 @@
 "Continue without account" = "Tiếp tục không cần tài khoản";
 "Control what appears on home and search." = "Kiểm soát nội dung hiển thị trên Trang chủ và tìm kiếm.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Kiểm soát cách nhận diện các mùa anime. Chọn MAL hoặc Kitsu để hiển thị mỗi mùa dưới dạng một mục riêng thay vì gộp chúng theo một IMDb ID.";
+"Controls how result names appear. Leave blank to use the original result name." = "Tùy chỉnh tên hiển thị. Bỏ trống nếu dùng tên gốc";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Điều chỉnh cách hiển thị tên kết quả. Để trống nếu muốn dùng tên kết quả gốc.";
 "Core playback behavior." = "Cơ chế phát lại cơ bản.";
 "Could not complete QR sign in" = "Không thể hoàn tất đăng nhập bằng mã QR";
 "Could not create profile. Try again." = "Không thể tạo hồ sơ. Vui lòng thử lại.";
@@ -123,6 +127,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "URL ảnh đại diện tùy chỉnh có thể được cấu hình tại bảng điều khiển web Tuvora.";
 "Default" = "Mặc định";
 "Default (media file)" = "Mặc định (tệp phương tiện)";
+"Default format" = "Định dạng mặc định";
 "Delete" = "Xóa";
 "Delete Profile" = "Xóa hồ sơ";
 "Delete Profile?" = "Xóa hồ sơ?";
@@ -130,6 +135,7 @@
 "Delete this list?" = "Xóa danh sách này?";
 "Dense" = "Dày đặc";
 "Description" = "Mô tả";
+"Description template" = "Mẫu tên";
 "Description, genres, and rating from TMDB" = "Mô tả, thể loại và điểm đánh giá từ TMDB";
 "Details" = "Chi tiết";
 "Device language" = "Ngôn ngữ thiết bị";
@@ -170,11 +176,13 @@
 "Files" = "Tệp";
 "Fill" = "Lấp đầy";
 "Filter sources by video codec." = "Lọc các nguồn theo codec video.";
+"Filter streams by file size." = "Lọc các luồng theo dung lượng tệp.";
 "Filters & Sorting" = "Bộ lọc & Sắp xếp";
 "Finish connection approval" = "Hoàn tất phê duyệt kết nối";
 "Fit" = "Vừa màn hình";
 "Focus an avatar to view its name" = "Chọn ảnh đại diện để xem tên";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Quên mã PIN? Vui lòng đặt lại mã PIN từ tài khoản Tuvora trên trang web Tuvora.";
+"Formatting" = "Định dạng";
 "Friends" = "Bạn bè";
 "General" = "Chung";
 "Generating QR…" = "Đang tạo mã QR…";
@@ -239,6 +247,7 @@
 "Movie" = "Phim";
 "Movies" = "Phim";
 "Name" = "Tên";
+"Name template" = "Mẫu tên";
 "Networks" = "Đơn vị phát sóng";
 "Networks with logos from TMDB" = "Đơn vị phát sóng kèm logo từ TMDB";
 "Next Episode" = "Tập tiếp theo";
@@ -267,12 +276,15 @@
 "Open the Simkl verification page and enter this code." = "Mở trang xác thực Simkl và nhập mã này.";
 "Opening…" = "Đang mở…";
 "Or go to %@ and enter" = "Hoặc truy cập %1$@ và nhập";
+"Original format" = "Định dạng gốc";
 "Original language" = "Ngôn ngữ gốc";
 "Original order" = "Thứ tự ban đầu";
 "Outline" = "Viền chữ";
 "PIN saved for %@." = "Đã lưu mã PIN cho %1$@.";
 "PRIMARY" = "CHÍNH";
 "Password" = "Mật khẩu";
+"Per quality limit" = "Giới hạn theo chất lượng";
+"Per resolution limit" = "Giới hạn theo độ phân giải";
 "Pick the accent color used across the app" = "Chọn màu nhấn dùng cho toàn bộ ứng dụng";
 "Play" = "Xem";
 "Play file" = "Phát tệp";
@@ -318,10 +330,12 @@
 "Required to fetch ratings from MDBList" = "Cần thiết để lấy điểm đánh giá từ MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Cần thiết để lấy mốc thời gian từ anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Yêu cầu bật tính năng bổ sung dữ liệu từ TMDB.";
+"Reset formatting" = "Đặt lại định dạng";
 "Reset to Default" = "Đặt lại mặc định";
 "Resolve playable links" = "Phân giải liên kết phát được";
 "Resolve playable links before playback starts." = "Phân giải các liên kết phát được trước khi bắt đầu phát.";
 "Resolve with" = "Phân giải bằng";
+"Restore default source formatting." = "Khôi phục định dạng nguồn mặc định.";
 "Resume" = "Xem tiếp";
 "Retry" = "Thử lại";
 "Rose" = "Hồng";
@@ -371,6 +385,7 @@
 "Simkl features" = "Tính năng Simkl";
 "Simkl-specific settings" = "Cài đặt riêng của Simkl";
 "Size" = "Cỡ chữ";
+"Size range" = "Khoảng dung lượng";
 "Skip Intro" = "Bỏ qua Giới thiệu";
 "Smallest first" = "Nhỏ nhất trước";
 "Sort" = "Sắp xếp";
@@ -462,3 +477,7 @@
 "tv:cw_min_left" = "Còn %1$ldph";
 "tv:type_movie" = "Phim";
 "tv:type_series" = "Loạt phim";
+"tv:debrid_stream_max_results_count" = "%1$ld luồng";
+"tv:debrid_size_range_up_to" = "Đến %1$ld GB";
+"tv:debrid_size_range_min_plus" = "Từ %1$ld GB";
+"tv:debrid_size_range_min_max" = "%1$ld–%2$ld GB";

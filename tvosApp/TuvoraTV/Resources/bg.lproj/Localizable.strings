@@ -49,6 +49,8 @@
 "Bold" = "Удебелен";
 "Browse and play files already in your connected accounts." = "Преглеждай и пускай файлове, които вече са в свързаните ти акаунти.";
 "Cancel" = "Отказ";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Ограничи повторенията на 2160p, 1080p, 720p резултати след сортиране.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ограничи повторенията на BluRay, WEB-DL, REMUX резултати след сортиране.";
 "Card" = "Картичка";
 "Cast with photos, director, and writer from TMDB" = "Актьорски състав със снимки, режисьор и сценарист от TMDB";
 "Catalog" = "Каталог";
@@ -97,6 +99,8 @@
 "Continue Watching Window" = "Прозорец на Продължи гледането";
 "Continue without account" = "Продължи без акаунт";
 "Control what appears on home and search." = "Контролирай какво се появява на началния екран и в търсенето.";
+"Controls how result names appear. Leave blank to use the original result name." = "Контролира как се показват имената на резултатите. Оставете празно, за да използвате оригиналното име на резултата.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Контролира метаданните, показани под всеки резултат. Оставете празно, за да използвате оригиналните детайли на резултата.";
 "Core playback behavior." = "Основно поведение при възпроизвеждане.";
 "Could not complete QR sign in" = "Не можахме да завършим QR вписването";
 "Could not start sign-in." = "Не можахме да стартираме вписването.";
@@ -114,6 +118,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Персонализирани URL адреси за аватар могат да се конфигурират от Tuvora уеб панела.";
 "Default" = "По подразбиране";
 "Default (media file)" = "По подразбиране (файл на медията)";
+"Default format" = "Формат по подразбиране";
 "Delete" = "Изтрий";
 "Delete Profile" = "Изтрий профила";
 "Delete Profile?" = "Изтрий профила?";
@@ -121,6 +126,7 @@
 "Delete this list?" = "Изтрий този списък?";
 "Dense" = "Плътен";
 "Description" = "Описание";
+"Description template" = "Шаблон за описание";
 "Description, genres, and rating from TMDB" = "Описание, жанрове и рейтинг от TMDB";
 "Details" = "Детайли";
 "Device language" = "Език на устройството";
@@ -159,11 +165,13 @@
 "Files" = "Файлове";
 "Fill" = "Запълни";
 "Filter sources by video codec." = "Филтрирай източници по видео кодек.";
+"Filter streams by file size." = "Филтрирай потоците по размер на файла.";
 "Filters & Sorting" = "Филтри и сортиране";
 "Finish connection approval" = "Завърши влизането в Trakt в браузъра си";
 "Fit" = "Побери";
 "Focus an avatar to view its name" = "Фокусирай аватар, за да видиш името му";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Забрави ли PIN? Нулирай го от Tuvora акаунта си на nuvio уебсайта.";
+"Formatting" = "Форматиране";
 "Friends" = "Приятели";
 "General" = "Общи";
 "Generating QR…" = "Генериране на QR…";
@@ -227,6 +235,7 @@
 "Movie" = "Филм";
 "Movies" = "Филми";
 "Name" = "Име";
+"Name template" = "Шаблон за име";
 "Networks" = "Мрежи";
 "Networks with logos from TMDB" = "Мрежи с лога от TMDB";
 "Next Episode" = "Следващ епизод";
@@ -251,6 +260,7 @@
 "On" = "Включено";
 "Only" = "Само";
 "Opening…" = "Отваряне…";
+"Original format" = "Оригинален формат";
 "Original language" = "Оригинален език";
 "Original order" = "Оригинален ред";
 "Outline" = "Контур";
@@ -258,6 +268,8 @@
 "PIN saved for %@." = "PIN запазен за %1$@.";
 "PRIMARY" = "ОСНОВЕН";
 "Password" = "Парола";
+"Per quality limit" = "Лимит на качество";
+"Per resolution limit" = "Лимит на резолюция";
 "Pick the accent color used across the app" = "Избери акцентния цвят, използван в приложението";
 "Play" = "Пусни";
 "Play file" = "Пусни файл";
@@ -302,10 +314,12 @@
 "Required to fetch ratings from MDBList" = "Задължителен за извличане на рейтинги от MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Задължителен за извличане на времеви маркери от anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Изисква активирано TMDB обогатяване";
+"Reset formatting" = "Възстанови форматирането";
 "Reset to Default" = "Възстанови по подразбиране";
 "Resolve playable links" = "Разрешавай възпроизводими връзки";
 "Resolve playable links before playback starts." = "Разрешавай възпроизводими връзки преди стартиране на възпроизвеждането.";
 "Resolve with" = "Разрешавай с";
+"Restore default source formatting." = "Възстанови стандартното форматиране на източниците.";
 "Resume" = "Продължи";
 "Retry" = "Опитай отново";
 "Rose" = "Роза";
@@ -350,6 +364,7 @@
 "Signed in" = "Вписан";
 "Simkl features" = "Simkl функции";
 "Size" = "Размер";
+"Size range" = "Диапазон на размер";
 "Skip Intro" = "Пропусни интро";
 "Smallest first" = "Най-малки първо";
 "Sort" = "Сортиране";
@@ -433,3 +448,5 @@
 "tv:cw_min_left" = "%1$ldm остава";
 "tv:type_movie" = "Филм";
 "tv:type_series" = "Сериал";
+"tv:debrid_stream_max_results_count" = "%1$ld потока";
+"tv:debrid_size_range_up_to" = "До %1$ldGB";

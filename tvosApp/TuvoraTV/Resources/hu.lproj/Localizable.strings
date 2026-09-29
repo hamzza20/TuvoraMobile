@@ -31,6 +31,8 @@
 "Bold" = "Félkövér";
 "Browse and play files already in your connected accounts." = "A csatlakoztatott fiókjaidban már meglévő fájlok böngészése és lejátszása.";
 "Cancel" = "Mégse";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Maximalizálja az ismétlődő 2160p, 1080p, 720p találatokat a rendezés után.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Maximalizálja az ismétlődő BluRay, WEB-DL, REMUX találatokat a rendezés után.";
 "Card" = "Kártya";
 "Cast with photos, director, and writer from TMDB" = "Színészek fotókkal, rendezők és írók a TMDB-ről";
 "Catalog" = "Katalógus";
@@ -62,6 +64,8 @@
 "Content & Discovery" = "Tartalom és felfedezés";
 "Continue Watching" = "Nézés folytatása";
 "Continue Watching Window" = "Folyamatos megtekintési időablak";
+"Controls how result names appear. Leave blank to use the original result name." = "A források nevének megjelenítését szabályozza.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Az egyes források alatt megjelenő metaadatokat szabályozza.";
 "Could not start sign-in." = "Nem sikerült elindítani a bejelentkezést.";
 "Couldn't play this cloud file." = "Nem sikerült lejátszani ezt a felhőben lévő fájlt.";
 "Create Profile" = "Profil létrehozása";
@@ -70,9 +74,11 @@
 "Custom" = "Egyedi";
 "Default" = "Alapértelmezett";
 "Default (media file)" = "Alapértelmezett (médiafájl)";
+"Default format" = "Alapértelmezett formátum";
 "Delete" = "Törlés";
 "Delete Profile" = "Profil törlése";
 "Dense" = "Sűrű";
+"Description template" = "Leírás sablon";
 "Description, genres, and rating from TMDB" = "Leírás, műfajok és értékelések a TMDB-ről";
 "Details" = "Részletek";
 "Device language" = "Eszköz nyelve";
@@ -127,6 +133,7 @@
 "More Like This source" = "„Hasonló tartalmak” forrása";
 "Movie" = "Film";
 "Movies" = "Filmek";
+"Name template" = "Név sablon";
 "Networks" = "Stúdiók / Csatornák";
 "Networks with logos from TMDB" = "Televíziós hálózatok és csatornák logókkal a TMDB-ről";
 "Next Episode" = "Következő epizód";
@@ -140,10 +147,13 @@
 "Ocean" = "Óceán";
 "Off" = "Ki";
 "On" = "Be";
+"Original format" = "Eredeti formátum";
 "Original language" = "Eredeti nyelv";
 "Original order" = "Eredeti sorrend";
 "Outline" = "Körvonal";
 "Password" = "Jelszó";
+"Per quality limit" = "Minőségenkénti korlát";
+"Per resolution limit" = "Felbontásonkénti korlát";
 "Play" = "Lejátszás";
 "Play file" = "Fájl lejátszása";
 "Play the first available source automatically." = "Az első elérhető forrás automatikus elindítása.";
@@ -167,6 +177,7 @@
 "Remove from library" = "Eltávolítás a könyvtárból";
 "Required to fetch ratings from MDBList" = "Szükséges az értékelések lekéréséhez az MDBList-ről";
 "Requires TMDB enrichment to be enabled" = "A TMDB adatbővítés engedélyezése szükséges hozzá";
+"Reset formatting" = "Formázás visszaállítása";
 "Reset to Default" = "Alapértelmezés visszaállítása";
 "Resolve playable links" = "Források engedélyezése";
 "Resolve playable links before playback starts." = "Az elsődleges források feloldása a lejátszás megkezdése előtt.";
@@ -194,6 +205,7 @@
 "Sign Out" = "Kijelentkezés";
 "Signed in" = "Bejelentkezve";
 "Simkl features" = "Simkl funkciók";
+"Size range" = "Mérettartomány";
 "Skip Intro" = "Intró kihagyása";
 "Smallest first" = "Legkisebb elöl";
 "Sort" = "Rendezés";

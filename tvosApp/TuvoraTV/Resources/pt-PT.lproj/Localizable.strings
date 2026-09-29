@@ -49,6 +49,8 @@
 "Bold" = "Negrito";
 "Browse and play files already in your connected accounts." = "Navega e reproduz ficheiros que já se encontram nas tuas contas ligadas.";
 "Cancel" = "Cancelar";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Limitar resultados repetidos de 2160p, 1080p, 720p após a ordenação.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limitar resultados repetidos de BluRay, WEB-DL, REMUX após a ordenação.";
 "Card" = "Cartão";
 "Cast with photos, director, and writer from TMDB" = "Mostra o elenco com fotografias e a equipa técnica (dados do TMDB).";
 "Catalog" = "Catálogo";
@@ -93,6 +95,8 @@
 "Continue Watching Window" = "Janela de Continuar a Ver";
 "Continue without account" = "Continuar sem conta";
 "Control what appears on home and search." = "Controla o que aparece na página inicial e na pesquisa.";
+"Controls how result names appear. Leave blank to use the original result name." = "Controla a forma como os nomes dos resultados aparecem. Deixa em branco para utilizar o nome original.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Controla os metadados apresentados sob cada resultado. Deixa em branco para utilizar os detalhes originais.";
 "Core playback behavior." = "Comportamento principal da reprodução.";
 "Could not complete QR sign in" = "Não foi possível concluir o início de sessão por QR";
 "Could not start sign-in." = "Não foi possível iniciar a sessão.";
@@ -110,12 +114,14 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Os URLs de avatares personalizados podem ser configurados a partir do painel web do Tuvora.";
 "Default" = "Predefinido";
 "Default (media file)" = "Predefinido (ficheiro multimédia)";
+"Default format" = "Formato predefinido";
 "Delete" = "Eliminar";
 "Delete Profile" = "Eliminar Perfil";
 "Delete Profile?" = "Eliminar Perfil?";
 "Delete this list?" = "Eliminar esta lista?";
 "Dense" = "Denso";
 "Description" = "Descrição";
+"Description template" = "Modelo de descrição";
 "Description, genres, and rating from TMDB" = "Descrição, géneros e classificação do TMDB";
 "Details" = "Detalhes";
 "Device language" = "Idioma do dispositivo";
@@ -154,11 +160,13 @@
 "Files" = "Ficheiros";
 "Fill" = "Preencher";
 "Filter sources by video codec." = "Filtrar fontes por codec de vídeo.";
+"Filter streams by file size." = "Filtrar streams pelo tamanho do ficheiro.";
 "Filters & Sorting" = "Filtros e Ordenação";
 "Finish connection approval" = "Conclui o início de sessão do Trakt no teu navegador";
 "Fit" = "Ajustar";
 "Focus an avatar to view its name" = "Foca num avatar para ver o teu nome";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Esqueceste-te do PIN? Repõe-no a partir da tua conta Tuvora no site do nuvio.";
+"Formatting" = "Formatação";
 "Friends" = "Amigos";
 "General" = "Geral";
 "Generating QR…" = "A gerar QR…";
@@ -220,6 +228,7 @@
 "Movie" = "Filme";
 "Movies" = "Filmes";
 "Name" = "Nome";
+"Name template" = "Modelo de nome";
 "Networks" = "Canais/Redes (Networks)";
 "Networks with logos from TMDB" = "Canais de transmissão com logótipos do TMDB";
 "Next Episode" = "Próximo episódio";
@@ -244,6 +253,7 @@
 "On" = "Ligado";
 "Only" = "Apenas";
 "Opening…" = "A abrir…";
+"Original format" = "Formato original";
 "Original language" = "Idioma original";
 "Original order" = "Ordem original";
 "Outline" = "Contorno";
@@ -251,6 +261,8 @@
 "PIN saved for %@." = "PIN guardado para %1$@.";
 "PRIMARY" = "PRINCIPAL";
 "Password" = "Palavra-passe";
+"Per quality limit" = "Limite por qualidade";
+"Per resolution limit" = "Limite por resolução";
 "Pick the accent color used across the app" = "Escolhe a cor de destaque utilizada na app";
 "Play" = "Reproduzir";
 "Play file" = "Reproduzir ficheiro";
@@ -291,10 +303,12 @@
 "Required to fetch ratings from MDBList" = "Necessária para obter as classificações do MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Necessário para obter as marcas de tempo para saltar a partir de anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Requer que o enriquecimento do TMDB esteja ativado";
+"Reset formatting" = "Repor formatação";
 "Reset to Default" = "Repor predefinições";
 "Resolve playable links" = "Resolver ligações reproduzíveis";
 "Resolve playable links before playback starts." = "Resolver as ligações reproduzíveis antes de a reprodução iniciar.";
 "Resolve with" = "Resolver com";
+"Restore default source formatting." = "Restaurar a formatação de fontes predefinida.";
 "Resume" = "Retomar";
 "Retry" = "Tentar novamente";
 "Rose" = "Rosa";
@@ -337,6 +351,7 @@
 "Sign Out" = "Terminar Sessão";
 "Signed in" = "Sessão iniciada";
 "Size" = "Tamanho";
+"Size range" = "Intervalo de tamanho";
 "Skip Intro" = "Saltar introdução";
 "Smallest first" = "Mais pequenos primeiro";
 "Sort" = "Ordenar";
@@ -411,3 +426,6 @@
 "tv:cw_min_left" = "restam %1$ldm";
 "tv:type_movie" = "Filme";
 "tv:type_series" = "Série";
+"tv:debrid_size_range_up_to" = "Até %1$ld GB";
+"tv:debrid_size_range_min_plus" = "%1$ld GB+";
+"tv:debrid_size_range_min_max" = "%1$ld-%2$ld GB";

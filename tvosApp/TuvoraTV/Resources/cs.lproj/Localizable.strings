@@ -52,6 +52,8 @@
 "Bold" = "Tučné";
 "Browse and play files already in your connected accounts." = "Procházejte a přehrávejte soubory, které již máte v připojených účtech.";
 "Cancel" = "Zrušit";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Omezit opakující se výsledky 2160p, 1080p, 720p po seřazení.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Omezit opakující se výsledky BluRay, WEB-DL, REMUX po seřazení.";
 "Card" = "Karta";
 "Cast with photos, director, and writer from TMDB" = "Obsazení s fotografiemi, režisér a scenárista z TMDB";
 "Catalog" = "Katalog";
@@ -99,6 +101,8 @@
 "Continue Watching Window" = "Okno Pokračovat ve sledování";
 "Continue without account" = "Pokračovat bez účtu";
 "Control what appears on home and search." = "Řídit, co se zobrazuje na domovské stránce a ve vyhledávání.";
+"Controls how result names appear. Leave blank to use the original result name." = "Ovládá, jak se budou názvy výsledků zobrazovat. Ponechte prázdné pro použití původního názvu výsledku.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Ovládá metadata zobrazená pod každým výsledkem. Ponechte prázdné pro použití původních detailů výsledku.";
 "Core playback behavior." = "Základní chování přehrávání.";
 "Could not complete QR sign in" = "Nepodařilo se dokončit QR přihlášení";
 "Could not start sign-in." = "Nepodařilo se spustit přihlášení.";
@@ -116,6 +120,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Vlastní URL avatarů lze konfigurovat z webového panelu Tuvora.";
 "Default" = "Výchozí";
 "Default (media file)" = "Výchozí (podle souboru)";
+"Default format" = "Výchozí formát";
 "Delete" = "Odstranit";
 "Delete Profile" = "Smazat profil";
 "Delete Profile?" = "Smazat profil?";
@@ -123,6 +128,7 @@
 "Delete this list?" = "Smazat tento seznam?";
 "Dense" = "Husté";
 "Description" = "Popis";
+"Description template" = "Šablona popisu";
 "Description, genres, and rating from TMDB" = "Popis, žánry a hodnocení z TMDB";
 "Details" = "Podrobnosti";
 "Device language" = "Jazyk zařízení";
@@ -161,11 +167,13 @@
 "Files" = "Soubory";
 "Fill" = "Vyplnit";
 "Filter sources by video codec." = "Filtrovat zdroje podle video kodeku.";
+"Filter streams by file size." = "Filtrovat streamy podle velikosti souboru.";
 "Filters & Sorting" = "Filtry a řazení";
 "Finish connection approval" = "Dokončete přihlášení do Trakt ve svém prohlížeči.";
 "Fit" = "Přizpůsobit";
 "Focus an avatar to view its name" = "Zaměřte avatara pro zobrazení jeho jména";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Zapomněli jste PIN? Resetujte jej ze svého účtu Tuvora na webu nuvio.";
+"Formatting" = "Formátování";
 "Friends" = "Přátelé";
 "General" = "Obecné";
 "Generating QR…" = "Generování QR…";
@@ -229,6 +237,7 @@
 "Movie" = "Film";
 "Movies" = "Filmy";
 "Name" = "Název";
+"Name template" = "Šablona názvu";
 "Networks" = "Sítě";
 "Networks with logos from TMDB" = "Sítě s logy z TMDB";
 "Next Episode" = "Další epizoda";
@@ -253,6 +262,7 @@
 "On" = "Zapnuto";
 "Only" = "Pouze";
 "Opening…" = "Otevírání…";
+"Original format" = "Původní formát";
 "Original language" = "Původní jazyk";
 "Original order" = "Původní pořadí";
 "Outline" = "Obrys";
@@ -260,6 +270,8 @@
 "PIN saved for %@." = "PIN uložen pro %1$@.";
 "PRIMARY" = "PRIMÁRNÍ";
 "Password" = "Heslo";
+"Per quality limit" = "Limit na kvalitu";
+"Per resolution limit" = "Limit na rozlišení";
 "Pick the accent color used across the app" = "Vyberte barvu zvýraznění používanou v celé aplikaci";
 "Play" = "Přehrát";
 "Play file" = "Přehrát soubor";
@@ -304,10 +316,12 @@
 "Required to fetch ratings from MDBList" = "Vyžadováno pro získání hodnocení z MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Vyžadováno pro získání časových značek přeskočení z anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Vyžaduje povolené obohacení TMDB";
+"Reset formatting" = "Obnovit formátování";
 "Reset to Default" = "Obnovit výchozí";
 "Resolve playable links" = "Získávat přehratelné odkazy";
 "Resolve playable links before playback starts." = "Získat přehratelné odkazy ještě před začátkem přehrávání.";
 "Resolve with" = "Získávat přes";
+"Restore default source formatting." = "Obnovit výchozí formátování zdrojů.";
 "Resume" = "Pokračovat";
 "Retry" = "Opakovat";
 "Rose" = "Růžová";
@@ -353,6 +367,7 @@
 "Signed in" = "Přihlášeno";
 "Simkl features" = "Funkce Simkl";
 "Size" = "Velikost";
+"Size range" = "Rozsah velikosti";
 "Skip Intro" = "Přeskočit intro";
 "Smallest first" = "Nejmenší první";
 "Sort" = "Řazení";
@@ -436,3 +451,5 @@
 "tv:cw_min_left" = "Zbývá %1$ldm";
 "tv:type_movie" = "Film";
 "tv:type_series" = "Seriál";
+"tv:debrid_stream_max_results_count" = "%1$ld streamů";
+"tv:debrid_size_range_up_to" = "Do %1$ldGB";

@@ -47,6 +47,8 @@
 "Bold" = "Vetgedrukt";
 "Browse and play files already in your connected accounts." = "Blader door en speel bestanden af die al in je verbonden accounts staan.";
 "Cancel" = "Annuleren";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Beperk herhaalde 2160p-, 1080p- en 720p-resultaten na het sorteren.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Beperk herhaalde BluRay-, WEB-DL- en REMUX-resultaten na het sorteren.";
 "Card" = "Kaart";
 "Cast with photos, director, and writer from TMDB" = "Cast met foto's, regisseur en schrijver van TMDB";
 "Catalog" = "Catalogus";
@@ -95,6 +97,8 @@
 "Continue without account" = "Doorgaan zonder account";
 "Control what appears on home and search." = "Bepaal wat zichtbaar is op het startscherm en bij zoeken.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Bepaalt hoe animeseries worden geïdentificeerd. Als je MAL of Kitsu kiest, krijgt elk seizoen een eigen vermelding in plaats van gegroepeerd te worden onder één IMDb-ID.";
+"Controls how result names appear. Leave blank to use the original result name." = "Bepaalt hoe resultaatnamen worden weergegeven. Laat leeg om de originele resultaatnaam te gebruiken.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Bepaalt de metadata die onder elk resultaat wordt getoond. Laat leeg om de originele resultaatdetails te gebruiken.";
 "Core playback behavior." = "Basisgedrag van het afspelen.";
 "Could not complete QR sign in" = "Kon de QR-aanmelding niet voltooien";
 "Could not create profile. Try again." = "Kon het profiel niet maken. Probeer het opnieuw.";
@@ -112,6 +116,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Eigen avatar-URL's kunnen worden ingesteld via het Tuvora-webpaneel.";
 "Default" = "Standaard";
 "Default (media file)" = "Standaard (mediabestand)";
+"Default format" = "Standaardformaat";
 "Delete" = "Verwijderen";
 "Delete Profile" = "Profiel verwijderen";
 "Delete Profile?" = "Profiel verwijderen?";
@@ -119,6 +124,7 @@
 "Delete this list?" = "Deze lijst verwijderen?";
 "Dense" = "Dicht";
 "Description" = "Beschrijving";
+"Description template" = "Beschrijvingssjabloon";
 "Description, genres, and rating from TMDB" = "Beschrijving, genres en beoordeling van TMDB";
 "Device language" = "Apparaattaal";
 "Disable" = "Uitschakelen";
@@ -157,11 +163,13 @@
 "Files" = "Bestanden";
 "Fill" = "Vullen";
 "Filter sources by video codec." = "Filter bronnen op videocodec.";
+"Filter streams by file size." = "Filter streams op bestandsgrootte.";
 "Filters & Sorting" = "Filters & sortering";
 "Finish connection approval" = "Goedkeuring van verbinding voltooien";
 "Fit" = "Passend";
 "Focus an avatar to view its name" = "Zet de focus op een avatar om de naam te zien";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Pincode vergeten? Stel deze opnieuw in via je Tuvora-account op de Tuvora-website.";
+"Formatting" = "Opmaak";
 "Friends" = "Vrienden";
 "General" = "Algemeen";
 "Generating QR…" = "QR genereren…";
@@ -222,6 +230,7 @@
 "Movie" = "Film";
 "Movies" = "Films";
 "Name" = "Naam";
+"Name template" = "Naamsjabloon";
 "Networks" = "Netwerken";
 "Networks with logos from TMDB" = "Netwerken met logo's van TMDB";
 "Next Episode" = "Volgende aflevering";
@@ -250,6 +259,7 @@
 "Open the Simkl verification page and enter this code." = "Open de Simkl-verificatiepagina en voer deze code in.";
 "Opening…" = "Openen…";
 "Or go to %@ and enter" = "Of ga naar %1$@ en voer in";
+"Original format" = "Oorspronkelijk formaat";
 "Original language" = "Oorspronkelijke taal";
 "Original order" = "Oorspronkelijke volgorde";
 "Outline" = "Omtrek";
@@ -257,6 +267,8 @@
 "PIN saved for %@." = "Pincode opgeslagen voor %1$@.";
 "PRIMARY" = "PRIMAIR";
 "Password" = "Wachtwoord";
+"Per quality limit" = "Limiet per kwaliteit";
+"Per resolution limit" = "Limiet per resolutie";
 "Pick the accent color used across the app" = "Kies de accentkleur die in de hele app wordt gebruikt";
 "Play" = "Afspelen";
 "Play file" = "Bestand afspelen";
@@ -299,10 +311,12 @@
 "Required to fetch ratings from MDBList" = "Vereist om beoordelingen van MDBList op te halen";
 "Required to fetch skip timestamps from anime-skip.com" = "Vereist om skip-tijdstempels op te halen van anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Vereist dat TMDB-verrijking is ingeschakeld";
+"Reset formatting" = "Opmaak herstellen";
 "Reset to Default" = "Herstellen naar standaard";
 "Resolve playable links" = "Afspeelbare links ophalen";
 "Resolve playable links before playback starts." = "Haal afspeelbare links op voordat het afspelen start.";
 "Resolve with" = "Ophalen via";
+"Restore default source formatting." = "Herstel de standaardopmaak van bronnen.";
 "Resume" = "Hervatten";
 "Retry" = "Opnieuw proberen";
 "Rose" = "Roze";
@@ -351,6 +365,7 @@
 "Simkl features" = "Simkl-functies";
 "Simkl-specific settings" = "Simkl-specifieke instellingen";
 "Size" = "Grootte";
+"Size range" = "Groottebereik";
 "Skip Intro" = "Intro overslaan";
 "Smallest first" = "Kleinste eerst";
 "Sort" = "Sorteren";
@@ -433,3 +448,6 @@
 "tv:cw_min_left" = "%1$ldm resterend";
 "tv:type_movie" = "Film";
 "tv:type_series" = "Serie";
+"tv:debrid_size_range_up_to" = "Tot %1$ld GB";
+"tv:debrid_size_range_min_plus" = "%1$ld GB+";
+"tv:debrid_size_range_min_max" = "%1$ld-%2$ld GB";

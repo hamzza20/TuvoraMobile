@@ -44,6 +44,8 @@
 "Bold" = "Fet";
 "Browse and play files already in your connected accounts." = "Bla gjennom og spill filer som allerede finnes i tilkoblede kontoer.";
 "Cancel" = "Avbryt";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Begrens gjentatte 2160p-, 1080p- og 720p-resultater etter sortering.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Begrens gjentatte BluRay-, WEB-DL- og REMUX-resultater etter sortering.";
 "Card" = "Kort";
 "Cast with photos, director, and writer from TMDB" = "Kast med bilder, regissør og skribent fra TMDB";
 "Catalog" = "Katalog";
@@ -89,6 +91,8 @@
 "Continue Watching Window" = "Fortsett å se vindu";
 "Continue without account" = "Fortsett uten konto";
 "Control what appears on home and search." = "Kontroller hva som vises på hjemmet og søket.";
+"Controls how result names appear. Leave blank to use the original result name." = "Styrer hvordan resultatnavn vises.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Styrer metadata vist under hvert resultat.";
 "Core playback behavior." = "Kjerneavspillingsatferd.";
 "Could not start sign-in." = "Kunne ikke starte innlogging.";
 "Couldn't play this cloud file." = "Kunne ikke spille av denne skyfilen.";
@@ -100,6 +104,7 @@
 "Custom" = "Egendefinert";
 "Default" = "Standard";
 "Default (media file)" = "Standard (mediefil)";
+"Default format" = "Standardformat";
 "Delete" = "Slett";
 "Delete Profile" = "Slett profil";
 "Delete Profile?" = "Slett profil?";
@@ -107,6 +112,7 @@
 "Delete this list?" = "Slett denne listen?";
 "Dense" = "Tett";
 "Description" = "Beskrivelse";
+"Description template" = "Beskrivelsesmal";
 "Description, genres, and rating from TMDB" = "Beskrivelse, sjangre og vurdering fra TMDB";
 "Details" = "Detaljer";
 "Device language" = "Enhetsspråk";
@@ -193,6 +199,7 @@
 "Movie" = "Film";
 "Movies" = "Filmer";
 "Name" = "Navn";
+"Name template" = "Navnemal";
 "Networks" = "Nettverk";
 "Networks with logos from TMDB" = "Nettverk med logoer fra TMDB";
 "Next Episode" = "Neste episode";
@@ -212,11 +219,14 @@
 "Nothing here yet" = "Det er ingenting her ennå";
 "Off" = "Av";
 "On" = "På";
+"Original format" = "Opprinnelig format";
 "Original language" = "Originalspråk";
 "Original order" = "Opprinnelig rekkefølge";
 "Outline" = "Oversikt";
 "PRIMARY" = "PRIMÆR";
 "Password" = "Passord";
+"Per quality limit" = "Grense per kvalitet";
+"Per resolution limit" = "Grense per oppløsning";
 "Play" = "Spill av";
 "Play file" = "Spill av fil";
 "Play the first available source automatically." = "Spill den første tilgjengelige kilden automatisk.";
@@ -255,6 +265,7 @@
 "Required to fetch ratings from MDBList" = "Kreves for å hente vurderinger fra MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Kreves for å hente hopptidsmerker fra anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Krever at TMDB-berikelse er aktivert";
+"Reset formatting" = "Tilbakestill formatering";
 "Reset to Default" = "Tilbakestill til standardverdier";
 "Resolve playable links" = "Løs spillbare lenker";
 "Resolve playable links before playback starts." = "Løs spillbare lenker før avspilling starter.";
@@ -299,6 +310,7 @@
 "Signed in" = "Logget inn";
 "Simkl features" = "Simkl-funksjoner";
 "Size" = "Størrelse";
+"Size range" = "Størrelsesområde";
 "Skip Intro" = "Hopp over intro";
 "Smallest first" = "Minst først";
 "Sort" = "Sortering";

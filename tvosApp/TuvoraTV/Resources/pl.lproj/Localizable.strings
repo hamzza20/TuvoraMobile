@@ -52,6 +52,8 @@
 "Bold" = "Pogrubienie";
 "Browse and play files already in your connected accounts." = "Przeglądaj i odtwarzaj pliki z połączonych kont.";
 "Cancel" = "Anuluj";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "Ogranicz powtarzające się wyniki 2160p, 1080p, 720p po sortowaniu.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ogranicz powtarzające się wyniki BluRay, WEB-DL, REMUX po sortowaniu.";
 "Card" = "Karta";
 "Cast with photos, director, and writer from TMDB" = "Obsada ze zdjęciami, reżyser i scenarzysta z TMDB";
 "Catalog" = "Katalog";
@@ -104,6 +106,8 @@
 "Continue without account" = "Kontynuuj bez konta";
 "Control what appears on home and search." = "Kontroluj co pojawia się na stronie głównej i w wyszukiwarce.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "Kontroluje sposób identyfikacji anime. Wybór MAL lub Kitsu daje każdemu sezonowi osobny wpis zamiast grupowania pod jednym ID IMDB.";
+"Controls how result names appear. Leave blank to use the original result name." = "Kontroluje sposób wyświetlania nazw źródeł.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "Kontroluje metadane wyświetlane pod każdym źródłem.";
 "Core playback behavior." = "Podstawowe zachowanie odtwarzacza.";
 "Could not complete QR sign in" = "Nie udało się dokończyć logowania QR";
 "Could not create profile. Try again." = "Nie udało się utworzyć profilu. Spróbuj ponownie.";
@@ -122,6 +126,7 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Niestandardowe adresy URL awatarów można skonfigurować z panelu webowego Tuvora.";
 "Default" = "Domyślny";
 "Default (media file)" = "Domyślny (plik multimedialny)";
+"Default format" = "Format domyślny";
 "Delete" = "Usuń";
 "Delete Profile" = "Usuń profil";
 "Delete Profile?" = "Usunąć profil?";
@@ -129,6 +134,7 @@
 "Delete this list?" = "Usunąć tę listę?";
 "Dense" = "Gęsty";
 "Description" = "Opis";
+"Description template" = "Szablon opisu";
 "Description, genres, and rating from TMDB" = "Opis, gatunki i ocena z TMDB";
 "Details" = "Szczegóły";
 "Device language" = "Język urządzenia";
@@ -168,11 +174,13 @@
 "Files" = "Pliki";
 "Fill" = "Wypełnij";
 "Filter sources by video codec." = "Filtruj źródła według kodeka wideo.";
+"Filter streams by file size." = "Filtruj strumienie według rozmiaru pliku.";
 "Filters & Sorting" = "Filtry i sortowanie";
 "Finish connection approval" = "Zakończ zatwierdzanie połączenia";
 "Fit" = "Dopasuj";
 "Focus an avatar to view its name" = "Skup się na awatarze, aby zobaczyć jego nazwę";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Zapomniałeś PIN? Zresetuj go ze swojego konta Tuvora na stronie nuvio.";
+"Formatting" = "Ustawienia webowe";
 "Friends" = "Znajomi";
 "General" = "Ogólne";
 "Generating QR…" = "Generowanie QR…";
@@ -235,6 +243,7 @@
 "Movie" = "Film";
 "Movies" = "Filmy";
 "Name" = "Nazwa";
+"Name template" = "Szablon nazwy";
 "Networks" = "Sieci";
 "Networks with logos from TMDB" = "Sieci z logo z TMDB";
 "Next Episode" = "Następny odcinek";
@@ -263,6 +272,7 @@
 "Open the Simkl verification page and enter this code." = "Otwórz stronę weryfikacji Simkl i wpisz ten kod.";
 "Opening…" = "Otwieranie…";
 "Or go to %@ and enter" = "Lub wejdź na %1$@ i wpisz";
+"Original format" = "Format oryginalny";
 "Original language" = "Język oryginalny";
 "Original order" = "Oryginalna kolejność";
 "Outline" = "Obrys";
@@ -270,6 +280,8 @@
 "PIN saved for %@." = "PIN zapisany dla %1$@.";
 "PRIMARY" = "GŁÓWNY";
 "Password" = "Hasło";
+"Per quality limit" = "Limit na jakość";
+"Per resolution limit" = "Limit na rozdzielczość";
 "Pick the accent color used across the app" = "Wybierz kolor akcentu używany w aplikacji";
 "Play" = "Odtwórz";
 "Play file" = "Odtwórz plik";
@@ -315,10 +327,12 @@
 "Required to fetch ratings from MDBList" = "Wymagany do pobierania ocen z MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Wymagany do pobierania znaczników czasu z anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Wymaga włączonego wzbogacania TMDB";
+"Reset formatting" = "Resetuj formatowanie";
 "Reset to Default" = "Przywróć domyślne";
 "Resolve playable links" = "Włącz źródła";
 "Resolve playable links before playback starts." = "Rozwiąż pierwsze źródła przed rozpoczęciem odtwarzania.";
 "Resolve with" = "Rozwiązuj za pomocą";
+"Restore default source formatting." = "Przywróć domyślne formatowanie źródeł.";
 "Resume" = "Wznów";
 "Retry" = "Spróbuj ponownie";
 "Rose" = "Róż";
@@ -367,6 +381,7 @@
 "Simkl features" = "Funkcje Simkl";
 "Simkl-specific settings" = "Ustawienia specyficzne dla Simkl";
 "Size" = "Rozmiar";
+"Size range" = "Zakres rozmiaru";
 "Skip Intro" = "Pomiń intro";
 "Smallest first" = "Najmniejsze najpierw";
 "Sort" = "Sortuj";
@@ -454,3 +469,6 @@
 "tv:cw_min_left" = "Zostało %1$ld min";
 "tv:type_movie" = "Film";
 "tv:type_series" = "Serial";
+"tv:debrid_stream_max_results_count" = "%1$ld strumieni";
+"tv:debrid_size_range_up_to" = "Do %1$ldGB";
+"tv:debrid_size_range_min_max" = "%1$ld–%2$ldGB";

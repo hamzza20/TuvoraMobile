@@ -53,6 +53,8 @@
 "Bold" = "خط عريض";
 "Browse and play files already in your connected accounts." = "تشغيل الملفات المحفوظة بحساباتك المرتبطة.";
 "Cancel" = "إلغاء";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "تقليل تكرار ملفات دقات (4K، 1080p، 720p) بعد ترتيبها.";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "تقليل تكرار إصدارات (BluRay، WEB-DL، REMUX) بعد الترتيب.";
 "Card" = "بطاقة";
 "Cast with photos, director, and writer from TMDB" = "الممثلون مع الصور، المخرج، والكاتب من TMDB";
 "Catalog" = "القائمة";
@@ -106,6 +108,8 @@
 "Continue without account" = "المتابعة بدون حساب";
 "Control what appears on home and search." = "التحكم في ما يظهر في الرئيسية والبحث.";
 "Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID." = "يتحكم في طريقة تعريف مسلسلات الأنمي. اختيار MAL أو Kitsu يعطي كل موسم مدخله الخاص بدل تجميعه تحت معرف IMDB واحد.";
+"Controls how result names appear. Leave blank to use the original result name." = "يتحكم في طريقة ظهور أسماء النتائج. اتركه فارغًا لاستخدام اسم النتيجة الأصلي.";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "يتحكم في البيانات الوصفية المعروضة أسفل كل نتيجة. اتركه فارغًا لاستخدام تفاصيل النتيجة الأصلية.";
 "Core playback behavior." = "الخصائص الأساسية للتشغيل.";
 "Could not complete QR sign in" = "تعذر إكمال تسجيل الدخول عبر رمز QR";
 "Could not start sign-in." = "تعذر الدخول.";
@@ -123,12 +127,14 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "يمكنك ضبط وتغيير روابط الصور الرمزية المخصصة عبر لوحة ويب Tuvora.";
 "Default" = "افتراضي";
 "Default (media file)" = "تلقائي (داخل الملف)";
+"Default format" = "التنسيق الافتراضي";
 "Delete" = "حذف";
 "Delete Profile" = "حذف الملف الشخصي";
 "Delete Profile?" = "حذف الملف الشخصي؟";
 "Delete this list?" = "حذف هذه القائمة؟";
 "Dense" = "كثيف";
 "Description" = "الوصف";
+"Description template" = "قالب الوصف";
 "Description, genres, and rating from TMDB" = "الوصف، التصنيفات، والتقييم من TMDB";
 "Details" = "التفاصيل";
 "Device language" = "لغة الجهاز";
@@ -168,11 +174,13 @@
 "Files" = "ملفات";
 "Fill" = "ملء";
 "Filter sources by video codec." = "تصفية الروابط بناءً على التكويد.";
+"Filter streams by file size." = "تصفية النتائج بناءً على المساحة الكلية للملف.";
 "Filters & Sorting" = "الفلاتر والترتيب";
 "Finish connection approval" = "إتمام الموافقة على الاتصال";
 "Fit" = "ملاءمة";
 "Focus an avatar to view its name" = "قف على الصورة الرمزية لعرض الاسم";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "نسيت رمز PIN؟ أعد تعيينه من حساب Tuvora الخاص بك على موقع nuvio.";
+"Formatting" = "التنسيق";
 "Friends" = "للأصدقاء";
 "General" = "عام";
 "Generating QR…" = "جاري إنشاء رمز QR…";
@@ -236,6 +244,7 @@
 "Movie" = "فيلم";
 "Movies" = "أفلام";
 "Name" = "الاسم";
+"Name template" = "قالب الاسم";
 "Networks" = "القنوات";
 "Networks with logos from TMDB" = "القنوات مع الشعارات من TMDB";
 "Next Episode" = "الحلقة التالية";
@@ -263,6 +272,7 @@
 "Only" = "فقط";
 "Open the Simkl verification page and enter this code." = "افتح صفحة التحقق من Simkl وأدخل هذا الرمز.";
 "Opening…" = "جاري الفتح…";
+"Original format" = "التنسيق الأصلي";
 "Original language" = "اللغة الأصلية";
 "Original order" = "الترتيب الأصلي";
 "Outline" = "الاطار الخارجي";
@@ -270,6 +280,8 @@
 "PIN saved for %@." = "تم حفظ رمز PIN لـ %1$@.";
 "PRIMARY" = "أساسي";
 "Password" = "كلمة المرور";
+"Per quality limit" = "الحد الأقصى لكل جودة";
+"Per resolution limit" = "الحد الأقصى لكل دقة";
 "Pick the accent color used across the app" = "حدد اللون العام المستخدم في كافة أنحاء التطبيق";
 "Play" = "تشغيل";
 "Play file" = "تشغيل الملف";
@@ -315,10 +327,12 @@
 "Required to fetch ratings from MDBList" = "مطلوب لجلب التقييمات من MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "مطلوب لجلب مواقيت التخطي من anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "يتطلب تفعيل إثراء بيانات TMDB";
+"Reset formatting" = "استعادة الإعدادات";
 "Reset to Default" = "استعادة الافتراضي";
 "Resolve playable links" = "جلب الروابط";
 "Resolve playable links before playback starts." = "تحليل الروابط بالخلفية قبل التشغيل.";
 "Resolve with" = "جلب بواسطة";
+"Restore default source formatting." = "استعادة التنسيق الافتراضي للمصدر.";
 "Resume" = "استئناف";
 "Retry" = "إعادة المحاولة";
 "Rose" = "الوردي";
@@ -367,6 +381,7 @@
 "Simkl features" = "ميزات Simkl";
 "Simkl-specific settings" = "إعدادات خاصة بـ Simkl";
 "Size" = "الحجم";
+"Size range" = "حجم الملفات المسموح";
 "Skip Intro" = "تخطي المقدمة";
 "Smallest first" = "الأصغر حجماً";
 "Sort" = "الترتيب";
@@ -459,3 +474,7 @@
 "tv:cw_min_left" = "متبقي %1$ld د";
 "tv:type_movie" = "فيلم";
 "tv:type_series" = "مسلسل";
+"tv:debrid_stream_max_results_count" = "%1$ld رابط";
+"tv:debrid_size_range_up_to" = "حتى %1$ld جيجابايت";
+"tv:debrid_size_range_min_plus" = "%1$ld جيجابايت فما فوق";
+"tv:debrid_size_range_min_max" = "%1$ld-%2$ld جيجابايت";

@@ -48,6 +48,8 @@
 "Bold" = "太字";
 "Browse and play files already in your connected accounts." = "接続済みアカウントのファイルを参照して再生";
 "Cancel" = "キャンセル";
+"Cap repeated 2160p, 1080p, 720p results after sorting." = "並べ替え後に2160p、1080p、720pの重複を制限します。";
+"Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "並べ替え後にBluRay、WEB-DL、REMUXの重複を制限します。";
 "Card" = "カード";
 "Cast with photos, director, and writer from TMDB" = "TMDBの写真付きキャスト、監督、脚本家";
 "Catalog" = "カタログ";
@@ -93,6 +95,8 @@
 "Continue Watching Window" = "視聴継続ウィンドウ";
 "Continue without account" = "アカウントなしで続ける";
 "Control what appears on home and search." = "ホームと検索に表示するものを制御";
+"Controls how result names appear. Leave blank to use the original result name." = "結果名の表示形式を制御します。空白の場合は元の結果名を使用します。";
+"Controls the metadata shown under each result. Leave blank to use the original result details." = "各結果に表示されるメタデータを制御します。空白の場合は元の結果詳細を使用します。";
 "Core playback behavior." = "基本的な再生動作";
 "Could not complete QR sign in" = "QRサインインを完了できませんでした";
 "Could not start sign-in." = "サインインを開始できませんでした。";
@@ -110,12 +114,14 @@
 "Custom avatar URLs can be configured from the Tuvora web panel." = "カスタムアバターURLはTuvoraウェブパネルから設定できます。";
 "Default" = "デフォルト";
 "Default (media file)" = "デフォルト（メディアファイル）";
+"Default format" = "デフォルト形式";
 "Delete" = "削除";
 "Delete Profile" = "プロフィールを削除";
 "Delete Profile?" = "プロフィールを削除しますか？";
 "Delete this list?" = "このリストを削除しますか？";
 "Dense" = "密集";
 "Description" = "説明";
+"Description template" = "説明テンプレート";
 "Description, genres, and rating from TMDB" = "TMDBの説明、ジャンル、評価";
 "Details" = "詳細";
 "Device language" = "デバイスの言語";
@@ -154,11 +160,13 @@
 "Files" = "ファイル";
 "Fill" = "塗りつぶし";
 "Filter sources by video codec." = "ビデオコーデックでソースをフィルターします。";
+"Filter streams by file size." = "ファイルサイズでストリームをフィルターします。";
 "Filters & Sorting" = "フィルター & 並べ替え";
 "Finish connection approval" = "ブラウザでTraktのサインインを完了してください";
 "Fit" = "フィット";
 "Focus an avatar to view its name" = "アバターを選択して名前を確認";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "PINを忘れた場合はTuvoraウェブサイトのアカウントページからリセットできます";
+"Formatting" = "フォーマット";
 "Friends" = "友達";
 "General" = "一般";
 "Generating QR…" = "QRを生成中…";
@@ -221,6 +229,7 @@
 "Movie" = "映画";
 "Movies" = "映画";
 "Name" = "名前";
+"Name template" = "名前テンプレート";
 "Networks" = "ネットワーク";
 "Networks with logos from TMDB" = "TMDBのロゴ付きネットワーク";
 "Next Episode" = "次のエピソード";
@@ -245,6 +254,7 @@
 "On" = "オン";
 "Only" = "のみ";
 "Opening…" = "開いています…";
+"Original format" = "オリジナル形式";
 "Original language" = "オリジナル言語";
 "Original order" = "元の順序";
 "Outline" = "アウトライン";
@@ -252,6 +262,8 @@
 "PIN saved for %@." = "%1$@ のPINを保存しました。";
 "PRIMARY" = "プライマリ";
 "Password" = "パスワード";
+"Per quality limit" = "品質ごとの制限";
+"Per resolution limit" = "解像度ごとの制限";
 "Pick the accent color used across the app" = "アプリ全体で使用するアクセントカラーを選択";
 "Play" = "再生";
 "Play file" = "ファイルを再生";
@@ -292,10 +304,12 @@
 "Required to fetch ratings from MDBList" = "MDBListから評価を取得するために必要";
 "Required to fetch skip timestamps from anime-skip.com" = "anime-skip.comからスキップタイムスタンプを取得するために必要";
 "Requires TMDB enrichment to be enabled" = "TMDB補完を有効にする必要があります";
+"Reset formatting" = "フォーマットをリセット";
 "Reset to Default" = "デフォルトにリセット";
 "Resolve playable links" = "再生可能リンクを解決";
 "Resolve playable links before playback starts." = "再生開始前に再生可能リンクを解決します。";
 "Resolve with" = "解決に使用";
+"Restore default source formatting." = "デフォルトのソースフォーマットを復元します。";
 "Resume" = "再開";
 "Retry" = "再試行";
 "Rose" = "ローズ";
@@ -338,6 +352,7 @@
 "Sign Out" = "サインアウト";
 "Signed in" = "サインイン済み";
 "Size" = "サイズ";
+"Size range" = "サイズ範囲";
 "Skip Intro" = "イントロスキップ";
 "Smallest first" = "小サイズ優先";
 "Sort" = "並び替え";
@@ -416,3 +431,5 @@
 "tv:cw_min_left" = "残り%1$ld分";
 "tv:type_movie" = "映画";
 "tv:type_series" = "シリーズ";
+"tv:debrid_stream_max_results_count" = "%1$ldストリーム";
+"tv:debrid_size_range_up_to" = "最大%1$ldGB";

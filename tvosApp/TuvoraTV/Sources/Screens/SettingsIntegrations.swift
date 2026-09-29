@@ -504,7 +504,7 @@ private struct DebridSettingsDetail: View {
                         }
                     }
                 }
-                if d.canResolvePlayableLinks {
+                if d.canResolvePlayableLinks || Self.smokeFilters {
                     SettingsGroupCard {
                         sectionLabel("Link Preparation")
                         SettingsToggleRow(title: "Prepare links", subtitle: "Resolve playable links before playback starts.",
@@ -527,6 +527,22 @@ private struct DebridSettingsDetail: View {
                                 options: [0, 5, 10, 20, 50].map { SettingsPickerOption(id: "\($0)", title: maxLabel($0)) },
                                 selectedId: "\(d.streamMaxResults)") { repo.setStreamMaxResults(value: Int32($0) ?? 0) }))
                         }
+                        let prefs = d.streamPreferences
+                        limitRow("Per resolution limit", "Cap repeated 2160p, 1080p, 720p results after sorting.",
+                                 Int(prefs.maxPerResolution)) { TvDebrid.shared.setMaxPerResolution(value: $0) }
+                        limitRow("Per quality limit", "Cap repeated BluRay, WEB-DL, REMUX results after sorting.",
+                                 Int(prefs.maxPerQuality)) { TvDebrid.shared.setMaxPerQuality(value: $0) }
+                        SettingsActionRow(title: "Size range", subtitle: "Filter streams by file size.",
+                                          value: sizeLabel(Int(prefs.sizeMinGb), Int(prefs.sizeMaxGb))) {
+                            let ranges = TvDebrid.shared.sizeRangeOptions
+                            dialogs.push(.picker(PickerSpec(title: "Size range",
+                                options: ranges.map { SettingsPickerOption(id: "\($0.minGb)-\($0.maxGb)", title: sizeLabel(Int($0.minGb), Int($0.maxGb))) },
+                                selectedId: "\(prefs.sizeMinGb)-\(prefs.sizeMaxGb)") { id in
+                                    if let r = ranges.first(where: { "\($0.minGb)-\($0.maxGb)" == id }) {
+                                        TvDebrid.shared.setSizeRange(minGb: r.minGb, maxGb: r.maxGb)
+                                    }
+                                }))
+                        }
                         let sorts: [(DebridStreamSortMode, String)] = [(.`default`, "Original order"), (.qualityDesc, "Best quality first"),
                                                                        (.sizeDesc, "Largest first"), (.sizeAsc, "Smallest first")]
                         enumRow("Sort results", "Choose how results are ordered.", sorts, d.streamSortMode) { repo.setStreamSortMode(value: $0) }
@@ -540,16 +556,63 @@ private struct DebridSettingsDetail: View {
                         enumRow("Codec", "Filter sources by video codec.", codecs, d.streamCodecFilter) { repo.setStreamCodecFilter(value: $0) }
                     }
                 }
+                SettingsGroupCard {
+                    sectionLabel("Formatting")
+                    templateRow("Name template", "Controls how result names appear. Leave blank to use the original result name.",
+                                d.streamNameTemplate, isDefault: TvDebrid.shared.isDefaultNameTemplate(template: d.streamNameTemplate)) {
+                        TvDebrid.shared.setNameTemplate(value: $0)
+                    }
+                    templateRow("Description template", "Controls the metadata shown under each result. Leave blank to use the original result details.",
+                                d.streamDescriptionTemplate,
+                                isDefault: TvDebrid.shared.isDefaultDescriptionTemplate(template: d.streamDescriptionTemplate)) {
+                        TvDebrid.shared.setDescriptionTemplate(value: $0)
+                    }
+                    SettingsActionRow(title: "Reset formatting", subtitle: "Restore default source formatting.", value: "Reset to Default") {
+                        TvDebrid.shared.resetTemplates()
+                    }
+                }
             }
         }
     }
+
+    /// Simulator smoke hook: `-smokeDebridFilters` shows the link and filter sections without an account.
+    private static let smokeFilters = ProcessInfo.processInfo.arguments.contains("-smokeDebridFilters")
 
     private func sectionLabel(_ text: String) -> some View {
         Text(ui: text).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary).padding(.top, dp(4))
     }
 
     private func prepareLabel(_ n: Int) -> String { n == 1 ? "1 link" : "\(n) links" }
-    private func maxLabel(_ n: Int) -> String { n == 0 ? "All streams" : "\(n) streams" }
+    /// debrid_stream_max_results_all / _count, in the viewer's language.
+    private func maxLabel(_ n: Int) -> String {
+        n <= 0 ? L("All streams") : String(format: LK("debrid_stream_max_results_count", "%1$ld streams"), n)
+    }
+    /// sizeRangeLabel (TvDebrid.sizeRangeLabel is the tested English form).
+    private func sizeLabel(_ minGb: Int, _ maxGb: Int) -> String {
+        if minGb <= 0 && maxGb <= 0 { return L("Any") }
+        if minGb <= 0 { return String(format: LK("debrid_size_range_up_to", "Up to %1$ldGB"), maxGb) }
+        if maxGb <= 0 { return String(format: LK("debrid_size_range_min_plus", "%1$ldGB+"), minGb) }
+        return String(format: LK("debrid_size_range_min_max", "%1$ld-%2$ldGB"), minGb, maxGb)
+    }
+
+    /// NuvioTV edits templates in a phone web editor it serves over the LAN; Apple TV edits them in
+    /// place with the native keyboard (the template shows as the row subtitle).
+    private func templateRow(_ title: String, _ description: String, _ template: String, isDefault: Bool,
+                             save: @escaping (String) -> Void) -> some View {
+        SettingsActionRow(title: title, subtitle: template.isEmpty ? description : template,
+                          value: template.isEmpty ? "Original format" : (isDefault ? "Default format" : nil)) {
+            dialogs.push(.custom(AnyView(KeyEntryDialog(title: title, subtitle: description,
+                placeholder: title, initial: template, dialogs: dialogs, onSave: save))))
+        }
+    }
+
+    private func limitRow(_ title: String, _ subtitle: String, _ current: Int, set: @escaping (Int32) -> Void) -> some View {
+        SettingsActionRow(title: title, subtitle: subtitle, value: maxLabel(current)) {
+            dialogs.push(.picker(PickerSpec(title: title,
+                options: TvDebrid.shared.limitOptions.map { SettingsPickerOption(id: "\($0.int32Value)", title: maxLabel(Int($0.int32Value))) },
+                selectedId: "\(current)") { set(Int32($0) ?? 0) }))
+        }
+    }
 
     private func enumRow<E: Equatable>(_ title: String, _ subtitle: String, _ options: [(E, String)], _ current: E,
                                        set: @escaping (E) -> Void) -> some View {
