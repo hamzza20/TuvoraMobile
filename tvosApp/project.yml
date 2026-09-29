@@ -1,0 +1,39 @@
+# Apple TV app. Generate the Xcode project with `xcodegen generate` (the .xcodeproj is not committed).
+# The shared Kotlin comes from ../tvosCore (NuvioMobile's own code compiled in place for tvOS).
+name: TuvoraTV
+options:
+  bundleIdPrefix: com.tuvora
+  deploymentTarget: { tvOS: "17.5" }
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  TuvoraTV:
+    type: application
+    platform: tvOS
+    sources: [TuvoraTV/Sources]
+    info:
+      path: TuvoraTV/Info.plist
+      properties:
+        CFBundleDisplayName: Tuvora
+        UILaunchScreen: {}
+        NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
+        CFBundleLocalizations: [en, ar, bg, cs, de, el, es, fr, he, hu, id, it, ja, nb, nl, pl, pt, pt-BR, ro, ru, sk, tr, ur, vi]
+    settings:
+      base:
+        FRAMEWORK_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../tvosCore/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"]
+        OTHER_LDFLAGS: ["$(inherited)", "-framework", "TuvoraCore", "-lsqlite3", "-lc++", "-framework", "SystemConfiguration"]
+        CODE_SIGN_STYLE: Automatic
+      # Same bundle IDs as the iPhone app: Universal Purchase puts Apple TV on the same App Store record.
+      configs:
+        Debug: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.app }
+        Release: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.media }
+    preBuildScripts:
+      - name: Build TuvoraCore (Kotlin)
+        script: exec "$SRCROOT/Scripts/build-tuvoracore.sh"
+        basedOnDependencyAnalysis: false
+    postBuildScripts:
+      - name: Copy string tables
+        script: exec "$SRCROOT/Scripts/copy-string-tables.sh"
+        basedOnDependencyAnalysis: false

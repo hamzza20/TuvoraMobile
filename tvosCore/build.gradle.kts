@@ -13,6 +13,8 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinxSerialization)
+    // Swift-friendly API for the Apple TV app: StateFlow as an observable, suspend as async.
+    alias(libs.plugins.skie)
 }
 
 val composeAppSrc = rootProject.file("composeApp/src")
@@ -140,8 +142,11 @@ abstract class GenerateTvosResources : DefaultTask() {
         plurals.forEach { (k, q) ->
             kt.appendLine("val Res.plurals.`$k`: PluralStringResource get() = PluralStringResource(${kotlinLiteral(k)}, ${kotlinLiteral(q["one"] ?: q["other"].orEmpty())}, ${kotlinLiteral(q["other"].orEmpty())})")
         }
-        drawables.forEach { kt.appendLine("val Res.drawable.`$it`: DrawableResource get() = DrawableResource(${kotlinLiteral(it)})") }
-        fonts.forEach { kt.appendLine("val Res.font.`$it`: FontResource get() = FontResource(${kotlinLiteral(it)})") }
+        // Compose's own generator turns '-' into '_' in accessor names (a file "a-b.xml" -> Res.drawable.a_b);
+        // a hyphen would also be an invalid Objective-C name in the framework header.
+        fun accessor(name: String) = name.replace('-', '_').replace('.', '_')
+        drawables.forEach { kt.appendLine("val Res.drawable.`${accessor(it)}`: DrawableResource get() = DrawableResource(${kotlinLiteral(it)})") }
+        fonts.forEach { kt.appendLine("val Res.font.`${accessor(it)}`: FontResource get() = FontResource(${kotlinLiteral(it)})") }
         val ktFile = kotlinOut.get().asFile.resolve("nuvio/composeapp/generated/resources/Res.tvos.kt")
         ktFile.parentFile.mkdirs()
         ktFile.writeText(kt.toString())
@@ -170,6 +175,11 @@ val generateTvosResources = tasks.register<GenerateTvosResources>("generateTvosR
 
 kotlin {
     listOf(tvosArm64(), tvosSimulatorArm64()).forEach { target ->
+        // The framework the Apple TV Xcode project links (tvosApp/). Static, like the iOS app's.
+        target.binaries.framework {
+            baseName = "TuvoraCore"
+            isStatic = true
+        }
         // Same CommonCrypto binding the iOS build uses (Stalker MAC signing, PIN hashing, Simkl PKCE).
         target.compilations.getByName("main").cinterops.create("commoncrypto") {
             defFile(rootProject.file("composeApp/src/nativeInterop/cinterop/commoncrypto.def"))

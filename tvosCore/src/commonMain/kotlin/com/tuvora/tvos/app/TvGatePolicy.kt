@@ -1,0 +1,79 @@
+package com.tuvora.tvos.app
+
+import com.nuvio.app.core.auth.AuthState
+import com.nuvio.app.features.profiles.NuvioProfile
+
+/**
+ * Apple TV's startup gate: which screen shows, and which profile opens without asking.
+ *
+ * Mirrors the phone's AppGate.kt (upstream, Compose-bound, excluded from :tvosCore) rule for rule, so
+ * a household sees the same behaviour on both. Pure, so it is tested without auth, storage or UI;
+ * TvAppLifecycle feeds it the live state and carries out the decision.
+ */
+enum class TvGateScreen { Loading, SignIn, ProfilePicker, Switching, Main }
+
+data class TvGateInput(
+    val auth: AuthState,
+    val profiles: List<NuvioProfile>,
+    val current: TvGateScreen,
+    val online: Boolean,
+    val rememberLastProfileEnabled: Boolean,
+    val hasEverSelectedProfile: Boolean,
+    val activeProfileIndex: Int,
+    /** The user chose "switch profile": the picker must stay up even with a single profile. */
+    val userOpenedPicker: Boolean = false,
+)
+
+sealed interface TvGateDecision {
+    data object Stay : TvGateDecision
+    data class Show(val screen: TvGateScreen) : TvGateDecision
+    data class SwitchTo(val profile: NuvioProfile, val sync: Boolean) : TvGateDecision
+}
+
+object TvGatePolicy {
+
+    fun decide(input: TvGateInput): TvGateDecision {
+        if (input.current == TvGateScreen.Switching) return TvGateDecision.Stay
+
+        val authenticated = input.auth is AuthState.Authenticated
+        val cachedAccess = input.profiles.isNotEmpty() && !authenticated
+
+        return when (input.auth) {
+            AuthState.Loading ->
+                if (cachedAccess) enterProfileGate(input, sync = false) else TvGateDecision.Show(TvGateScreen.Loading)
+
+            AuthState.Unauthenticated ->
+                // AppGate.kt: cached profiles stay usable offline, or when the user is not on sign-in.
+                if (cachedAccess && (!input.online || input.current != TvGateScreen.SignIn)) {
+                    enterProfileGate(input, sync = false)
+                } else {
+                    TvGateDecision.Show(TvGateScreen.SignIn)
+                }
+
+            is AuthState.Authenticated -> when (input.current) {
+                TvGateScreen.Loading, TvGateScreen.SignIn -> enterProfileGate(input, sync = true)
+                // Profiles can arrive after the picker went up (pull after sign-in): auto-skip then too.
+                TvGateScreen.ProfilePicker ->
+                    if (input.userOpenedPicker) TvGateDecision.Stay else autoSkip(input, sync = true) ?: TvGateDecision.Stay
+                else -> TvGateDecision.Stay
+            }
+        }
+    }
+
+    private fun enterProfileGate(input: TvGateInput, sync: Boolean): TvGateDecision {
+        if (input.profiles.isEmpty()) return TvGateDecision.Show(TvGateScreen.ProfilePicker)
+        return autoSkip(input, sync) ?: TvGateDecision.Show(TvGateScreen.ProfilePicker)
+    }
+
+    /** A profile that opens without the picker: the remembered one, or the only one; never past a PIN. */
+    private fun autoSkip(input: TvGateInput, sync: Boolean): TvGateDecision? {
+        if (input.rememberLastProfileEnabled && input.hasEverSelectedProfile) {
+            input.profiles
+                .find { it.profileIndex == input.activeProfileIndex }
+                ?.takeUnless { it.pinEnabled }
+                ?.let { return TvGateDecision.SwitchTo(it, sync) }
+        }
+        val only = input.profiles.singleOrNull() ?: return null
+        return if (only.pinEnabled) null else TvGateDecision.SwitchTo(only, sync)
+    }
+}

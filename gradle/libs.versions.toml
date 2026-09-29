@@ -1,4 +1,5 @@
 [versions]
+skie = "0.10.15"
 agp = "9.2.0"
 android-compileSdk = "37"
 android-compileSdkMinor = "0"
@@ -106,6 +107,7 @@ desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref 
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
 
 [plugins]
+skie = { id = "co.touchlab.skie", version.ref = "skie" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
