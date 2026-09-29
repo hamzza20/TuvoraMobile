@@ -176,6 +176,17 @@ struct SettingsScreen: View {
                                                         placeholder: "Enter Torbox API key", initial: "", dialogs: dialogs) { _ in })))
         case "engine":
             dialogs.push(.picker(PlaybackSettingsDetail.enginePicker(current: UserDefaults.standard.string(forKey: "tvos.player.engine") ?? "auto")))
+        case "guideRegions": dialogs.push(.guideRegions)
+        case "iptvPairing": dialogs.push(.iptvPairing)
+        case "hiddenItems":
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                // `-smokeAccount <name>` picks the playlist; else the first.
+                let args = ProcessInfo.processInfo.arguments
+                let wanted = args.firstIndex(of: "-smokeAccount").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+                let accounts = model.xtream?.accounts ?? []
+                if let account = accounts.first(where: { $0.name == wanted }) ?? accounts.first { dialogs.push(.hiddenItems(account)) }
+            }
         case "removePlaylist":
             Task {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
@@ -217,6 +228,9 @@ enum SettingsDialogKind {
     case signOut
     case picker(PickerSpec)
     case playlistActions(XtreamAccount)
+    case hiddenItems(XtreamAccount)
+    case guideRegions
+    case iptvPairing
     case removePlaylist(XtreamAccount)
     case playlistForm(PlaylistFormModel)
     case addonActions(ManagedAddon)
@@ -277,6 +291,12 @@ private struct SettingsDialogView: View {
             }
         case .playlistActions(let account):
             PlaylistActionsDialog(account: account, dialogs: dialogs)
+        case .hiddenItems(let account):
+            HiddenItemsDialog(account: account, dialogs: dialogs)
+        case .guideRegions:
+            GuideRegionsDialog(dialogs: dialogs)
+        case .iptvPairing:
+            IptvPairingDialog(dialogs: dialogs)
         case .removePlaylist(let account):
             RemovePlaylistDialog(account: account, dialogs: dialogs)
         case .playlistForm(let form):
@@ -720,11 +740,11 @@ private struct AddonsSettingsDetail: View {
 // MARK: - Integrations (IPTV)
 
 /// XtreamSettingsContent (XtreamSettingsScreen.kt), reached from the Integrations hub as on NuvioTV.
-/// Not ported: "Add from phone" pairing, Guide regions, Content & Categories, Hidden channels, and the
-/// catch-up / guide-offset pickers.
+/// Not ported: Content & Categories and the catch-up / guide-offset pickers.
 struct IptvSettingsDetail: View {
     @ObservedObject var model: SettingsModel
     @EnvironmentObject private var dialogs: SettingsDialogs
+    @State private var regionSummary = "—"
 
     var body: some View {
         VStack(alignment: .leading, spacing: dp(12)) {
@@ -733,6 +753,16 @@ struct IptvSettingsDetail: View {
                 SettingsActionRow(title: "Add IPTV account", subtitle: "Paste a portal / M3U URL", leadingIcon: "md_add") {
                     TvPlaylists.shared.clearError()
                     dialogs.push(.playlistForm(PlaylistFormModel(editing: nil)))
+                }
+                // Pair from a phone: typing on a TV remote is painful, so a QR + code lets the viewer enter
+                // the playlist on their phone (NuvioTV P5).
+                SettingsActionRow(title: "Add from phone", subtitle: "Scan a QR on your phone and enter a playlist — no typing on the TV",
+                                  leadingIcon: "md_phone_android") {
+                    dialogs.push(.iptvPairing)
+                }
+                SettingsActionRow(title: "Guide regions", subtitle: "Choose which countries' EPG this device keeps",
+                                  value: regionSummary, leadingIcon: "md_explore") {
+                    dialogs.push(.guideRegions)
                 }
                 ForEach(model.xtream?.accounts ?? [], id: \.id) { account in
                     SettingsActionRow(title: account.name,
@@ -744,6 +774,125 @@ struct IptvSettingsDetail: View {
                 }
             }
         }
+        // Re-read when the region picker closes (the dialog stack changes).
+        .task(id: dialogs.stack.count) {
+            let regions = (try? await TvIptvPersonalize.shared.regions()) ?? []
+            let selected = (try? await TvIptvPersonalize.shared.selectedRegions()) ?? []
+            regionSummary = TvIptvSettingsPolicy.shared.regionSummary(selected: selected, available: regions)
+        }
+    }
+}
+
+/// "Hidden in <playlist>" (NuvioTV hiddenFor dialog): hides made on any device or tuvora.co, undone here.
+private struct HiddenItemsDialog: View {
+    let account: XtreamAccount
+    @ObservedObject var dialogs: SettingsDialogs
+    @State private var items: [TvHiddenItem]?
+
+    var body: some View {
+        NuvioDialog(title: "Hidden in \(account.name)",
+                    subtitle: TvIptvSettingsPolicy.shared.hiddenSubtitle(loading: items == nil, count: Int32(items?.count ?? 0)),
+                    width: dp(520)) {
+            ForEach(items ?? [], id: \.id) { item in
+                SettingsActionRow(title: item.name, subtitle: item.kindLabel, value: "Unhide", showChevron: false) {
+                    TvIptvPersonalize.shared.unhide(id: item.id)
+                    NSLog("SMOKE settings unhid=%@", item.name)
+                    items?.removeAll { $0.id == item.id }
+                }
+            }
+            SettingsDialogButton(title: "Done", fullWidth: true, initialFocus: (items ?? []).isEmpty) { dialogs.pop() }
+        }
+        .task {
+            items = (try? await TvIptvPersonalize.shared.hiddenItems(accountId: account.id)) ?? []
+            NSLog("SMOKE settings hidden count=%d", items?.count ?? -1)
+            // `-smokeUnhide <name>` (with `-smokeSettingsDialog hiddenItems`) reverts one verification hide,
+            // by exact name — never anything else the account has hidden.
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-smokeUnhide"), i + 1 < args.count {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                for item in (items ?? []) where item.name == args[i + 1] {
+                    TvIptvPersonalize.shared.unhide(id: item.id)
+                    NSLog("SMOKE settings unhid=%@", item.name)
+                    items?.removeAll { $0.id == item.id }
+                }
+            }
+        }
+    }
+}
+
+/// EpgRegionPickerDialog: "Done" / "Use all", then a check row per region (flag, name, channel count);
+/// checked rows FocusBackground. Empty selection = every region (the opt-in default).
+private struct GuideRegionsDialog: View {
+    @ObservedObject var dialogs: SettingsDialogs
+    @State private var regions: [TvEpgRegion]?
+    @State private var selected: Set<String> = []
+
+    var body: some View {
+        NuvioDialog(title: "Guide regions",
+                    subtitle: TvIptvSettingsPolicy.shared.regionDialogSubtitle(selectedCount: Int32(selected.count), total: Int32(regions?.count ?? 0))) {
+            if let regions, regions.isEmpty {
+                SettingsHelperText(text: "Available after the first guide sync.")
+                SettingsDialogButton(title: "Done", primary: true, fullWidth: true, initialFocus: true) { dialogs.pop() }
+            } else if let regions {
+                HStack(spacing: dp(8)) {
+                    SettingsDialogButton(title: "Done", primary: true) {
+                        TvIptvPersonalize.shared.setRegions(regions: selected)
+                        NSLog("SMOKE settings regions=%@", selected.sorted().joined(separator: ","))
+                        dialogs.pop()
+                    }
+                    SettingsDialogButton(title: "Use all") { selected = [] }
+                    Spacer()
+                }
+                ForEach(regions, id: \.name) { region in
+                    RegionCheckRow(region: region, checked: selected.contains(region.name),
+                                   initialFocus: region.name == regions.first?.name) {
+                        if selected.contains(region.name) { selected.remove(region.name) } else { selected.insert(region.name) }
+                    }
+                }
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            regions = (try? await TvIptvPersonalize.shared.regions()) ?? []
+            selected = (try? await TvIptvPersonalize.shared.selectedRegions()) ?? []
+        }
+    }
+}
+
+/// EpgRegionCheckRow: card radius 10, BackgroundCard / FocusBackground when checked or focused, 16dp
+/// padding; flag, name, "N channels", check.
+private struct RegionCheckRow: View {
+    let region: TvEpgRegion
+    let checked: Bool
+    let initialFocus: Bool
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: dp(10), style: .continuous)
+        Button(action: action) {
+            HStack(spacing: dp(12)) {
+                if !region.flag.isEmpty { Text(region.flag).font(NuvioType.titleMedium) }
+                VStack(alignment: .leading, spacing: dp(2)) {
+                    Text(region.name).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    Text("\(region.channelCount) channels").font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
+                }
+                Spacer()
+                if checked {
+                    Image("md_check_circle").renderingMode(.template).resizable().frame(width: dp(20), height: dp(20))
+                        .foregroundStyle(colors.secondary)
+                }
+            }
+            .padding(dp(16))
+            .background(shape.fill(checked || focused ? colors.focusBackground : colors.backgroundCard))
+            .overlay(shape.stroke(focused ? colors.focusRing : .clear, lineWidth: dp(2)))
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .reportsFocus(focused)
+        .onAppear { if initialFocus { DispatchQueue.main.async { focused = true } } }
     }
 }
 
@@ -759,6 +908,11 @@ private struct PlaylistActionsDialog: View {
                     TvPlaylists.shared.clearError()
                     dialogs.push(.playlistForm(PlaylistFormModel(editing: account)))
                 }
+            }
+            // F02: hides made on any device or the website are undone here.
+            SettingsActionRow(title: "Hidden channels & groups", subtitle: "Bring back what you hid") {
+                dialogs.pop()
+                dialogs.push(.hiddenItems(account))
             }
             if TvPlaylists.shared.canRematch(account: account) {
                 SettingsActionRow(title: "Re-match catalog", subtitle: "Re-check titles this playlist was thought not to have") {
@@ -1156,5 +1310,112 @@ private struct LicencesDialog: View {
             SettingsDialogButton(title: "Close", primary: true, action: close)
         }
         .frame(maxHeight: dp(460))
+    }
+}
+
+
+/// IptvPairingScreen (NuvioTV P5): "Add IPTV from your phone" — QR (220dp on white) beside the code
+/// (Primary-outlined, 4sp tracking), the URL, "Waiting for a playlist from your phone…" and the expiry;
+/// then success / expired / error with Try again. The poll lives in this dialog's task only.
+private struct IptvPairingDialog: View {
+    @ObservedObject var dialogs: SettingsDialogs
+    @Environment(\.nuvio) private var colors
+    @State private var state = TvPairingState(status: "loading", code: nil, webUrl: nil, expiresAtMs: nil, message: nil)
+    @State private var attempt = 0
+    @State private var now = Date()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: dp(12)) {
+            switch state.status {
+            case "success":
+                Text("Playlist added").font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+                Text(state.message ?? "Your playlist is now on your TV.").font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                SettingsDialogButton(title: "Done", primary: true, initialFocus: true) { dialogs.pop() }
+            case "expired", "error":
+                Text(state.status == "expired" ? "Pairing code expired" : "Couldn't pair")
+                    .font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+                Text(state.status == "expired" || state.message == nil
+                     ? "The code timed out before a playlist was received. Try again to get a new code."
+                     : state.message!)
+                    .font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                HStack(spacing: dp(8)) {
+                    SettingsDialogButton(title: "Try again", primary: true, initialFocus: true) { attempt += 1 }
+                    SettingsDialogButton(title: "Back") { dialogs.pop() }
+                }
+            default:
+                Text("Add IPTV from your phone").font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+                Text("Scan the QR code with your phone, or open the link below and enter the code. Then type your playlist on the phone — it will appear here.")
+                    .font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary).frame(maxWidth: dp(520), alignment: .leading)
+                HStack(alignment: .top, spacing: dp(32)) {
+                    qr
+                    codeColumn
+                }
+                .padding(.top, dp(12))
+                SettingsDialogButton(title: "Back", initialFocus: true) { dialogs.pop() }
+                    .padding(.top, dp(12))
+            }
+        }
+        .padding(dp(32))
+        .frame(maxWidth: dp(720), alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: dp(20)).fill(colors.backgroundElevated))
+        .task(id: attempt) {
+            try? await TvIptvPairing.shared.run { next in
+                // The session reports from Kotlin's dispatcher threads; state belongs to the main actor.
+                DispatchQueue.main.async { state = next }
+                NSLog("SMOKE pairing status=%@ code=%@", next.status, next.code ?? "-")
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                now = Date()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var qr: some View {
+        if let url = state.webUrl, let image = QrCode.image(for: url) {
+            Image(decorative: image, scale: 1).interpolation(.none).resizable()
+                .padding(dp(10)).frame(width: dp(220), height: dp(220))
+                .background(RoundedRectangle(cornerRadius: dp(12)).fill(Color.white))
+                .accessibilityLabel("IPTV pairing QR code")
+        } else {
+            Text(state.status == "loading" ? "Generating QR…" : "QR unavailable")
+                .font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
+                .frame(width: dp(220), height: dp(220))
+                .background(RoundedRectangle(cornerRadius: dp(12)).fill(colors.backgroundCard))
+                .overlay(RoundedRectangle(cornerRadius: dp(12)).stroke(colors.border, lineWidth: dp(1)))
+        }
+    }
+
+    private var codeColumn: some View {
+        VStack(alignment: .leading, spacing: dp(4)) {
+            if let code = state.code {
+                Text("Your code").font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
+                Text(code).font(NuvioType.inter(36, .bold)).tracking(dp(4)).foregroundStyle(colors.textPrimary)
+                    .fixedSize()
+                    .padding(.horizontal, dp(20)).padding(.vertical, dp(14))
+                    .overlay(RoundedRectangle(cornerRadius: dp(12)).stroke(colors.primary.opacity(0.5), lineWidth: dp(1)))
+                Text("On your phone, go to:").font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).padding(.top, dp(16))
+                Text(TvIptvPairingPolicy.shared.displayUrl(baseUrl: TvIptvPairingPolicy.shared.WEB_BASE_URL))
+                    .font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary)
+                HStack(spacing: dp(8)) {
+                    ProgressView().scaleEffect(0.6)
+                    Text(state.status == "saving" ? "Adding your playlist…" : "Waiting for a playlist from your phone…")
+                        .font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
+                }
+                .padding(.top, dp(16))
+                if let expires = state.expiresAtMs?.int64Value {
+                    Text(TvIptvPairingPolicy.shared.expiresText(remainingMs: expires - Int64(now.timeIntervalSince1970 * 1000)))
+                        .font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
+                }
+            } else {
+                HStack(spacing: dp(8)) {
+                    ProgressView().scaleEffect(0.6)
+                    Text("Preparing a pairing code…").font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
+                }
+            }
+        }
     }
 }
