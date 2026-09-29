@@ -241,6 +241,12 @@ class TvPlayerSession(
             saturation = settings.iosSaturation,
             gamma = settings.iosGamma,
         )
+        val subStyle = TvSubtitleStyle.forMpv(settings.subtitleStyle)
+        created.applySubtitleStyle(
+            textColor = subStyle.textColor, backgroundColor = subStyle.backgroundColor, outlineColor = subStyle.outlineColor,
+            outlineSize = subStyle.outlineSize, bold = subStyle.bold, fontSize = subStyle.fontSize,
+            subPos = subStyle.subPos, stripSdh = subStyle.stripSdh,
+        )
         created.setIsLiveStream(isLive)
         val headers = TvPlaybackHeaders.sanitize(launch.sourceHeaders)
         created.loadFileWithAudio(
