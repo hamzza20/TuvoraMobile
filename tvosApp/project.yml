@@ -15,7 +15,15 @@ targets:
   TuvoraTV:
     type: application
     platform: tvOS
-    sources: [TuvoraTV/Sources, TuvoraTV/Assets.xcassets, TuvoraTV/Resources, Shared]
+    sources:
+      - TuvoraTV/Sources
+      - TuvoraTV/Assets.xcassets
+      - TuvoraTV/Resources
+      - Shared
+      # libmpv/libass renders subtitles only with a font it can find: the same Noto Sans CJK the iOS
+      # app bundles (MPVPlayerBridge.configureBundledSubtitleFont), shared rather than copied.
+      - path: ../iosApp/iosApp/Resources/Fonts/NotoSansCJKsc-Regular.otf
+        buildPhase: resources
     dependencies:
       - package: MPVKit
         product: MPVKit

@@ -33,7 +33,19 @@ struct TvPlayerScreen: View {
     @State private var scrubOriginMs: Int64 = 0
     @State private var panel: PlayerPanel?
     @State private var skipFlash: String?
+    @State private var overlay: PlayerOverlay?
+    /// The skip segment whose button auto-hid (10 s, NuvioTV); it shows again with the controls.
+    @State private var skipHiddenFor: Int64?
     @FocusState private var rootFocused: Bool
+    @FocusState private var skipFocused: Bool
+    @FocusState private var startOverFocused: Bool
+
+    /// The Skip button is up: a segment is playing and it hasn't auto-hidden (or the controls are showing).
+    private var skipVisible: Bool {
+        guard let segment = state?.skipSegment, panel == nil, overlay == nil, state?.startOverAtMs == nil else { return false }
+        return controlsVisible || skipHiddenFor != segment.startMs
+    }
+    private var startOverVisible: Bool { state?.startOverAtMs != nil && panel == nil && overlay == nil }
 
     private var isLive: Bool { state?.isLive ?? false }
 
@@ -45,12 +57,45 @@ struct TvPlayerScreen: View {
             if let state {
                 PlayerChrome(session: session, state: state, scrubMs: scrubMs, visible: controlsVisible || scrubMs != nil,
                              skipFlash: skipFlash,
-                             onShowPanel: { panel = $0 }, onActivity: bumpControls)
+                             onShowPanel: { panel = $0 }, onShowOverlay: { overlay = $0 }, onActivity: bumpControls)
                 if state.showNextEpisode, let next = state.nextEpisode, panel == nil, let meta = session.seriesMeta {
                     NextEpisodeCard(video: next) { playback.openSources(meta: meta, video: next) }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                         .padding(.trailing, dp(32)).padding(.bottom, controlsVisible ? dp(150) : dp(32))
                         .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                if skipVisible, let segment = state.skipSegment {
+                    SkipSegmentButton(label: segment.label, countingDown: !controlsVisible && skipHiddenFor != segment.startMs) {
+                        session.skipSegment(); bumpControls()
+                    }
+                    .focused($skipFocused)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    .padding(.leading, dp(32)).padding(.bottom, controlsVisible ? dp(170) : dp(32))
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    .task(id: segment.startMs) {
+                        // NuvioTV auto-hides the button after 10 s while the controls are hidden.
+                        try? await Task.sleep(nanoseconds: 10_000_000_000)
+                        if !Task.isCancelled, !controlsVisible { skipHiddenFor = segment.startMs }
+                    }
+                }
+                if startOverVisible, let at = state.startOverAtMs {
+                    StartOverCard(resumeAt: SeekBar.clock(at.int64Value)) { session.startFromBeginning() }
+                        .focused($startOverFocused)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .padding(.top, dp(160))
+                }
+                if let overlay {
+                    switch overlay {
+                    case .speed:
+                        Color.black.opacity(0.35).ignoresSafeArea().transition(.opacity)
+                        SpeedDialog(current: state.speed) { speed in
+                            session.setSpeed(speed: speed); self.overlay = nil; bumpControls()
+                        }
+                        .transition(.opacity)
+                    case .info:
+                        StreamInfoOverlay(sections: session.streamInfoSections())
+                            .transition(.opacity)
+                    }
                 }
                 if let panel {
                     // HIG › Materials: glass over bright video needs ~35% dimming beneath it to stay legible.
@@ -72,16 +117,35 @@ struct TvPlayerScreen: View {
             )
             .allowsHitTesting(false)
         }
-        .focusable(panel == nil && !controlsVisible)
+        .focusable(panel == nil && overlay == nil && !controlsVisible && !skipVisible && !startOverVisible)
         .focused($rootFocused)
         .onAppear {
             session.attach()
             bumpControls()
-            // Simulator smoke hook: `-smokePanel subtitles|audio|aspect` opens the track panel after 5 s.
+            // Simulator smoke hooks: `-smokePanel subtitles|audio|aspect` opens the track panel after 5 s;
+            // `-smokeOverlay speed|info` a player dialog; `-smokeSkip <start>,<end>,<type>` adds a segment.
             let args = ProcessInfo.processInfo.arguments
             if let i = args.firstIndex(of: "-smokePanel"), i + 1 < args.count {
                 let kind: PlayerPanel = args[i + 1] == "audio" ? .audio : (args[i + 1] == "aspect" ? .aspect : .subtitles)
                 Task { try? await Task.sleep(nanoseconds: 5_000_000_000); panel = kind }
+            }
+            if let i = args.firstIndex(of: "-smokeOverlay"), i + 1 < args.count {
+                let kind: PlayerOverlay = args[i + 1] == "info" ? .info : .speed
+                Task { try? await Task.sleep(nanoseconds: 6_000_000_000); overlay = kind }
+            }
+            // `-smokeAddonSub <url>` picks that file as an add-on subtitle after 6 s; `-smokeSubDelay <ms>` sets the delay.
+            if let i = args.firstIndex(of: "-smokeAddonSub"), i + 1 < args.count {
+                let sub = AddonSubtitle(id: "smoke", url: args[i + 1], language: "en", display: "Smoke (English)", addonName: "Smoke", isSelected: false)
+                Task { try? await Task.sleep(nanoseconds: 6_000_000_000); session.selectAddonSubtitle(subtitle: sub) }
+            }
+            if let i = args.firstIndex(of: "-smokeSubDelay"), i + 1 < args.count, let ms = Int32(args[i + 1]) {
+                Task { try? await Task.sleep(nanoseconds: 7_000_000_000); session.setSubtitleDelay(delayMs: ms) }
+            }
+            if let i = args.firstIndex(of: "-smokeSkip"), i + 1 < args.count {
+                let parts = args[i + 1].split(separator: ",").map(String.init)
+                if parts.count == 3, let a = Double(parts[0]), let b = Double(parts[1]) {
+                    session.addSkipIntervalForTesting(startSeconds: a, endSeconds: b, type: parts[2])
+                }
             }
         }
         .onDisappear { session.detach() }
@@ -101,6 +165,7 @@ struct TvPlayerScreen: View {
         }
         .onExitCommand {
             if panel != nil { withAnimation { panel = nil }; return }
+            if overlay != nil { withAnimation { overlay = nil }; bumpControls(); return }
             if scrubMs != nil { scrubMs = nil; return }                 // Menu cancels a scrub
             if controlsVisible && state?.isPlaying == true { withAnimation(NuvioTokens.Motion.overlay) { controlsVisible = false }; rootFocused = true; return }
             session.close()
@@ -108,12 +173,22 @@ struct TvPlayerScreen: View {
         }
         .animation(NuvioTokens.Motion.overlay, value: controlsVisible)
         .animation(NuvioTokens.Motion.overlay, value: panel)
+        .animation(NuvioTokens.Motion.overlay, value: overlay)
+        .animation(NuvioTokens.Motion.fast, value: skipVisible)
+        .onChange(of: skipVisible) { _, visible in
+            // NuvioTV requests focus for the button when it appears over hidden controls.
+            if visible && !controlsVisible { DispatchQueue.main.async { skipFocused = true } }
+        }
+        .onChange(of: startOverVisible) { _, visible in
+            if visible { DispatchQueue.main.async { startOverFocused = true } }
+        }
         .task {
             for await next in session.state {
                 state = next
-                NSLog("SMOKE player lane=%@ gen=%d loading=%d playing=%d pos=%lld dur=%lld err=%@",
+                NSLog("SMOKE player lane=%@ gen=%d loading=%d playing=%d pos=%lld dur=%lld err=%@ skip=%@ startOver=%@ speed=%.2f subDelay=%d addonSub=%@ segments=%d",
                       "\(next.lane)", next.engineGeneration, next.isLoading, next.isPlaying,
-                      next.positionMs, next.durationMs, next.errorMessage ?? "-")
+                      next.positionMs, next.durationMs, next.errorMessage ?? "-", next.skipSegment?.label ?? "-",
+                      next.startOverAtMs.map { "\($0)" } ?? "-", next.speed, next.subtitleDelayMs, next.addonSubtitleId ?? "-", next.skipSegmentCount)
             }
         }
     }
@@ -163,15 +238,17 @@ struct TvPlayerScreen: View {
         hideTask?.cancel()
         hideTask = Task {
             try? await Task.sleep(nanoseconds: 4_000_000_000)
-            if !Task.isCancelled, state?.isPlaying == true, panel == nil, scrubMs == nil {
+            if !Task.isCancelled, state?.isPlaying == true, panel == nil, overlay == nil, scrubMs == nil {
                 controlsVisible = false
-                rootFocused = true
+                // The Skip / Start over controls take focus when the chrome hides (NuvioTV), else the video.
+                if skipVisible { skipFocused = true } else if startOverVisible { startOverFocused = true } else { rootFocused = true }
             }
         }
     }
 }
 
 enum PlayerPanel: Hashable { case subtitles, audio, aspect, episodes, sources }
+enum PlayerOverlay: Hashable { case speed, info }
 
 /// Hosts the current engine's view controller; swaps it when the session escalates engines.
 struct EngineHost: UIViewControllerRepresentable {
@@ -222,6 +299,7 @@ private struct PlayerChrome: View {
     let visible: Bool
     let skipFlash: String?
     let onShowPanel: (PlayerPanel) -> Void
+    let onShowOverlay: (PlayerOverlay) -> Void
     let onActivity: () -> Void
     @Environment(\.nuvio) private var colors
 
@@ -283,6 +361,8 @@ private struct PlayerChrome: View {
                 PlayerButton(icon: "ic_player_subtitles") { onShowPanel(.subtitles) }
                 PlayerButton(icon: "ic_player_audio_filled") { onShowPanel(.audio) }
                 PlayerButton(icon: "ic_player_aspect_ratio") { onShowPanel(.aspect) }
+                if !state.isLive { PlayerButton(icon: "md_speed") { onShowOverlay(.speed) } }
+                PlayerButton(icon: "md_info") { onShowOverlay(.info) }
             }
             .focusSection()
         }
@@ -387,10 +467,29 @@ private struct TrackPanel: View {
                     VStack(spacing: dp(6)) {
                         switch current {
                         case .subtitles:
-                            PanelRow(title: "Off", checked: !tracks.contains { $0.selected }) { session.selectSubtitle(trackId: -1); reload() }
-                            ForEach(tracks, id: \.id) { t in
-                                PanelRow(title: t.label.isEmpty ? t.language : t.label, detail: t.language, checked: t.selected) { session.selectSubtitle(trackId: t.id); reload() }
+                            let addonId = session.state.value.addonSubtitleId
+                            SubtitleDelayRow(session: session)
+                            PanelRow(title: "Off", checked: addonId == nil && !tracks.contains { $0.selected }) {
+                                session.selectSubtitle(trackId: -1); reload()
                             }
+                            ForEach(tracks, id: \.id) { t in
+                                PanelRow(title: t.label.isEmpty ? t.language : t.label, detail: t.language, checked: addonId == nil && t.selected) {
+                                    session.selectSubtitle(trackId: t.id); reload()
+                                }
+                            }
+                            // SubtitleSelectionOverlay: the add-on subtitles found for this title.
+                            if addonLoading || !addonSubtitles.isEmpty {
+                                Text("Add-on subtitles").font(NuvioType.labelMedium).foregroundStyle(colors.textTertiary)
+                                    .frame(maxWidth: .infinity, alignment: .leading).padding(.top, dp(8))
+                            }
+                            ForEach(addonSubtitles, id: \.id) { sub in
+                                PanelRow(title: sub.display.isEmpty ? sub.language : sub.display,
+                                         detail: [sub.language, sub.addonName].compactMap { $0 }.joined(separator: " · "),
+                                         checked: sub.id == addonId) {
+                                    session.selectAddonSubtitle(subtitle: sub); reload()
+                                }
+                            }
+                            if addonLoading { ProgressView().frame(maxWidth: .infinity).padding(dp(8)) }
                         case .audio:
                             ForEach(tracks, id: \.id) { t in
                                 PanelRow(title: t.label.isEmpty ? t.language : t.label, detail: t.language, checked: t.selected) { session.selectAudio(trackId: t.id); reload() }
@@ -415,10 +514,19 @@ private struct TrackPanel: View {
         .ignoresSafeArea()
         .onAppear { current = kind; reload() }
         .onExitCommand(perform: onClose)
+        .task {
+            for await next in session.addonSubtitles {
+                addonSubtitles = next
+                NSLog("SMOKE addon subtitles=%d %@", next.count, next.prefix(3).map { "\($0.language)/\($0.addonName ?? "-")" }.joined(separator: ","))
+            }
+        }
+        .task { for await next in session.addonSubtitlesLoading { addonLoading = next.boolValue } }
     }
 
     @State private var current: PlayerPanel = .subtitles
     @AppStorage("tvos.player.aspect") private var aspect = 0
+    @State private var addonSubtitles: [AddonSubtitle] = []
+    @State private var addonLoading = false
 
     private func switchTo(_ panel: PlayerPanel) { current = panel; reload() }
     private func reload() {
@@ -559,5 +667,193 @@ private struct ContentPanel: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Skip / start over / speed / stream info (NuvioTV player extras)
+
+/// SkipIntroButton.kt: #1E1E1E 85% card (glass here, it's a control), radius 12, 18×12 padding, a 20dp
+/// skip-next icon and 14sp label; focused Secondary with OnSecondary content. A 4dp bar along the
+/// bottom counts down the 10 s auto-hide while the controls are hidden.
+private struct SkipSegmentButton: View {
+    let label: String
+    let countingDown: Bool
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 0) {
+                HStack(spacing: dp(8)) {
+                    Image("md_skip_next").renderingMode(.template).resizable().frame(width: dp(20), height: dp(20))
+                    Text(label).font(NuvioType.inter(14, .medium))
+                }
+                .foregroundStyle(focused ? colors.onSecondary : Color.white)
+                .padding(.horizontal, dp(18)).padding(.vertical, dp(12))
+                GeometryReader { geo in
+                    Rectangle().fill(Color.white.opacity(countingDown ? 0.15 : 0))
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(focused ? colors.onSecondary.opacity(0.5) : Color.white.opacity(0.6))
+                                .frame(width: geo.size.width * progress)
+                                .opacity(countingDown ? 1 : 0)
+                        }
+                }
+                .frame(height: dp(4))
+            }
+            .fixedSize()
+            .background(RoundedRectangle(cornerRadius: dp(12), style: .continuous).fill(focused ? colors.secondary : Color(argb: 0xD91E1E1E)))
+            .clipShape(RoundedRectangle(cornerRadius: dp(12), style: .continuous))
+            .navigationGlass(in: RoundedRectangle(cornerRadius: dp(12), style: .continuous))
+            .scaleEffect(focused ? 1.05 : 1)
+            .animation(NuvioTokens.Motion.fast, value: focused)
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .onAppear { withAnimation(.linear(duration: 10)) { progress = 1 } }
+    }
+}
+
+/// StartOverAction: black 72% card (radius 16), "Resuming at 13:42 — the provider is slow to jump there"
+/// (bodyMedium white 86%) over a primary "Start from beginning" button; shown after 15 s of a resume
+/// that hasn't drawn a frame (ResumeLoadPolicy).
+private struct StartOverCard: View {
+    let resumeAt: String
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(spacing: dp(8)) {
+            Text("Resuming at \(resumeAt) — the provider is slow to jump there")
+                .font(NuvioType.bodyMedium).foregroundStyle(.white.opacity(0.86)).multilineTextAlignment(.center)
+            Button(action: action) {
+                Text("Start from beginning").font(NuvioType.labelLargeSemi)
+                    .foregroundStyle(focused ? Color.black : Color.white)
+                    .padding(.horizontal, dp(20)).padding(.vertical, dp(10))
+                    .background(Capsule().fill(focused ? Color.white : Color.white.opacity(0.12)))
+                    .scaleEffect(focused ? 1.04 : 1)
+                    .animation(NuvioTokens.Motion.fast, value: focused)
+            }
+            .buttonStyle(PlainNoChromeButtonStyle())
+            .focused($focused)
+        }
+        .padding(.horizontal, dp(16)).padding(.vertical, dp(12))
+        .frame(maxWidth: dp(460))
+        .background(RoundedRectangle(cornerRadius: dp(16), style: .continuous).fill(Color.black.opacity(0.72)))
+    }
+}
+
+/// SpeedSelectionDialog: 300dp, "Playback Speed" headlineSmall, one row per NuvioTV speed ("Normal" for 1x)
+/// with a check on the current one. A glass dialog here (control layer).
+private struct SpeedDialog: View {
+    let current: Float
+    let onSelect: (Float) -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focusedSpeed: Float?
+
+    var body: some View {
+        let speeds = TvPlaybackSpeeds.shared.values.map { $0.floatValue }
+        let selected = TvPlaybackSpeeds.shared.nearest(current: current)
+        VStack(alignment: .leading, spacing: dp(6)) {
+            Text("Playback Speed").font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary).padding(.bottom, dp(10))
+            ForEach(speeds, id: \.self) { speed in
+                PanelRow(title: TvPlaybackSpeeds.shared.label(speed: speed), checked: speed == selected) { onSelect(speed) }
+                    .focused($focusedSpeed, equals: speed)
+            }
+        }
+        .padding(dp(24))
+        .frame(width: dp(300))
+        .navigationGlass(in: RoundedRectangle(cornerRadius: NuvioTokens.Radius.dialog, style: .continuous))
+        .focusSection()
+        .defaultFocus($focusedSpeed, selected)
+        .onAppear { DispatchQueue.main.async { focusedSpeed = selected } }
+    }
+}
+
+/// StreamInfoOverlay.kt: over a bottom scrim, bottom-left at 48dp × 36dp: section labels (SOURCE /
+/// VIDEO / AUDIO / SUBTITLE) with their facts in a row, 36dp apart — a small TextTertiary label over a
+/// white value. Menu closes it.
+private struct StreamInfoOverlay: View {
+    let sections: [TvInfoSection]
+    @Environment(\.nuvio) private var colors
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black.opacity(0.55), location: 0.35),
+                                   .init(color: .black.opacity(0.9), location: 1)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            VStack(alignment: .leading, spacing: dp(16)) {
+                if sections.isEmpty {
+                    Text("No stream information yet").font(NuvioType.bodyLarge).foregroundStyle(colors.textSecondary)
+                }
+                ForEach(sections, id: \.title) { section in
+                    VStack(alignment: .leading, spacing: dp(4)) {
+                        Text(section.title).font(NuvioType.labelMedium).kerning(dp(1)).foregroundStyle(colors.secondary)
+                        HStack(alignment: .top, spacing: dp(36)) {
+                            ForEach(section.rows, id: \.label) { row in
+                                VStack(alignment: .leading, spacing: dp(2)) {
+                                    Text(row.label).font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
+                                    Text(row.value).font(NuvioType.bodyLarge).foregroundStyle(.white).lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, dp(48)).padding(.vertical, dp(36))
+        }
+    }
+}
+
+/// NuvioTV's Subtitles Delay control (SubtitleDelayConfig): − / value / + in 100 ms steps, ±60 s;
+/// selecting the value resets it to 0.
+private struct SubtitleDelayRow: View {
+    let session: TvPlayerSession
+    @Environment(\.nuvio) private var colors
+    @State private var delay: Int32 = 0
+
+    var body: some View {
+        HStack(spacing: dp(8)) {
+            Text("Subtitles Delay").font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary)
+            Spacer()
+            DelayButton(icon: "md_remove") { change(up: false) }
+            DelayButton(title: TvSubtitleDelay.shared.label(ms: delay)) { session.setSubtitleDelay(delayMs: 0); delay = 0 }
+            DelayButton(icon: "md_add") { change(up: true) }
+        }
+        .padding(.horizontal, dp(16)).padding(.vertical, dp(4))
+        .focusSection()
+        .task { for await next in session.state { delay = next.subtitleDelayMs } }
+    }
+
+    private func change(up: Bool) {
+        let next = TvSubtitleDelay.shared.step(currentMs: delay, up: up)
+        delay = next
+        session.setSubtitleDelay(delayMs: next)
+    }
+}
+
+private struct DelayButton: View {
+    var icon: String? = nil
+    var title: String? = nil
+    let action: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if let icon {
+                    Image(icon).renderingMode(.template).resizable().frame(width: dp(18), height: dp(18))
+                } else if let title {
+                    Text(title).font(NuvioType.labelLargeSemi).monospacedDigit().frame(minWidth: dp(52))
+                }
+            }
+            .foregroundStyle(focused ? Color.black : Color.white)
+            .padding(.horizontal, dp(10)).padding(.vertical, dp(8))
+            .background(Capsule().fill(focused ? Color.white : Color.white.opacity(0.1)))
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
     }
 }
