@@ -394,13 +394,16 @@ private struct SignOutButton: View {
 
 // MARK: - Profiles
 
-/// ProfileSettingsContent.kt. Apple TV's profile picker is where profiles are chosen.
+/// ProfileSettingsContent.kt. Manage Profiles opens the picker in manage mode (edit, PIN, delete, add).
 private struct ProfilesSettingsDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: dp(12)) {
             SettingsDetailHeader(title: "Profiles", subtitle: "Manage user profiles for this account")
             SettingsGroupCard {
-                SettingsActionRow(title: "Manage Profiles") { TvAppLifecycle.shared.openProfilePicker() }
+                SettingsActionRow(title: "Manage Profiles") {
+                    ProfilePickerLaunch.manageRequested = true
+                    TvAppLifecycle.shared.openProfilePicker()
+                }
             }
         }
     }

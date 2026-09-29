@@ -39,6 +39,20 @@ data class TvSportsCategory(val category: RadarCategory, val followedCount: Int)
     val subtitle: String get() = if (followedCount > 0) "$followedCount followed" else "${category.leagues.size} to track"
 }
 
+/** NuvioTV LeagueFixturesPage: everything in one league — live, upcoming, recent results. */
+data class TvLeaguePage(
+    val league: RadarLeague,
+    val upcoming: List<RadarFixture>,
+    val recent: List<RadarFixture>,
+    /** The league's fixtures have arrived (followed or fetched on demand). */
+    val loaded: Boolean,
+    val followed: Boolean,
+    /** "Soccer · 12 upcoming" / "Soccer · Loading…". */
+    val subtitle: String,
+    /** Loaded and nothing to show: "No scheduled matches right now." */
+    val empty: Boolean,
+)
+
 /** One tier of channels in the match sheet; [label] is null when it is the only tier. */
 data class TvMatchGroup(val label: String?, val matches: List<RadarChannelMatcher.ChannelMatch>)
 
@@ -106,6 +120,23 @@ object TvSportsHubPolicy {
             TvMatchGroup(if (labeled) "BROADCASTING THIS MATCH" else null, broadcasting),
             TvMatchGroup(if (labeled) carriesLabel else null, carries),
         ).filter { it.matches.isNotEmpty() }
+    }
+
+    const val LEAGUE_PAGE_UPCOMING_CAP = 40
+
+    fun leaguePage(state: RadarUiState, league: RadarLeague, nowMs: Long): TvLeaguePage {
+        val upcoming = state.upcoming(listOf(league.id), nowMs, cap = LEAGUE_PAGE_UPCOMING_CAP)
+        val recent = state.recent(league.id, nowMs)
+        val loaded = state.fixturesByLeague.containsKey(league.id)
+        return TvLeaguePage(
+            league = league,
+            upcoming = upcoming,
+            recent = recent,
+            loaded = loaded,
+            followed = league.id in state.followedLeagueIds,
+            subtitle = listOfNotNull(league.sport?.takeIf { it.isNotBlank() }, if (loaded) "${upcoming.size} upcoming" else "Loading…").joinToString(" · "),
+            empty = loaded && upcoming.isEmpty() && recent.isEmpty(),
+        )
     }
 
     fun fixtureKey(fixture: RadarFixture): String = fixture.id ?: "${fixture.leagueId}/${fixture.event}/${fixture.ts}"
