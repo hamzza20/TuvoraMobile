@@ -1,4 +1,4 @@
-name: Build iOS IPA
+name: Build IPA
  
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
 jobs:
   build-ios:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 150
  
     steps:
       - name: Checkout
@@ -22,13 +22,38 @@ jobs:
       - name: Init MPVKit submodule
         run: git submodule update --init --recursive -- MPVKit
  
+      - name: Get MPVKit revision
+        id: mpvrev
+        run: echo "sha=$(git rev-parse HEAD:MPVKit)" >> $GITHUB_OUTPUT
+ 
+      # MPVKit's Package.swift points at local, prebuilt xcframeworks in
+      # MPVKit/dist/release/xcframework. Those are not committed, so build them.
+      - name: Cache MPVKit xcframeworks
+        id: mpvcache
+        uses: actions/cache@v4
+        with:
+          path: MPVKit/dist
+          key: mpvkit-dist-${{ steps.mpvrev.outputs.sha }}
+ 
+      - name: Install MPVKit build tools
+        if: steps.mpvcache.outputs.cache-hit != 'true'
+        run: brew install cmake meson ninja pkg-config nasm autoconf automake libtool || true
+ 
+      - name: Build MPVKit xcframeworks (iOS device)
+        if: steps.mpvcache.outputs.cache-hit != 'true'
+        working-directory: MPVKit
+        run: make build platform=ios enable-gpl
+ 
+      - name: Verify MPVKit output
+        run: ls -la MPVKit/dist/release/xcframework
+ 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
  
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -105,4 +130,3 @@ jobs:
         with:
           name: xcodebuild-log
           path: ${{ runner.temp }}/xcodebuild.log
- 
