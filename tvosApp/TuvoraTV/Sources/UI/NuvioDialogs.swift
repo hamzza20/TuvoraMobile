@@ -12,8 +12,8 @@ struct NuvioDialog<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: dp(16)) {
-            Text(title).font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
-            if let subtitle { Text(subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary) }
+            Text(ui: title).font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+            if let subtitle { Text(ui: subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary) }
             // Hug short content; scroll only when it outgrows the space the dialog is given.
             ViewThatFits(in: .vertical) {
                 VStack(spacing: dp(8)) { content }
@@ -55,11 +55,11 @@ struct SettingsActionRow: View {
                         .padding(.trailing, dp(4))
                 }
                 VStack(alignment: .leading, spacing: dp(2)) {
-                    Text(title).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary).lineLimit(1)
-                    if let subtitle, !subtitle.isEmpty { Text(subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).lineLimit(3) }
+                    Text(ui: title).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    if let subtitle, !subtitle.isEmpty { Text(ui: subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).lineLimit(3) }
                 }
                 Spacer()
-                if let value { Text(value).font(NuvioType.labelLarge).foregroundStyle(valueColor ?? colors.textSecondary).lineLimit(1) }
+                if let value { Text(ui: value).font(NuvioType.labelLarge).foregroundStyle(valueColor ?? colors.textSecondary).lineLimit(1) }
                 if showChevron {
                     Image(trailingIcon).renderingMode(.template).resizable().frame(width: dp(18), height: dp(18)).foregroundStyle(colors.textTertiary)
                 }

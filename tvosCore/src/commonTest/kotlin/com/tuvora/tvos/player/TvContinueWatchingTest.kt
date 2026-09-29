@@ -31,4 +31,12 @@ class TvContinueWatchingTest {
         assertEquals("Next Up", TvContinueWatching.badge(item("a", "v", 0, nextUp = true)))
         assertEquals("S2 E1", TvContinueWatching.episodeLabel(item("a", "v", 0, s = 2, e = 1)))
     }
+
+    @Test
+    fun `minutes left is null when there is nothing to count down`() {
+        assertEquals(109, TvContinueWatching.minutesLeft(item("a", "v", 0, pos = 11 * 60_000L, dur = 120 * 60_000L)))
+        assertEquals(null, TvContinueWatching.minutesLeft(item("a", "v", 0, nextUp = true, dur = 60 * 60_000L)))
+        assertEquals(null, TvContinueWatching.minutesLeft(item("a", "v", 0, pos = 10L)))
+        assertEquals(null, TvContinueWatching.minutesLeft(item("a", "v", 0, pos = 60 * 60_000L, dur = 60 * 60_000L)))
+    }
 }

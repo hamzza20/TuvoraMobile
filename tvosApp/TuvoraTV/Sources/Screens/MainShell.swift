@@ -138,7 +138,7 @@ struct MainShell: View {
     @ViewBuilder
     private func toast(_ colors: NuvioPalette) -> some View {
         if let message = playback.message {
-            Text(message)
+            Text(ui: message)
                 .font(NuvioType.bodyMedium)
                 .foregroundStyle(colors.textPrimary)
                 .padding(.horizontal, dp(20)).padding(.vertical, dp(10))
@@ -215,7 +215,7 @@ private struct SidebarItem: View {
                     .frame(width: dp(22), height: dp(22))
                     .foregroundStyle(selected ? colors.secondary : colors.textPrimary.opacity(focused ? 1 : 0.8))
                 if expanded {
-                    Text(item.title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    Text(ui: item.title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
                     Spacer(minLength: 0)
                 }
             }
@@ -277,7 +277,7 @@ struct PlaceholderScreen: View {
     let title: String
     @Environment(\.nuvio) private var colors
     var body: some View {
-        Text(title).font(NuvioType.headlineMedium).foregroundStyle(colors.textSecondary)
+        Text(ui: title).font(NuvioType.headlineMedium).foregroundStyle(colors.textSecondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

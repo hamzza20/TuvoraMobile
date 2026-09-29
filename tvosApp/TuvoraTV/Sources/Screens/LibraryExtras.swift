@@ -226,7 +226,7 @@ struct ManageListsSheet: View {
             } else {
                 Text("No personal lists yet.").font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
             }
-            if let message { Text(message).font(NuvioType.bodySmall).foregroundStyle(colors.error) }
+            if let message { Text(ui: message).font(NuvioType.bodySmall).foregroundStyle(colors.error) }
             HStack(spacing: dp(10)) {
                 NuvioTextButton(title: "Create") { TvLibraryLists.shared.create() }
                 NuvioTextButton(title: "Edit", enabled: selectedKey != nil) { if let k = selectedKey { TvLibraryLists.shared.edit(key: k) } }
@@ -271,7 +271,7 @@ struct ManageListsSheet: View {
     @ViewBuilder
     private func errorLine(_ state: LibraryListDialogState) -> some View {
         if let text = TvLibraryLists.shared.errorText(state: state) {
-            Text(text).font(NuvioType.bodySmall).foregroundStyle(colors.error)
+            Text(ui: text).font(NuvioType.bodySmall).foregroundStyle(colors.error)
         }
     }
 

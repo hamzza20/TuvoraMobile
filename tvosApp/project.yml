@@ -36,7 +36,7 @@ targets:
         UILaunchScreen: {}
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
         CFBundleURLTypes: [{ CFBundleURLName: com.tuvora.deeplink, CFBundleURLSchemes: [tuvora] }]
-        CFBundleLocalizations: [en, ar, bg, cs, de, el, es, fr, he, hu, id, it, ja, nb, nl, pl, pt, pt-BR, ro, ru, sk, tr, ur, vi]
+        CFBundleLocalizations: [en, ar, bg, bs, cs, da, de, el, es, es-419, fr, he, hi, hu, id, it, ja, lt, nb, nl, pl, pt, pt-BR, pt-PT, ro, ru, sk, sl, sq, sr-Latn, sv, ta, tr, uk, ur, vi, zh-Hans, zh-Hant]
     settings:
       base:
         FRAMEWORK_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../tvosCore/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"]

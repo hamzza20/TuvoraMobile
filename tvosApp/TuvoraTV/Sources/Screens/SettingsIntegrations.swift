@@ -323,7 +323,7 @@ struct TrackingAccountDialog: View {
             }
         }()
         Image("md_check_circle").renderingMode(.template).resizable().frame(width: dp(40), height: dp(40)).foregroundStyle(colors.success)
-        Text(label).font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+        Text(ui: label).font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
         Text(description).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary).multilineTextAlignment(.center)
         if provider == .trakt, let expires = model.trakt?.tokenExpiresAtMillis?.int64Value {
             let remaining = max(0, Int64(Double(expires) - now.timeIntervalSince1970 * 1000))
@@ -545,7 +545,7 @@ private struct DebridSettingsDetail: View {
     }
 
     private func sectionLabel(_ text: String) -> some View {
-        Text(text).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary).padding(.top, dp(4))
+        Text(ui: text).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary).padding(.top, dp(4))
     }
 
     private func prepareLabel(_ n: Int) -> String { n == 1 ? "1 link" : "\(n) links" }

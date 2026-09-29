@@ -209,7 +209,7 @@ struct PlayPill: View {
         Button(action: action) {
             HStack(spacing: dp(8)) {
                 Image("md_play_arrow").renderingMode(.template).resizable().frame(width: dp(18), height: dp(18))
-                Text(title).font(NuvioType.labelLargeSemi)
+                Text(ui: title).font(NuvioType.labelLargeSemi)
             }
             .foregroundStyle(Color.black)
             .padding(.horizontal, dp(24)).padding(.vertical, dp(14))
@@ -253,7 +253,7 @@ private struct SeasonTab: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(NuvioType.titleMedium)
+            Text(ui: title).font(NuvioType.titleMedium)
                 .foregroundStyle(focused ? colors.onSecondary : colors.textPrimary)
                 .padding(.horizontal, dp(20)).padding(.vertical, dp(10))
                 .background(RoundedRectangle(cornerRadius: dp(20)).fill(focused ? colors.secondary : (selected ? colors.surfaceVariant : colors.backgroundCard)))

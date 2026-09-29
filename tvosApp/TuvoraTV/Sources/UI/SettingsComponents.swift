@@ -22,7 +22,7 @@ struct SettingsRailButton: View {
                 Image(icon).renderingMode(.template).resizable().scaledToFit()
                     .frame(width: dp(18), height: dp(18))
                     .foregroundStyle(lit ? colors.textPrimary : colors.textSecondary)
-                Text(title).font(NuvioType.inter(16, lit ? .semibold : .medium))
+                Text(ui: title).font(NuvioType.inter(16, lit ? .semibold : .medium))
                     .foregroundStyle(lit ? colors.textPrimary : colors.textSecondary).lineLimit(1)
                 Spacer(minLength: 0)
                 Image("md_chevron_right").renderingMode(.template).resizable()
@@ -48,8 +48,8 @@ struct SettingsDetailHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: dp(6)) {
-            Text(title).font(NuvioType.headlineMedium).foregroundStyle(colors.textPrimary)
-            Text(subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+            Text(ui: title).font(NuvioType.headlineMedium).foregroundStyle(colors.textPrimary)
+            Text(ui: subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -65,8 +65,8 @@ struct SettingsGroupCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: dp(10)) {
-            if let title { Text(title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary) }
-            if let subtitle { Text(subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary) }
+            if let title { Text(ui: title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary) }
+            if let subtitle { Text(ui: subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary) }
             content
         }
         .padding(dp(14))
@@ -91,8 +91,8 @@ struct SettingsToggleRow: View {
         Button(action: toggle) {
             HStack(spacing: dp(12)) {
                 VStack(alignment: .leading, spacing: dp(2)) {
-                    Text(title).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary).lineLimit(1)
-                    if let subtitle { Text(subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).lineLimit(3) }
+                    Text(ui: title).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    if let subtitle { Text(ui: subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).lineLimit(3) }
                 }
                 Spacer(minLength: 0)
                 SettingsTogglePill(checked: isOn)
@@ -137,7 +137,7 @@ struct SettingsChoiceChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(label).font(NuvioType.labelMedium)
+            Text(ui: label).font(NuvioType.labelMedium)
                 .foregroundStyle((selected || focused ? colors.textPrimary : colors.textSecondary).opacity(dimmed ? 0.4 : 1))
                 .padding(.horizontal, dp(16)).padding(.vertical, dp(10))
                 .background(Capsule().fill(selected ? colors.focusRing.opacity(0.2) : colors.background))
@@ -164,7 +164,7 @@ struct SettingsDialogButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(NuvioType.labelLarge).lineLimit(1)
+            Text(ui: title).font(NuvioType.labelLarge).lineLimit(1)
                 .foregroundStyle(focused ? Color.black : colors.textPrimary)
                 .padding(.horizontal, dp(18)).padding(.vertical, dp(10))
                 .frame(maxWidth: fullWidth ? .infinity : nil)
@@ -210,7 +210,7 @@ struct SettingsSingleChoiceDialog: View {
                 Button { onSelect(option.id) } label: {
                     HStack(spacing: dp(12)) {
                         VStack(alignment: .leading, spacing: dp(4)) {
-                            Text(option.title).font(NuvioType.bodyLarge)
+                            Text(ui: option.title).font(NuvioType.bodyLarge)
                                 .foregroundStyle(selected ? colors.primary : colors.textPrimary)
                             if let d = option.description {
                                 Text(d).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
@@ -250,12 +250,12 @@ struct SettingsTextField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: dp(4)) {
-            Text(label).font(NuvioType.labelMedium).foregroundStyle(focused ? colors.primary : colors.textSecondary)
+            Text(ui: label).font(NuvioType.labelMedium).foregroundStyle(focused ? colors.primary : colors.textSecondary)
             Group {
                 if secure {
-                    SecureField(label, text: $text, prompt: Text(hint).foregroundStyle(colors.textTertiary))
+                    SecureField(L(label), text: $text, prompt: Text(ui: hint).foregroundStyle(colors.textTertiary))
                 } else {
-                    TextField(label, text: $text, prompt: Text(hint).foregroundStyle(colors.textTertiary))
+                    TextField(L(label), text: $text, prompt: Text(ui: hint).foregroundStyle(colors.textTertiary))
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
@@ -277,7 +277,7 @@ struct SettingsHelperText: View {
     let text: String
     @Environment(\.nuvio) private var colors
     var body: some View {
-        Text(text).font(NuvioType.bodySmall).foregroundStyle(colors.textTertiary).fixedSize(horizontal: false, vertical: true)
+        Text(ui: text).font(NuvioType.bodySmall).foregroundStyle(colors.textTertiary).fixedSize(horizontal: false, vertical: true)
     }
 }
 

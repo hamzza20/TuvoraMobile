@@ -670,7 +670,7 @@ private struct PinKey: View {
 
     var body: some View {
         Button(action: action) {
-            Text(label)
+            Text(ui: label)
                 .font(NuvioType.inter(18, .semibold))
                 .foregroundStyle(focused ? Color.black : Color(argb: 0xFFF5F7F8))
                 .frame(width: dp(44), height: dp(44))

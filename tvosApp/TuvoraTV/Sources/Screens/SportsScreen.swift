@@ -245,7 +245,7 @@ private struct SportsRowTitle: View {
 
     var body: some View {
         HStack(spacing: dp(8)) {
-            Text(text).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).lineLimit(1)
+            Text(ui: text).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).lineLimit(1)
                 .overlay(alignment: .leading) {
                     if let badge, !badge.isEmpty {
                         BadgeImage(url: badge, size: dp(22)).offset(x: -dp(30))
@@ -400,7 +400,7 @@ private struct MatchStatusPill: View {
     private func pill(_ tint: Color, fill: Double, stroke: Double, dot: Bool) -> some View {
         HStack(spacing: dp(4)) {
             if dot { Circle().fill(tint).frame(width: dp(6), height: dp(6)) }
-            Text(status.text).font(NuvioType.labelSmall.weight(.bold)).foregroundStyle(tint).lineLimit(1)
+            Text(ui: status.text).font(NuvioType.labelSmall.weight(.bold)).foregroundStyle(tint).lineLimit(1)
         }
         .padding(.horizontal, dp(8)).padding(.vertical, dp(2))
         .background(Capsule().fill(tint.opacity(fill)))
@@ -492,7 +492,7 @@ private struct FixturesPageView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: dp(16)) {
-                Text(page.title).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary)
+                Text(ui: page.title).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary)
                 if fixtures.isEmpty {
                     Text("No upcoming matches.").font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
                 } else {
@@ -529,7 +529,7 @@ private struct LeaguePageView: View {
                     if let badge = league.badge, !badge.isEmpty { BadgeImage(url: badge, size: dp(56)) }
                     VStack(alignment: .leading, spacing: dp(2)) {
                         Text(league.name).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary).lineLimit(1)
-                        Text(page.subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                        Text(ui: page.subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
                     }
                     Spacer()
                     Button { TvSports.shared.toggleFollow(league: league) } label: {
@@ -565,7 +565,7 @@ private struct LeaguePageView: View {
 
     private func section(_ title: String, _ fixtures: [RadarFixture]) -> some View {
         VStack(alignment: .leading, spacing: dp(8)) {
-            Text(title).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).padding(.vertical, dp(8))
+            Text(ui: title).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).padding(.vertical, dp(8))
             LazyVGrid(columns: [GridItem(.adaptive(minimum: SportsMetrics.matchCardWidth), spacing: dp(12))], alignment: .leading, spacing: dp(12)) {
                 ForEach(fixtures, id: \.self) { fixture in
                     MatchCard(fixture: fixture, radar: radar, now: now) { onMatch(fixture) }
@@ -660,7 +660,7 @@ private struct MatchChannelsSheet: View {
             } else {
                 ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                     if let label = group.label {
-                        Text(label).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
+                        Text(ui: label).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, dp(4))
                     }
                     ForEach(group.matches, id: \.channel.contentId) { match in
@@ -701,7 +701,7 @@ private struct MatchChannelsSheet: View {
     }
 
     private func message(_ text: String) -> some View {
-        Text(text).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+        Text(ui: text).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 

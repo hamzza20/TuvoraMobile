@@ -341,7 +341,7 @@ private struct PlayerChrome: View {
         VStack(alignment: .leading, spacing: dp(10)) {
             Text(session.title).font(NuvioType.headlineMedium).foregroundStyle(.white).lineLimit(1)
             if let subtitle = session.subtitle {
-                Text(subtitle).font(NuvioType.titleMedium).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+                Text(ui: subtitle).font(NuvioType.titleMedium).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
             }
             if state.isLive {
                 HStack(spacing: dp(6)) {
@@ -555,9 +555,9 @@ private struct PanelRow: View {
                 Image("md_check_circle").renderingMode(.template).resizable().frame(width: dp(18), height: dp(18))
                     .foregroundStyle(checked ? colors.secondary : .clear)
                 VStack(alignment: .leading, spacing: dp(2)) {
-                    Text(title).font(NuvioType.bodyLarge).foregroundStyle(focused ? Color.black : colors.textPrimary).lineLimit(1)
+                    Text(ui: title).font(NuvioType.bodyLarge).foregroundStyle(focused ? Color.black : colors.textPrimary).lineLimit(1)
                     if let detail, !detail.isEmpty, detail != title {
-                        Text(detail).font(NuvioType.bodySmall).foregroundStyle(focused ? Color.black.opacity(0.7) : colors.textSecondary)
+                        Text(ui: detail).font(NuvioType.bodySmall).foregroundStyle(focused ? Color.black.opacity(0.7) : colors.textSecondary)
                     }
                 }
                 Spacer()
@@ -688,7 +688,7 @@ private struct SkipSegmentButton: View {
             VStack(spacing: 0) {
                 HStack(spacing: dp(8)) {
                     Image("md_skip_next").renderingMode(.template).resizable().frame(width: dp(20), height: dp(20))
-                    Text(label).font(NuvioType.inter(14, .medium))
+                    Text(ui: label).font(NuvioType.inter(14, .medium))
                 }
                 .foregroundStyle(focused ? colors.onSecondary : Color.white)
                 .padding(.horizontal, dp(18)).padding(.vertical, dp(12))
@@ -790,11 +790,11 @@ private struct StreamInfoOverlay: View {
                 }
                 ForEach(sections, id: \.title) { section in
                     VStack(alignment: .leading, spacing: dp(4)) {
-                        Text(section.title).font(NuvioType.labelMedium).kerning(dp(1)).foregroundStyle(colors.secondary)
+                        Text(ui: section.title).font(NuvioType.labelMedium).kerning(dp(1)).foregroundStyle(colors.secondary)
                         HStack(alignment: .top, spacing: dp(36)) {
                             ForEach(section.rows, id: \.label) { row in
                                 VStack(alignment: .leading, spacing: dp(2)) {
-                                    Text(row.label).font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
+                                    Text(ui: row.label).font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
                                     Text(row.value).font(NuvioType.bodyLarge).foregroundStyle(.white).lineLimit(1)
                                 }
                             }
@@ -846,7 +846,7 @@ private struct DelayButton: View {
                 if let icon {
                     Image(icon).renderingMode(.template).resizable().frame(width: dp(18), height: dp(18))
                 } else if let title {
-                    Text(title).font(NuvioType.labelLargeSemi).monospacedDigit().frame(minWidth: dp(52))
+                    Text(ui: title).font(NuvioType.labelLargeSemi).monospacedDigit().frame(minWidth: dp(52))
                 }
             }
             .foregroundStyle(focused ? Color.black : Color.white)

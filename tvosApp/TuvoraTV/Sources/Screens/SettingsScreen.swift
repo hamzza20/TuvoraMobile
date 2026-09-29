@@ -399,8 +399,8 @@ private struct AccountActionButton: View {
                 Image(icon).renderingMode(.template).resizable().frame(width: dp(22), height: dp(22))
                     .foregroundStyle(focused ? colors.primary : colors.textSecondary)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(title).font(NuvioType.inter(14, .medium)).foregroundStyle(colors.textPrimary)
-                    Text(subtitle).font(NuvioType.inter(11, .regular)).foregroundStyle(colors.textSecondary)
+                    Text(ui: title).font(NuvioType.inter(14, .medium)).foregroundStyle(colors.textPrimary)
+                    Text(ui: subtitle).font(NuvioType.inter(11, .regular)).foregroundStyle(colors.textSecondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -586,7 +586,7 @@ private struct LayoutSettingsDetail: View {
     private func optionRow<Chips: View>(title: String, selected: String, @ViewBuilder chips: () -> Chips) -> some View {
         VStack(alignment: .leading, spacing: dp(8)) {
             HStack {
-                Text(title).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary)
+                Text(ui: title).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary)
                 Spacer()
                 Text(selected).font(NuvioType.labelLarge).foregroundStyle(colors.textSecondary)
             }
@@ -618,7 +618,7 @@ private struct HomeLayoutCard: View {
                     if selected {
                         Image("md_check_circle").renderingMode(.template).resizable().frame(width: dp(14), height: dp(14)).foregroundStyle(colors.focusRing)
                     }
-                    Text(title).font(NuvioType.labelLarge).foregroundStyle(selected || focused ? colors.textPrimary : colors.textSecondary)
+                    Text(ui: title).font(NuvioType.labelLarge).foregroundStyle(selected || focused ? colors.textPrimary : colors.textSecondary)
                 }
             }
             .padding(dp(10))
@@ -691,7 +691,7 @@ private struct AddonsSettingsDetail: View {
                 HStack(spacing: dp(12)) {
                     SettingsDialogButton(title: installing ? "Installing" : "Install", primary: true) { install() }
                     if let status {
-                        Text(status.text).font(NuvioType.bodySmall).foregroundStyle(status.error ? colors.error : colors.textSecondary)
+                        Text(ui: status.text).font(NuvioType.bodySmall).foregroundStyle(status.error ? colors.error : colors.textSecondary)
                     }
                 }
             }
@@ -1098,7 +1098,7 @@ private struct PlaylistFormDialog: View {
     }
 
     private func label(_ text: String) -> some View {
-        Text(text).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary)
+        Text(ui: text).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary)
     }
 
     private func submit() {
@@ -1125,7 +1125,7 @@ private struct AddPlaylistButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(label).font(NuvioType.bodyMedium).foregroundStyle(colors.textPrimary.opacity(enabled ? 1 : 0.4))
+            Text(ui: label).font(NuvioType.bodyMedium).foregroundStyle(colors.textPrimary.opacity(enabled ? 1 : 0.4))
                 .frame(maxWidth: .infinity).padding(.vertical, dp(12))
                 .background(RoundedRectangle(cornerRadius: dp(10)).fill(focused ? colors.primary : colors.backgroundElevated))
                 .overlay(RoundedRectangle(cornerRadius: dp(10)).stroke(focused ? colors.primary : colors.border, lineWidth: NuvioTokens.Stroke.hairline))
@@ -1301,8 +1301,8 @@ private struct LicencesDialog: View {
         NuvioDialog(title: "Licenses & Attribution", width: dp(640)) {
             ForEach(entries, id: \.0) { title, text in
                 VStack(alignment: .leading, spacing: dp(4)) {
-                    Text(title).font(NuvioType.titleSmall).foregroundStyle(colors.textPrimary)
-                    Text(text).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    Text(ui: title).font(NuvioType.titleSmall).foregroundStyle(colors.textPrimary)
+                    Text(ui: text).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, dp(6))

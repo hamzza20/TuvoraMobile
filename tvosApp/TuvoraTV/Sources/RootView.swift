@@ -86,7 +86,7 @@ struct SplashView: View {
                     .opacity(pulse ? 1 : 0.7)
                     .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
                 ProgressView().tint(NuvioPalette.marigold.secondary)
-                if let message { Text(message).font(NuvioType.bodyMedium).foregroundStyle(NuvioPalette.marigold.textSecondary) }
+                if let message { Text(ui: message).font(NuvioType.bodyMedium).foregroundStyle(NuvioPalette.marigold.textSecondary) }
             }
         }
         .onAppear { pulse = true }

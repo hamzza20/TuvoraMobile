@@ -420,7 +420,7 @@ private struct LiveGuideView: View {
     /// GuideTimeHeaderWithDay: the day the window sits on (Primary Bold once travelled), then the ticks.
     private var timeHeader: some View {
         HStack(spacing: 0) {
-            Text(Self.dayLabel(windowStart: windowStart, now: now))
+            Text(ui: Self.dayLabel(windowStart: windowStart, now: now))
                 .font(atLive ? NuvioType.labelSmall : NuvioType.labelSmall.weight(.bold))
                 .foregroundStyle(atLive ? colors.textSecondary : colors.primary)
                 .frame(width: Self.labelWidth, alignment: .leading)
@@ -717,7 +717,7 @@ private struct GuideCategoryRow: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(NuvioType.bodyMedium).lineLimit(1)
+            Text(ui: title).font(NuvioType.bodyMedium).lineLimit(1)
                 .foregroundStyle(focused ? colors.onPrimary : (selected ? colors.textPrimary : colors.textSecondary))
                 .padding(.horizontal, dp(12)).padding(.vertical, dp(8))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -845,7 +845,7 @@ private struct GuideCellView: View {
                 Text("⟲").font(NuvioType.labelSmall.weight(.bold)).foregroundStyle(focused ? colors.onPrimary : colors.primary)
             }
             if let title = cell.programme?.title {
-                Text(title).font(NuvioType.labelMedium).lineLimit(1)
+                Text(ui: title).font(NuvioType.labelMedium).lineLimit(1)
                     .foregroundStyle(focused ? colors.onPrimary : (cell.airing ? colors.textPrimary : colors.textSecondary))
             }
             Spacer(minLength: 0)
@@ -933,7 +933,7 @@ private struct SheetButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: dp(8))
         Button(action: action) {
-            Text(label).font(NuvioType.titleSmall.weight(.bold)).lineLimit(1)
+            Text(ui: label).font(NuvioType.titleSmall.weight(.bold)).lineLimit(1)
                 .foregroundStyle(focused ? colors.onPrimary : colors.textPrimary)
                 .padding(.horizontal, dp(16)).padding(.vertical, dp(8))
                 .background(shape.fill(focused ? colors.primary : (primary ? colors.primary.opacity(0.22) : .clear)))

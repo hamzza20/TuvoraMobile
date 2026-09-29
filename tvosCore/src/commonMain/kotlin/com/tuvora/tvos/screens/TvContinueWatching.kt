@@ -40,12 +40,20 @@ object TvContinueWatching {
     /** The top-right badge: "Next Up", or time left like NuvioTV ("8m left", "1h 49m left"). */
     fun badge(item: TvCwItem): String? {
         if (item.isNextUp) return "Next Up"
-        if (item.durationMs <= 0) return null
-        val leftMin = ((item.durationMs - item.positionMs).coerceAtLeast(0) / 60_000).toInt()
-        if (leftMin <= 0) return null
+        val leftMin = minutesLeft(item) ?: return null
         val h = leftMin / 60
         val m = leftMin % 60
         return if (h > 0) "${h}h ${m}m left" else "${m}m left"
+    }
+
+    /**
+     * Whole minutes still to watch, or null when there is nothing to show (Next Up, unknown
+     * duration, finished). The screen formats it in the viewer's language; [badge] is the English form.
+     */
+    fun minutesLeft(item: TvCwItem): Int? {
+        if (item.isNextUp || item.durationMs <= 0) return null
+        val leftMin = ((item.durationMs - item.positionMs).coerceAtLeast(0) / 60_000).toInt()
+        return leftMin.takeIf { it > 0 }
     }
 
     /** "S2 E1" for episodes, null for movies. */

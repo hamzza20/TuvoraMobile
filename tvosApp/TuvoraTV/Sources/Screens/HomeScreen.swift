@@ -181,7 +181,7 @@ struct HeroContent: Identifiable, Equatable {
         backdrop = preview.banner ?? preview.landscapePoster ?? preview.poster
         logo = preview.logo
         title = preview.name
-        meta = [preview.type == "series" ? "Series" : "Movie", preview.genres.first, preview.releaseInfo].compactMap { $0 }
+        meta = [preview.type == "series" ? LK("type_series", "Series") : LK("type_movie", "Movie"), preview.genres.first, preview.releaseInfo].compactMap { $0 }
         status = nil
         rating = preview.imdbRating
         description = preview.description_
@@ -192,9 +192,9 @@ struct HeroContent: Identifiable, Equatable {
         backdrop = details?.background ?? cw.background ?? cw.artwork
         logo = details?.logo ?? cw.logo
         title = cw.title
-        let kind = cw.seasonNumber == nil ? "Movie" : "Series"
+        let kind = cw.seasonNumber == nil ? LK("type_movie", "Movie") : LK("type_series", "Series")
         meta = [kind, details?.genres.first, details?.releaseInfo].compactMap { $0 }
-        status = [TvContinueWatching.shared.episodeLabel(item: cw), TvContinueWatching.shared.badge(item: cw)?.uppercased()]
+        status = [TvContinueWatching.shared.episodeLabel(item: cw), cwBadge(cw)?.uppercased()]
             .compactMap { $0 }.joined(separator: " · ").nilIfEmpty
         rating = details?.imdbRating
         description = details?.description_
@@ -327,7 +327,7 @@ struct ContinueWatchingCard: View {
     }
 
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous) }
-    private var badge: String? { TvContinueWatching.shared.badge(item: item) }
+    private var badge: String? { cwBadge(item) }
     private var episodeLabel: String? { TvContinueWatching.shared.episodeLabel(item: item) }
     private var posterArt: String? { item.poster ?? item.background ?? item.artwork }
 
@@ -426,7 +426,7 @@ struct ContinueWatchingCard: View {
     }
 
     private func badgeView(_ text: String) -> some View {
-        Text(text).font(NuvioType.labelSmall).foregroundStyle(colors.textPrimary)
+        Text(ui: text).font(NuvioType.labelSmall).foregroundStyle(colors.textPrimary)
             .padding(.horizontal, dp(6)).padding(.vertical, dp(3))
             .background(RoundedRectangle(cornerRadius: NuvioTokens.Radius.badge).fill(colors.background.opacity(0.8)))
     }

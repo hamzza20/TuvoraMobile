@@ -307,7 +307,7 @@ private struct OverlayButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: dp(12), style: .continuous)
         Button(action: action) {
-            Text(title).font(NuvioType.inter(15, .semibold)).lineLimit(1)
+            Text(ui: title).font(NuvioType.inter(15, .semibold)).lineLimit(1)
                 .foregroundStyle(textColor)
                 .padding(.horizontal, dp(28)).padding(.vertical, dp(12))
                 .frame(minHeight: dp(48))
@@ -349,7 +349,7 @@ private struct CategoryTab: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: dp(20), style: .continuous)
         Button(action: action) {
-            Text(label).font(NuvioType.inter(13, selected ? .semibold : .medium))
+            Text(ui: label).font(NuvioType.inter(13, selected ? .semibold : .medium))
                 .foregroundStyle(selected || focused ? Color.white : colors.textSecondary)
                 .padding(.horizontal, dp(18)).padding(.vertical, dp(8))
                 .background(shape.fill(focused ? colors.focusBackground : selected ? colors.secondary.opacity(0.22) : Color.white.opacity(0.06)))
@@ -390,7 +390,7 @@ private struct AvatarGridItem: View {
 struct ProfileToast: View {
     let text: String
     var body: some View {
-        Text(text).font(NuvioType.inter(15, .medium)).foregroundStyle(.white)
+        Text(ui: text).font(NuvioType.inter(15, .medium)).foregroundStyle(.white)
             .padding(.horizontal, dp(24)).padding(.vertical, dp(14))
             .background(Capsule().fill(Color.black.opacity(0.78)))
             .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: dp(1)))

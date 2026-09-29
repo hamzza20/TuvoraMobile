@@ -31,7 +31,7 @@ struct HubChip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: dp(4)) {
-                Text(title).font(NuvioType.labelLarge).lineLimit(1)
+                Text(ui: title).font(NuvioType.labelLarge).lineLimit(1)
                 if let trailingIcon {
                     Image(trailingIcon).renderingMode(.template).resizable().frame(width: dp(16), height: dp(16))
                 }
@@ -70,7 +70,7 @@ struct NuvioPosterCard: View {
                 ZStack {
                     colors.backgroundCard
                     CachedPosterArtwork(urlString: imageURL, width: width, height: height, maximumWidth: width * 2) {
-                        Text(title).font(NuvioType.titleMedium).foregroundStyle(colors.textSecondary)
+                        Text(ui: title).font(NuvioType.titleMedium).foregroundStyle(colors.textSecondary)
                             .multilineTextAlignment(.center).lineLimit(3).padding(.horizontal, dp(12))
                             .frame(width: width, height: height)
                             .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard).stroke(colors.border, lineWidth: NuvioTokens.Stroke.hairline))
@@ -83,8 +83,8 @@ struct NuvioPosterCard: View {
                 .hoverEffect(.highlight)   // tvOS-native focus: lift, parallax and shadow under the Tuvora ring
                 if showLabel {
                     VStack(alignment: .leading, spacing: dp(2)) {
-                        Text(title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
-                        if let subtitle { Text(subtitle).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary).lineLimit(1) }
+                        Text(ui: title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                        if let subtitle { Text(ui: subtitle).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary).lineLimit(1) }
                     }
                     .frame(width: width, alignment: .leading)
                 }
@@ -127,7 +127,7 @@ struct NuvioShelfHeader<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: dp(12)) {
-            Text(title).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).lineLimit(1)
+            Text(ui: title).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).lineLimit(1)
             trailing
             Spacer()
         }
@@ -166,8 +166,8 @@ struct NuvioStateMessage: View {
 
     var body: some View {
         VStack(spacing: dp(12)) {
-            Text(title).font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
-            Text(message).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+            Text(ui: title).font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+            Text(ui: message).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
                 .multilineTextAlignment(.center).frame(maxWidth: dp(420))
             if let retry {
                 Button(action: retry) {
@@ -245,9 +245,9 @@ struct NuvioEmptyState: View {
                     .frame(width: dp(80), height: dp(80)).foregroundStyle(colors.textTertiary)
                     .padding(.bottom, dp(24))
             }
-            Text(title).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary).multilineTextAlignment(.center)
+            Text(ui: title).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary).multilineTextAlignment(.center)
             if let subtitle {
-                Text(subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                Text(ui: subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
                     .multilineTextAlignment(.center).padding(.top, dp(8))
             }
         }
@@ -272,7 +272,7 @@ struct NuvioTextButton: View {
                 if let icon {
                     Image(icon).renderingMode(.template).resizable().scaledToFit().frame(width: dp(18), height: dp(18))
                 }
-                Text(title).font(NuvioType.labelLarge).lineLimit(1)
+                Text(ui: title).font(NuvioType.labelLarge).lineLimit(1)
             }
             .foregroundStyle(enabled ? colors.textPrimary : colors.textDisabled)
             .padding(.horizontal, dp(16)).padding(.vertical, dp(10))
@@ -317,9 +317,9 @@ struct NuvioDropdownPicker: View {
     var body: some View {
         Button { open = true } label: {
             VStack(alignment: .leading, spacing: dp(2)) {
-                Text(title).font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
+                Text(ui: title).font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
                 HStack {
-                    Text(value).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    Text(ui: value).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
                     Spacer(minLength: dp(8))
                     Image(open ? "md_expand_less" : "md_expand_more").renderingMode(.template).resizable()
                         .frame(width: dp(20), height: dp(20))
@@ -367,7 +367,7 @@ private struct PickerDialog: View {
                 let isSelected = option.value == selectedValue
                 Button { onSelect(option) } label: {
                     HStack {
-                        Text(option.label).font(NuvioType.bodyLarge).lineLimit(1)
+                        Text(ui: option.label).font(NuvioType.bodyLarge).lineLimit(1)
                             .foregroundStyle(isFocused ? colors.onSecondary : colors.textPrimary)
                         Spacer()
                         if isSelected {
@@ -385,4 +385,26 @@ private struct PickerDialog: View {
         }
         .defaultFocus($focusedValue, selectedValue ?? options.first?.value)
     }
+}
+
+/// Looks a runtime UI string up in Localizable.strings (generated from NuvioTV's translations by
+/// Scripts/gen-localizable.py). String literals passed to Text already localize; String parameters
+/// do not, so shared components route their labels through this. Unknown strings (titles, channel
+/// names) fall back to themselves.
+func L(_ s: String) -> String { Bundle.main.localizedString(forKey: s, value: s, table: nil) }
+
+extension Text {
+    /// A runtime label, localized; rendered verbatim (no Markdown or format parsing of data).
+    init(ui s: String) { self.init(verbatim: L(s)) }
+}
+
+/// A string Scripts/gen-localizable.py emits under a NuvioTV key ("tv:<key>"), with its English form.
+func LK(_ key: String, _ english: String) -> String { Bundle.main.localizedString(forKey: "tv:" + key, value: english, table: nil) }
+
+/// The Continue Watching badge in the viewer's language ("Next Up", "1h 49m left"), NuvioTV's copy.
+func cwBadge(_ item: TvCwItem) -> String? {
+    if item.isNextUp { return LK("cw_next_up", "Next Up") }
+    guard let left = TvContinueWatching.shared.minutesLeft(item: item)?.intValue else { return nil }
+    return left >= 60 ? String(format: LK("cw_hours_min_left", "%1$ldh %2$ldm left"), left / 60, left % 60)
+                      : String(format: LK("cw_min_left", "%1$ldm left"), left)
 }

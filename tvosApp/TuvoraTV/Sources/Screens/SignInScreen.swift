@@ -169,7 +169,7 @@ struct SignInView: View {
         if let status = statusLine {
             Spacer().frame(height: dp(14))
             if status.isError {
-                Text(status.text)
+                Text(ui: status.text)
                     .font(NuvioType.bodySmall).foregroundStyle(AuthColors.errorText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, dp(12)).padding(.vertical, dp(10))
@@ -177,7 +177,7 @@ struct SignInView: View {
                     .background(RoundedRectangle(cornerRadius: dp(12)).fill(AuthColors.errorBackground))
                     .overlay(RoundedRectangle(cornerRadius: dp(12)).stroke(NuvioPrimitives.neutral750.opacity(0.35), lineWidth: dp(1)))
             } else {
-                Text(status.text).font(NuvioType.bodySmall).foregroundStyle(AuthColors.textSecondary)
+                Text(ui: status.text).font(NuvioType.bodySmall).foregroundStyle(AuthColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
@@ -239,7 +239,7 @@ private struct AuthButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(NuvioType.labelLarge).lineLimit(1)
+            Text(ui: title).font(NuvioType.labelLarge).lineLimit(1)
                 .foregroundStyle(focused ? Color.black : AuthColors.textPrimary)
                 .padding(.horizontal, dp(16)).padding(.vertical, dp(10))
                 .background(RoundedRectangle(cornerRadius: dp(16), style: .continuous)

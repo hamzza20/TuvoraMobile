@@ -161,7 +161,7 @@ private struct SearchErrorState: View {
 
     var body: some View {
         VStack(spacing: dp(16)) {
-            Text(message).font(NuvioType.bodyLarge).foregroundStyle(colors.textSecondary).multilineTextAlignment(.center)
+            Text(ui: message).font(NuvioType.bodyLarge).foregroundStyle(colors.textSecondary).multilineTextAlignment(.center)
             NuvioTextButton(title: "Retry", action: retry)
         }
         .frame(maxWidth: .infinity).frame(height: dp(400))
@@ -203,7 +203,7 @@ private struct RecentSearchButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(NuvioType.labelLarge).lineLimit(1)
+            Text(ui: title).font(NuvioType.labelLarge).lineLimit(1)
                 .foregroundStyle(focused ? colors.primary : colors.textPrimary)
                 .padding(.horizontal, dp(16)).padding(.vertical, dp(10))
                 .frame(maxWidth: .infinity, alignment: .leading)
