@@ -253,16 +253,12 @@ struct SettingsTextField: View {
                         .textInputAutocapitalization(.never)
                 }
             }
-            .textFieldStyle(.plain)
+            // tvOS draws its own text-field platter (and lifts it on focus); a second box around it read
+            // as a field inside a field, so only NuvioTV's label sits above the native field.
             .font(NuvioType.bodyMedium)
-            .foregroundStyle(colors.textPrimary)
             .focused($focused)
             .onSubmit(onSubmit)
-            .padding(.horizontal, dp(14)).padding(.vertical, dp(12))
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: dp(10)).fill(colors.backgroundElevated))
-            .overlay(RoundedRectangle(cornerRadius: dp(10)).stroke(focused ? colors.primary : colors.border,
-                                                                   lineWidth: focused ? NuvioTokens.Stroke.focus : NuvioTokens.Stroke.hairline))
             .reportsFocus(focused)
         }
         .padding(.top, dp(12))
