@@ -239,6 +239,15 @@ private struct LiveGuideView: View {
         .task(id: accountId) {
             loading = true
             channels = (try? await TvLiveGuide.shared.channels(accountId: accountId)) ?? []
+            // Simulator smoke hook: `-smokeGuidePlay` previews the first channel, then goes full screen.
+            if ProcessInfo.processInfo.arguments.contains("-smokeGuidePlay"), let first = channels.first {
+                Task {
+                    select(first)
+                    try? await Task.sleep(nanoseconds: 12_000_000_000)
+                    NSLog("SMOKE guide preview=%@ session=%d", first.name, previewSession == nil ? 0 : 1)
+                    select(first)
+                }
+            }
             favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
             loading = false
         }
