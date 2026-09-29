@@ -1,0 +1,5 @@
+#include "Version.xcconfig"
+// POSTHOG_CLI_API_KEY for the Release dSYM upload — the iPhone app's gitignored file, shared.
+#include? "../../iosApp/Configuration/PostHog.local.xcconfig"
+
+DEVELOPMENT_TEAM = 8ZLXPVM885

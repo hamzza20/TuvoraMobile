@@ -7,6 +7,11 @@ options:
 packages:
   # Our MPVKit fork (git submodule at NuvioMobile/MPVKit): libmpv + FFmpeg, LGPL build, tvOS slices.
   MPVKit: { path: ../MPVKit }
+  # Same SDK and version floor as the iPhone app (crash autocapture works on tvOS via POSIX signals).
+  PostHog: { url: https://github.com/PostHog/posthog-ios.git, majorVersion: 3.63.1 }
+configFiles:
+  Debug: Configuration/TuvoraTV.xcconfig
+  Release: Configuration/TuvoraTV.xcconfig
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -24,14 +29,22 @@ targets:
       # app bundles (MPVPlayerBridge.configureBundledSubtitleFont), shared rather than copied.
       - path: ../iosApp/iosApp/Resources/Fonts/NotoSansCJKsc-Regular.otf
         buildPhase: resources
+      # PostHog setup + event scrubbing, one file for both Apple apps.
+      - ../iosApp/iosApp/TuvoraTelemetry.swift
     dependencies:
       - package: MPVKit
         product: MPVKit
+      - package: PostHog
+        product: PostHog
       - target: TuvoraTopShelf
     info:
       path: TuvoraTV/Info.plist
       properties:
         CFBundleDisplayName: Tuvora
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Only HTTPS/TLS from the OS — exempt, so TestFlight skips the export-compliance question.
+        ITSAppUsesNonExemptEncryption: false
         UIAppFonts: [Fonts/inter_variable.ttf]
         UILaunchScreen: {}
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
@@ -56,6 +69,12 @@ targets:
       - name: Copy string tables
         script: exec "$SRCROOT/Scripts/copy-string-tables.sh"
         basedOnDependencyAnalysis: false
+      # Release only: sends the dSYM to PostHog so tvOS crash stacks symbolicate (same script as iOS;
+      # it fails an archive without POSTHOG_CLI_API_KEY and only warns on a plain Release build).
+      - name: Upload dSYM to PostHog
+        script: exec "$SRCROOT/../iosApp/Scripts/upload-posthog-symbols.sh"
+        basedOnDependencyAnalysis: false
+        inputFiles: ["${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}"]
 
   # Top Shelf: Continue Watching on the Apple TV Home Screen. Reads the feed the app writes into the App Group.
   TuvoraTopShelf:
@@ -66,6 +85,8 @@ targets:
       path: TopShelf/Info.plist
       properties:
         CFBundleDisplayName: Tuvora
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.tv-top-shelf
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentProvider

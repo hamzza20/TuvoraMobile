@@ -1,5 +1,6 @@
 import SwiftUI
 import TuvoraCore
+import PostHog
 
 /// Apple TV entry point. Order matters (TvAppGraph.kt): analytics and the memory-pressure source
 /// first, then the Kotlin bootstrap, before any screen reads shared state.
@@ -8,15 +9,14 @@ struct TuvoraTVApp: App {
     init() {
         // Before anything reads storage: route the shared code's defaults to Apple TV's tiers.
         TieredUserDefaults.install()
+        // PostHog with crash autocapture, the iPhone app's scrubbing and its consent switch.
+        TuvoraTelemetry.start()
         AnalyticsSink.shared.register { event, properties in
-            // PostHog is wired in a later Phase 2 step; until then events go to the device log.
-            NSLog("[analytics] %@ %@", event, properties.description)
+            PostHogSDK.shared.capture(event, properties: properties)
         }
         MemoryPressureObserver.shared.start()
         TvAppGraph.shared.start()
         PlayerEngines.register()
-        NSLog("SMOKE strings lang=%@ auth_sign_up_failed=%@", Locale.preferredLanguages.first ?? "?",
-              Bundle.main.localizedString(forKey: "auth_sign_up_failed", value: "MISSING", table: "Tuvora"))
     }
 
     var body: some Scene {
