@@ -100,7 +100,28 @@ struct MainShell: View {
             TitleDetailsScreen(preview: box.preview).environmentObject(playback).environment(\.nuvio, colors)
         }
         .task { await theme.observe() }
+        .task { TopShelfPublisher.start() }
+        .onReceive(DeepLinkCenter.shared.$pending) { link in
+            guard let link else { return }
+            DeepLinkCenter.shared.pending = nil
+            open(link)
+        }
         .task { for await state in ProfileRepository.shared.state { profile = state.activeProfile } }
+    }
+
+    /// A Top Shelf item: Play resumes that title's sources, Select opens its details.
+    private func open(_ link: DeepLink) {
+        Task {
+            if link.play, let meta = try? await MetaDetailsRepository.shared.fetch(type: link.type, id: link.id, cacheResult: true) {
+                let video = meta.videos.first { $0.id == link.videoId }
+                playback.pendingPicker = TvCwTargetBox(target: TvCwTarget(meta: meta, video: video))
+            } else {
+                smokeDetails = PreviewBox(preview: MetaPreview(id: link.id, type: link.type, name: "", poster: nil, banner: nil, logo: nil,
+                                                               posterShape: .poster, description: nil, releaseInfo: nil, rawReleaseDate: nil,
+                                                               popularity: nil, voteCount: nil, imdbRating: nil, genres: [], pinned: false,
+                                                               rawPosterUrl: nil, landscapePoster: nil, rawLandscapePosterUrl: nil))
+            }
+        }
     }
 
     @ViewBuilder

@@ -15,8 +15,11 @@ targets:
   TuvoraTV:
     type: application
     platform: tvOS
-    sources: [TuvoraTV/Sources, TuvoraTV/Assets.xcassets, TuvoraTV/Resources]
-    dependencies: [{ package: MPVKit, product: MPVKit }]
+    sources: [TuvoraTV/Sources, TuvoraTV/Assets.xcassets, TuvoraTV/Resources, Shared]
+    dependencies:
+      - package: MPVKit
+        product: MPVKit
+      - target: TuvoraTopShelf
     info:
       path: TuvoraTV/Info.plist
       properties:
@@ -24,12 +27,14 @@ targets:
         UIAppFonts: [Fonts/inter_variable.ttf]
         UILaunchScreen: {}
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
+        CFBundleURLTypes: [{ CFBundleURLName: com.tuvora.deeplink, CFBundleURLSchemes: [tuvora] }]
         CFBundleLocalizations: [en, ar, bg, cs, de, el, es, fr, he, hu, id, it, ja, nb, nl, pl, pt, pt-BR, ro, ru, sk, tr, ur, vi]
     settings:
       base:
         FRAMEWORK_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../tvosCore/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"]
         OTHER_LDFLAGS: ["$(inherited)", "-framework", "TuvoraCore", "-lsqlite3", "-lc++", "-framework", "SystemConfiguration"]
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: TuvoraTV/TuvoraTV.entitlements
       # Same bundle IDs as the iPhone app: Universal Purchase puts Apple TV on the same App Store record.
       configs:
         Debug: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.app }
@@ -42,3 +47,23 @@ targets:
       - name: Copy string tables
         script: exec "$SRCROOT/Scripts/copy-string-tables.sh"
         basedOnDependencyAnalysis: false
+
+  # Top Shelf: Continue Watching on the Apple TV Home Screen. Reads the feed the app writes into the App Group.
+  TuvoraTopShelf:
+    type: app-extension
+    platform: tvOS
+    sources: [TopShelf/Sources, Shared]
+    info:
+      path: TopShelf/Info.plist
+      properties:
+        CFBundleDisplayName: Tuvora
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.tv-top-shelf
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentProvider
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: TopShelf/TopShelf.entitlements
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.app.topshelf }
+        Release: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.media.topshelf }

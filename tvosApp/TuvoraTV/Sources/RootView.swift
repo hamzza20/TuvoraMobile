@@ -9,11 +9,15 @@ struct RootView: View {
     @State private var smokeSession: TvPlayerSession? = RootView.smokeSessionFromArguments()
 
     var body: some View {
-        if let session = smokeSession {
-            TvPlayerScreen(session: session) { smokeSession = nil }
-        } else {
-            gate
+        Group {
+            if let session = smokeSession {
+                TvPlayerScreen(session: session) { smokeSession = nil }
+            } else {
+                gate
+            }
         }
+        // Top Shelf items open here (tuvora://title?…); MainShell opens them once the gate reaches Main.
+        .onOpenURL { url in if let link = DeepLink(url: url) { DeepLinkCenter.shared.pending = link } }
     }
 
     private static func smokeSessionFromArguments() -> TvPlayerSession? {
