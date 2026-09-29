@@ -204,3 +204,161 @@ struct ImdbBadge: View {
             .background(RoundedRectangle(cornerRadius: dp(3)).fill(NuvioPrimitives.imdb))
     }
 }
+
+/// EmptyScreenState (components/EmptyScreenState.kt): optional 80dp TextTertiary icon, 24dp gap,
+/// headlineSmall title, 8dp gap, bodyMedium TextSecondary subtitle, centred in a 400dp-tall block.
+struct NuvioEmptyState: View {
+    var icon: String? = nil
+    let title: String
+    var subtitle: String? = nil
+    var height: CGFloat = dp(400)
+    @Environment(\.nuvio) private var colors
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let icon {
+                Image(icon).renderingMode(.template).resizable().scaledToFit()
+                    .frame(width: dp(80), height: dp(80)).foregroundStyle(colors.textTertiary)
+                    .padding(.bottom, dp(24))
+            }
+            Text(title).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary).multilineTextAlignment(.center)
+            if let subtitle {
+                Text(subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                    .multilineTextAlignment(.center).padding(.top, dp(8))
+            }
+        }
+        .frame(maxWidth: .infinity).frame(height: height)
+    }
+}
+
+/// NuvioTV's TV Material Button as the Search / Library screens use it: BackgroundCard fill,
+/// TextPrimary label, radius md (12); focused FocusBackground with a white label, scale 1.02.
+struct NuvioTextButton: View {
+    let title: String
+    var icon: String? = nil
+    var selected = false
+    var enabled = true
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: dp(8)) {
+                if let icon {
+                    Image(icon).renderingMode(.template).resizable().scaledToFit().frame(width: dp(18), height: dp(18))
+                }
+                Text(title).font(NuvioType.labelLarge).lineLimit(1)
+            }
+            .foregroundStyle(enabled ? colors.textPrimary : colors.textDisabled)
+            .padding(.horizontal, dp(16)).padding(.vertical, dp(10))
+            .background(RoundedRectangle(cornerRadius: dp(12), style: .continuous)
+                .fill(focused || selected ? colors.focusBackground : colors.backgroundCard))
+            .overlay(RoundedRectangle(cornerRadius: dp(12), style: .continuous)
+                .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+            .scaleEffect(focused ? NuvioTokens.Motion.focusScale : 1)
+            .animation(NuvioTokens.Motion.fast, value: focused)
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .disabled(!enabled)
+        .focused($focused)
+        .reportsFocus(focused)
+    }
+}
+
+/// One choice in a NuvioDropdownPicker.
+struct NuvioPickerOption: Identifiable, Hashable {
+    let value: String
+    let label: String
+    var id: String { value }
+}
+
+/// The dropdown card Library and Discover share (LibraryScreen.kt LibraryDropdownPicker,
+/// SearchDiscoverSection.kt DiscoverDropdownPicker): BackgroundCard, radius 14, 1dp Border; focused
+/// FocusBackground with a 2dp FocusRing. labelSmall TextTertiary caption over a titleMedium value and a
+/// chevron (FocusRing when focused). OK opens the options in a NuvioDialog (tvOS has no anchored
+/// dropdown); the current choice is marked and takes focus.
+struct NuvioDropdownPicker: View {
+    let title: String
+    let value: String
+    let selectedValue: String?
+    let options: [NuvioPickerOption]
+    let onSelect: (NuvioPickerOption) -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+    /// Simulator smoke hook: `-smokeOpenPicker <title>` opens that picker's options at launch.
+    @State private var open = false
+    @State private var smokeChecked = false
+
+    var body: some View {
+        Button { open = true } label: {
+            VStack(alignment: .leading, spacing: dp(2)) {
+                Text(title).font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
+                HStack {
+                    Text(value).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    Spacer(minLength: dp(8))
+                    Image(open ? "md_expand_less" : "md_expand_more").renderingMode(.template).resizable()
+                        .frame(width: dp(20), height: dp(20))
+                        .foregroundStyle(focused ? colors.focusRing : colors.textSecondary)
+                }
+            }
+            .padding(.horizontal, dp(14)).padding(.vertical, dp(10))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: dp(14), style: .continuous).fill(focused ? colors.focusBackground : colors.backgroundCard))
+            .overlay(RoundedRectangle(cornerRadius: dp(14), style: .continuous)
+                .stroke(focused ? colors.focusRing : colors.border, lineWidth: focused ? NuvioTokens.Stroke.focus : NuvioTokens.Stroke.hairline))
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .reportsFocus(focused)
+        .onAppear {
+            guard !smokeChecked else { return }
+            smokeChecked = true
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-smokeOpenPicker"), i + 1 < args.count { open = args[i + 1] == title } else { open = false }
+        }
+        .sheet(isPresented: $open) {
+            PickerDialog(title: title, selectedValue: selectedValue, options: options) { option in
+                open = false
+                onSelect(option)
+            }
+            .environment(\.nuvio, colors)
+        }
+    }
+}
+
+/// Dropdown menu rows: radius 10; focused Secondary fill with OnSecondary text, selected FocusBackground.
+private struct PickerDialog: View {
+    let title: String
+    let selectedValue: String?
+    let options: [NuvioPickerOption]
+    let onSelect: (NuvioPickerOption) -> Void
+    @FocusState private var focusedValue: String?
+    @Environment(\.nuvio) private var colors
+
+    var body: some View {
+        NuvioDialog(title: title) {
+            ForEach(options) { option in
+                let isFocused = focusedValue == option.value
+                let isSelected = option.value == selectedValue
+                Button { onSelect(option) } label: {
+                    HStack {
+                        Text(option.label).font(NuvioType.bodyLarge).lineLimit(1)
+                            .foregroundStyle(isFocused ? colors.onSecondary : colors.textPrimary)
+                        Spacer()
+                        if isSelected {
+                            Image("md_check_circle").renderingMode(.template).resizable().frame(width: dp(18), height: dp(18))
+                                .foregroundStyle(isFocused ? colors.onSecondary : colors.secondary)
+                        }
+                    }
+                    .padding(.horizontal, dp(14)).padding(.vertical, dp(10))
+                    .background(RoundedRectangle(cornerRadius: dp(10), style: .continuous)
+                        .fill(isFocused ? colors.secondary : (isSelected ? colors.focusBackground : .clear)))
+                }
+                .buttonStyle(PlainNoChromeButtonStyle())
+                .focused($focusedValue, equals: option.value)
+            }
+        }
+        .defaultFocus($focusedValue, selectedValue ?? options.first?.value)
+    }
+}
