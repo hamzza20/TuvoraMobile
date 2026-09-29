@@ -186,7 +186,55 @@ final class AVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     /// Position is the only frame evidence AVPlayer offers without an output tap; enough for the session.
     func getVideoFrameTicks() -> Int64 { getPositionMs() / 40 }
     func getVoFrameStats() -> Int64 { 0 }
-    func getStreamInfoJson() -> String { "" }
+    /// What AVPlayerItem exposes about the stream, in the libmpv payload's shape (PlayerStreamInfoPayload):
+    /// codecs from the tracks' format descriptions, the presentation size, the nominal frame rate, and
+    /// the access log's indicated bitrate (HLS) or the track's estimated data rate (files).
+    func getStreamInfoJson() -> String {
+        guard let item = player.currentItem else { return "" }
+        var info: [String: Any] = [:]
+        let size = item.presentationSize
+        if size.width > 0, size.height > 0 { info["videoWidth"] = Int(size.width); info["videoHeight"] = Int(size.height) }
+        for track in item.tracks {
+            guard let asset = track.assetTrack else { continue }
+            let format = (asset.formatDescriptions as? [CMFormatDescription])?.first
+            switch asset.mediaType {
+            case .video:
+                if let format { info["videoCodec"] = Self.codecName(CMFormatDescriptionGetMediaSubType(format)) }
+                if asset.nominalFrameRate > 0 { info["videoFps"] = Double(asset.nominalFrameRate) }
+                if asset.estimatedDataRate > 0 { info["videoBitrate"] = Double(asset.estimatedDataRate) }
+            case .audio:
+                if let format {
+                    info["audioCodec"] = Self.codecName(CMFormatDescriptionGetMediaSubType(format))
+                    if let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(format)?.pointee {
+                        if asbd.mChannelsPerFrame > 0 { info["audioChannels"] = Int(asbd.mChannelsPerFrame) }
+                        if asbd.mSampleRate > 0 { info["audioSampleRate"] = Int(asbd.mSampleRate) }
+                    }
+                }
+                if asset.estimatedDataRate > 0 { info["audioBitrate"] = Double(asset.estimatedDataRate) }
+            default: break
+            }
+        }
+        if let event = item.accessLog()?.events.last, event.indicatedBitrate > 0 { info["videoBitrate"] = event.indicatedBitrate }
+        guard !info.isEmpty, let data = try? JSONSerialization.data(withJSONObject: info) else { return "" }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+
+    /// FourCC → the names libmpv reports, for the common Apple codecs; anything else as its FourCC.
+    static func codecName(_ code: FourCharCode) -> String {
+        switch code {
+        case kCMVideoCodecType_H264: return "H.264"
+        case kCMVideoCodecType_HEVC, 0x68766331 /* hvc1 */: return "HEVC"
+        case 0x64766831 /* dvh1 */, 0x64766865 /* dvhe */: return "Dolby Vision"
+        case kCMVideoCodecType_AV1: return "AV1"
+        case kAudioFormatMPEG4AAC: return "AAC"
+        case kAudioFormatAC3: return "AC-3"
+        case kAudioFormatEnhancedAC3: return "E-AC-3"
+        case kAudioFormatMPEGLayer3: return "MP3"
+        default:
+            let chars = [24, 16, 8, 0].map { Character(UnicodeScalar(UInt8((code >> $0) & 0xFF))) }
+            return String(chars).trimmingCharacters(in: .whitespaces)
+        }
+    }
 
     func destroy() {
         player.pause()

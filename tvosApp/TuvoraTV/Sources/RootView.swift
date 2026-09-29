@@ -5,7 +5,10 @@ import TuvoraCore
 /// sign-in screen already runs the real device sign-in against the backend.
 struct RootView: View {
     @State private var screen: TvGateScreen = .loading
-    /// Simulator smoke hook: `-smokePlay <url> [-smokeLive]` opens the player straight away.
+    /// Simulator smoke hook: `-smokePlay <url> [-smokeLive]` opens the player straight away. With
+    /// `-smokeAs <type>:<videoId>` (e.g. `series:tt0944947:1:1`) it waits for the signed-in main screen
+    /// and plays the URL as that title, so its skip segments and add-on subtitles load;
+    /// `-smokeStartMs <ms>` resumes from there.
     @State private var smokeSession: TvPlayerSession? = RootView.smokeSessionFromArguments()
 
     var body: some View {
@@ -25,8 +28,21 @@ struct RootView: View {
 
     private static func smokeSessionFromArguments() -> TvPlayerSession? {
         let args = ProcessInfo.processInfo.arguments
-        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count else { return nil }
+        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count, !args.contains("-smokeAs") else { return nil }
         let launch = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: args.contains("-smokeLive"), startPositionMs: 0)
+        return TvPlayerSession(launch: launch, liveReresolve: nil)
+    }
+
+    /// `-smokeAs`: the smoke session as a catalog title, built once the profile is loaded.
+    private static func smokeCatalogSession() -> TvPlayerSession? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count,
+              let j = args.firstIndex(of: "-smokeAs"), j + 1 < args.count else { return nil }
+        let spec = args[j + 1]
+        guard let colon = spec.firstIndex(of: ":") else { return nil }
+        let type = String(spec[..<colon]), videoId = String(spec[spec.index(after: colon)...])
+        let start = args.firstIndex(of: "-smokeStartMs").flatMap { k in k + 1 < args.count ? Int64(args[k + 1]) : nil } ?? 0
+        let launch = TvPlayerLaunches.shared.directAs(url: args[i + 1], title: "Smoke test", type: type, videoId: videoId, startPositionMs: start)
         return TvPlayerSession(launch: launch, liveReresolve: nil)
     }
 
@@ -43,6 +59,10 @@ struct RootView: View {
         .task {
             for await next in TvAppLifecycle.shared.screen {
                 NSLog("SMOKE gate screen=%@", "\(next)")
+                if next == .main, smokeSession == nil, let session = Self.smokeCatalogSession() {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)   // let the add-ons load first
+                    smokeSession = session
+                }
                 screen = next
                 TvAppGraph.shared.screenChanged(name: "tv_gate_\(next)")
             }
