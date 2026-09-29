@@ -81,6 +81,8 @@ struct SettingsToggleRow: View {
     let title: String
     var subtitle: String? = nil
     let isOn: Bool
+    /** NuvioTV `enabled = false`: dims to 40% and can't take focus. */
+    var enabled = true
     let toggle: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
@@ -99,8 +101,10 @@ struct SettingsToggleRow: View {
             .frame(minHeight: dp(62))
             .background(Capsule().fill(colors.background))
             .overlay(Capsule().stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+            .opacity(enabled ? 1 : 0.4)
         }
         .buttonStyle(PlainNoChromeButtonStyle())
+        .disabled(!enabled)
         .focused($focused)
         .reportsFocus(focused)
     }

@@ -61,6 +61,8 @@ struct NuvioPalette {
     let error = NuvioPrimitives.error
     let success = NuvioPrimitives.success
     let live = NuvioPrimitives.marigoldLive
+    let warning = Color(argb: 0xFFFFB74D)   // PrimitiveTokens.warning
+    let info = Color(argb: 0xFF29B6F6)      // PrimitiveTokens.info
 
     static let marigold = NuvioPalette(secondary: NuvioPrimitives.marigoldAccent, secondaryVariant: NuvioPrimitives.marigoldAccentVariant,
                                        onSecondary: NuvioPrimitives.marigoldInk, focusRing: NuvioPrimitives.marigoldAccent,
