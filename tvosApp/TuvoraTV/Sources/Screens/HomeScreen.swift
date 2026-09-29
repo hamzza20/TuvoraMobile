@@ -16,24 +16,29 @@ struct HomeScreen: View {
     /// Settings → Layout (NuvioTV "Show Hero Section" / "Show Continue Watching").
     @AppStorage(NuvioLayoutPrefs.showHeroKey) private var showHero = true
     @AppStorage(NuvioLayoutPrefs.cwEnabledKey) private var cwEnabled = true
+    /// Settings → Layout → Home Layout (NuvioTV HomeLayout) and Continue Watching style.
+    @AppStorage(NuvioLayoutPrefs.homeLayoutKey) private var homeLayout = "modern"
+    @AppStorage(NuvioLayoutPrefs.cwStyleKey) private var cwStyleKey = "card"
+    private var cwStyle: CwStyle { CwStyle(rawValue: cwStyleKey) ?? .card }
 
-    var body: some View {
-        GeometryReader { geo in
-            let viewport = showHero ? geo.size.height * 0.52 : geo.size.height - dp(30)
-            ZStack(alignment: .topLeading) {
-                colors.background.ignoresSafeArea()
-                if showHero, let hero {
-                    HomeHero(content: hero, width: geo.size.width, height: geo.size.height - viewport + dp(24) + dp(14),
-                             textBottomInset: viewport + dp(16))
-                        .id(hero.id)
-                        .transition(.opacity.animation(.easeInOut(duration: 0.48)))
-                }
-                VStack(spacing: 0) {
-                    Spacer(minLength: geo.size.height - viewport)
-                    rowsList.frame(height: viewport)
-                }
+    /// Simulator smoke hooks: `-smokeHomeLayout <modern|grid|classic>`, `-smokeCwStyle <card|wide|poster>`,
+    /// `-smokeShowHero <true|false>`
+    /// write the Settings → Layout preferences before the screen reads them.
+    private static let applySmokePrefs: Void = {
+        let args = ProcessInfo.processInfo.arguments
+        for (flag, key) in [("-smokeHomeLayout", NuvioLayoutPrefs.homeLayoutKey), ("-smokeCwStyle", NuvioLayoutPrefs.cwStyleKey)] {
+            if let i = args.firstIndex(of: flag), i + 1 < args.count, UserDefaults.standard.string(forKey: key) != args[i + 1] {
+                UserDefaults.standard.set(args[i + 1], forKey: key)
             }
         }
+        if let i = args.firstIndex(of: "-smokeShowHero"), i + 1 < args.count {
+            UserDefaults.standard.set(args[i + 1] != "false", forKey: NuvioLayoutPrefs.showHeroKey)
+        }
+    }()
+    init() { _ = Self.applySmokePrefs }
+
+    var body: some View {
+        layoutBody
         .task {
             TvHome.shared.start()
             for await next in TvHome.shared.rows { rows = next; if hero == nil, let first = next.heroItems.first ?? next.sections.first?.items.first { hero = HeroContent(preview: first) } }
@@ -53,31 +58,46 @@ struct HomeScreen: View {
         }
     }
 
+    /// NuvioTV HomeScreen.kt: CLASSIC → ClassicHomeRoute, GRID → GridHomeRoute, MODERN → ModernHomeRoute.
+    @ViewBuilder
+    private var layoutBody: some View {
+        switch homeLayout {
+        case "classic":
+            ClassicHomeView(rows: rows, continueWatching: cwEnabled ? continueWatching : [], showHero: showHero, cwStyle: cwStyle,
+                            onOpenCw: open, onOpen: { details = PreviewBox(preview: $0) })
+        case "grid":
+            GridHomeView(rows: rows, continueWatching: cwEnabled ? continueWatching : [], showHero: showHero, cwStyle: cwStyle,
+                         onOpenCw: open, onOpen: { details = PreviewBox(preview: $0) })
+        default:
+            modernBody
+        }
+    }
+
+    private var modernBody: some View {
+        GeometryReader { geo in
+            let viewport = showHero ? geo.size.height * 0.52 : geo.size.height - dp(30)
+            ZStack(alignment: .topLeading) {
+                colors.background.ignoresSafeArea()
+                if showHero, let hero {
+                    HomeHero(content: hero, width: geo.size.width, height: geo.size.height - viewport + dp(24) + dp(14),
+                             textBottomInset: viewport + dp(16))
+                        .id(hero.id)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.48)))
+                }
+                VStack(spacing: 0) {
+                    Spacer(minLength: geo.size.height - viewport)
+                    rowsList.frame(height: viewport)
+                }
+            }
+        }
+    }
+
     private var rowsList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: NuvioTokens.Layout.rowGap) {
                 if cwEnabled && !continueWatching.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        NuvioShelfHeader(title: "Continue Watching") { EmptyView() }
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: NuvioTokens.Layout.itemGap) {
-                                ForEach(continueWatching, id: \.videoId) { item in
-                                    ContinueWatchingCard(item: item, onFocus: { focusCw(item) }) { open(item) }
-                                        .contextMenu {
-                                            Button("Remove from Continue Watching", role: .destructive) {
-                                                WatchProgressRepository.shared.removeProgress(
-                                                    contentId: item.parentMetaId,
-                                                    seasonNumber: item.seasonNumber,
-                                                    episodeNumber: item.episodeNumber)
-                                            }
-                                        }
-                                }
-                            }
-                            .padding(.horizontal, NuvioTokens.Layout.gutter).padding(.vertical, dp(8))
-                        }
-                        .scrollClipDisabled()
-            .focusSection()
-                    }
+                    ContinueWatchingRow(items: continueWatching, style: cwStyle, size: cwStyle.modernSize, header: .modern,
+                                        onFocus: focusCw, onOpen: open)
                 }
                 if let rows {
                     if rows.sections.isEmpty && rows.isLoading {
@@ -264,6 +284,7 @@ private struct CatalogRow: View {
                 LazyHStack(alignment: .top, spacing: NuvioTokens.Layout.itemGap) {
                     ForEach(section.items, id: \.id) { item in
                         ExpandingPosterCard(item: item, size: size, onFocus: { onFocus(item) }) { onOpen(item) }
+                            .titleActions(item) { onOpen(item) }
                     }
                 }
                 .padding(.horizontal, NuvioTokens.Layout.gutter).padding(.vertical, dp(8))
@@ -274,64 +295,140 @@ private struct CatalogRow: View {
     }
 }
 
-/// ContinueWatchingSection (CARD style): landscape artwork, gradient from 45% to Background 95%, badge
-/// top-trailing (labelSmall on Background 80%), text inside at the bottom (12dp padding), a 3dp
-/// Secondary progress bar inset 10dp and 4dp from the bottom; 2dp FocusRing, no scale.
-private struct ContinueWatchingCard: View {
+/// ContinueWatchingSection.kt ContinueWatchingCard in NuvioTV's three styles (Settings → Layout):
+/// - CARD: landscape artwork, gradient from 45% to Background 95%, badge top-trailing (labelSmall on
+///   Background 80%), text inside at the bottom (12dp), a 3dp Secondary bar inset 10dp / 4dp.
+/// - WIDE: a BackgroundCard strip — 2:3 poster on the left (height × 2/3), then title + badge, episode,
+///   episode title (bodySmall) and, at the bottom, the bar with the badge text under it.
+/// - POSTER: poster art with the bar on a Background-70% pill (8dp in), badge only for Next Up; the
+///   title (titleSmall × 0.85, 2 lines) and episode sit below the artwork, which carries the ring.
+/// 2dp FocusRing, no scale.
+struct ContinueWatchingCard: View {
     let item: TvCwItem
+    var style: CwStyle = .card
+    var size: CGSize = CwStyle.card.modernSize
     let onFocus: () -> Void
     let action: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
 
     var body: some View {
-        let size = ModernCardSize.landscape
         Button(action: action) {
-            ZStack(alignment: .bottomLeading) {
-                colors.backgroundCard
-                CachedPosterArtwork(urlString: item.artwork, width: size.width, height: size.height, maximumWidth: size.width * 2) { colors.backgroundCard }
-                    .frame(width: size.width, height: size.height)
-                LinearGradient(stops: [.init(color: .clear, location: 0.45), .init(color: colors.background.opacity(0.7), location: 0.72),
-                                       .init(color: colors.background.opacity(0.95), location: 1)], startPoint: .top, endPoint: .bottom)
-                VStack(alignment: .leading, spacing: dp(2)) {
-                    if let label = TvContinueWatching.shared.episodeLabel(item: item) {
-                        Text(label).font(NuvioType.labelMedium).foregroundStyle(colors.textPrimary)
-                    }
-                    Text(item.title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
-                    if let episode = item.episodeTitle {
-                        Text(episode).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary).lineLimit(1)
-                    }
-                }
-                .padding(dp(12)).padding(.bottom, item.isNextUp ? 0 : dp(6))
-                if !item.isNextUp && item.progress > 0 {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: dp(1.5)).fill(Color.black.opacity(0.3))
-                            RoundedRectangle(cornerRadius: dp(1.5)).fill(colors.secondary).frame(width: geo.size.width * CGFloat(item.progress))
-                        }
-                    }
-                    .frame(height: dp(3))
-                    .padding(.horizontal, dp(10)).padding(.bottom, dp(4))
-                }
+            switch style {
+            case .card: cardBody
+            case .wide: wideBody
+            case .poster: posterBody
             }
-            .frame(width: size.width, height: size.height)
-            .overlay(alignment: .topTrailing) {
-                if let badge = TvContinueWatching.shared.badge(item: item) {
-                    Text(badge).font(NuvioType.labelSmall).foregroundStyle(colors.textPrimary)
-                        .padding(.horizontal, dp(6)).padding(.vertical, dp(3))
-                        .background(RoundedRectangle(cornerRadius: NuvioTokens.Radius.badge).fill(colors.background.opacity(0.8)))
-                        .padding(dp(8))
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous)
-                .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
-            .hoverEffect(.highlight)
         }
         .buttonStyle(PlainNoChromeButtonStyle())
         .focused($focused)
         .reportsFocus(focused)
         .onChange(of: focused) { _, isFocused in if isFocused { onFocus() } }
+    }
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous) }
+    private var badge: String? { TvContinueWatching.shared.badge(item: item) }
+    private var episodeLabel: String? { TvContinueWatching.shared.episodeLabel(item: item) }
+    private var posterArt: String? { item.poster ?? item.background ?? item.artwork }
+
+    private var cardBody: some View {
+        ZStack(alignment: .bottomLeading) {
+            colors.backgroundCard
+            CachedPosterArtwork(urlString: item.artwork, width: size.width, height: size.height, maximumWidth: size.width * 2) { colors.backgroundCard }
+                .frame(width: size.width, height: size.height)
+            LinearGradient(stops: [.init(color: .clear, location: 0.45), .init(color: colors.background.opacity(0.7), location: 0.72),
+                                   .init(color: colors.background.opacity(0.95), location: 1)], startPoint: .top, endPoint: .bottom)
+            VStack(alignment: .leading, spacing: dp(2)) {
+                if let episodeLabel { Text(episodeLabel).font(NuvioType.labelMedium).foregroundStyle(colors.textPrimary) }
+                Text(item.title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                if let episode = item.episodeTitle {
+                    Text(episode).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary).lineLimit(1)
+                }
+            }
+            .padding(dp(12)).padding(.bottom, item.isNextUp ? 0 : dp(6))
+            if !item.isNextUp && item.progress > 0 {
+                progressBar.padding(.horizontal, dp(10)).padding(.bottom, dp(4))
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .overlay(alignment: .topTrailing) { if let badge { badgeView(badge).padding(dp(8)) } }
+        .clipShape(shape)
+        .overlay(shape.stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+        .hoverEffect(.highlight)
+    }
+
+    private var wideBody: some View {
+        let strip = size.height * 2 / 3
+        return HStack(spacing: 0) {
+            CachedPosterArtwork(urlString: posterArt, width: strip, height: size.height, maximumWidth: strip * 2) { colors.backgroundCard }
+                .frame(width: strip, height: size.height).clipped()
+            VStack(alignment: .leading, spacing: dp(2)) {
+                HStack(alignment: .center, spacing: dp(4)) {
+                    Text(item.title).font(NuvioType.titleSmall).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    Spacer(minLength: 0)
+                    if item.isNextUp, let badge { badgeView(badge) }
+                }
+                Text(episodeLabel ?? " ").font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary).lineLimit(1)
+                Text(item.episodeTitle ?? " ").font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).lineLimit(1)
+                Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: dp(2)) {
+                    progressBar
+                    Text(badge ?? " ").font(NuvioType.labelSmall).foregroundStyle(colors.textSecondary).lineLimit(1)
+                }
+                .opacity(item.isNextUp ? 0 : 1)
+            }
+            .padding(.horizontal, dp(12)).padding(.vertical, dp(8))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .frame(width: size.width, height: size.height)
+        .background(colors.backgroundCard)
+        .clipShape(shape)
+        .overlay(shape.stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+        .hoverEffect(.highlight)
+    }
+
+    private var posterBody: some View {
+        VStack(alignment: .leading, spacing: dp(2)) {
+            ZStack(alignment: .bottomLeading) {
+                colors.backgroundCard
+                CachedPosterArtwork(urlString: posterArt, width: size.width, height: size.height, maximumWidth: size.width * 2) { colors.backgroundCard }
+                    .frame(width: size.width, height: size.height)
+                if !item.isNextUp {
+                    progressBar
+                        .padding(dp(2))
+                        .background(Capsule().fill(colors.background.opacity(0.7)))
+                        .padding(.horizontal, dp(10)).padding(.bottom, dp(8))
+                }
+            }
+            .frame(width: size.width, height: size.height)
+            .overlay(alignment: .topTrailing) { if item.isNextUp, let badge { badgeView(badge).padding(dp(8)) } }
+            .clipShape(shape)
+            .overlay(shape.stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+            .hoverEffect(.highlight)
+            HStack(alignment: .top, spacing: dp(4)) {
+                Text(item.title).font(NuvioType.inter(14 * 0.85, .medium)).foregroundStyle(colors.textPrimary).lineLimit(2)
+                Spacer(minLength: 0)
+                if let episodeLabel { Text(episodeLabel).font(NuvioType.labelSmall).foregroundStyle(colors.textSecondary) }
+            }
+            .padding(.horizontal, dp(4)).padding(.top, dp(2))
+            .frame(width: size.width, height: dp(30), alignment: .topLeading)
+        }
+    }
+
+    private var progressBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: dp(1.5)).fill(Color.black.opacity(0.3))
+                RoundedRectangle(cornerRadius: dp(1.5)).fill(colors.secondary).frame(width: geo.size.width * CGFloat(item.progress))
+            }
+        }
+        .frame(height: dp(3))
+    }
+
+    private func badgeView(_ text: String) -> some View {
+        Text(text).font(NuvioType.labelSmall).foregroundStyle(colors.textPrimary)
+            .padding(.horizontal, dp(6)).padding(.vertical, dp(3))
+            .background(RoundedRectangle(cornerRadius: NuvioTokens.Radius.badge).fill(colors.background.opacity(0.8)))
     }
 }
 

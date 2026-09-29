@@ -109,6 +109,7 @@ object TvHome {
         episodeTitle = episodeTitle, seasonNumber = seasonNumber, episodeNumber = episodeNumber,
         artwork = episodeThumbnail ?: background ?: poster, logo = logo, background = background ?: poster,
         positionMs = lastPositionMs, durationMs = durationMs, lastUpdatedEpochMs = lastUpdatedEpochMs, isNextUp = isNextUp,
+        poster = poster,
     )
 
     private fun WatchProgressEntry.toNextUp(meta: MetaDetails, video: MetaVideo) = TvCwItem(
@@ -116,6 +117,7 @@ object TvHome {
         episodeTitle = video.title, seasonNumber = video.season, episodeNumber = video.episode,
         artwork = video.thumbnail ?: meta.background ?: meta.poster, logo = meta.logo, background = meta.background ?: meta.poster,
         positionMs = 0, durationMs = 0, lastUpdatedEpochMs = lastUpdatedEpochMs, isNextUp = true,
+        poster = meta.poster,
     )
 
     private fun MetaDetails.videoFor(season: Int?, episode: Int?, videoId: String): MetaVideo? {

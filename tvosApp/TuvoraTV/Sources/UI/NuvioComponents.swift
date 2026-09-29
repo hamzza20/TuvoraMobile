@@ -195,6 +195,8 @@ enum NuvioLayoutPrefs {
     static let cwEnabledKey = "tvos.layout.cwEnabled"
     static let cwStyleKey = "tvos.layout.cwStyle"
     static let collapseSidebarKey = "tvos.layout.collapseSidebar"
+    /** NuvioTV HomeLayout: "modern" (default here), "grid" or "classic". */
+    static let homeLayoutKey = "tvos.layout.homeLayout"
 
     static var posterLabels: Bool { UserDefaults.standard.object(forKey: posterLabelsKey) as? Bool ?? true }
 }

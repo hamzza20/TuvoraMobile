@@ -119,6 +119,7 @@ private struct IptvShelf: View {
                         ForEach(category.items, id: \.id) { item in
                             NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster,
                                             width: size.width, height: size.height) { onOpen(item) }
+                                .titleActions(item) { onOpen(item) }
                                 .onAppear {
                                     if item.id == category.items.last?.id && category.hasMore {
                                         TvIptvBrowse.shared.loadMore(categoryId: category.id)

@@ -486,6 +486,7 @@ private struct LayoutSettingsDetail: View {
     @AppStorage(NuvioLayoutPrefs.posterWidthKey) private var posterWidth: Double = 126
     @AppStorage(NuvioLayoutPrefs.cwEnabledKey) private var cwEnabled = true
     @AppStorage(NuvioLayoutPrefs.cwStyleKey) private var cwStyle = "card"
+    @AppStorage(NuvioLayoutPrefs.homeLayoutKey) private var homeLayout = "modern"
     @Environment(\.nuvio) private var colors
 
     private let widths: [(String, Double)] = [("Compact", 104), ("Dense", 112), ("Standard", 120),
@@ -494,6 +495,14 @@ private struct LayoutSettingsDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: dp(14)) {
             SettingsDetailHeader(title: "Layout Settings", subtitle: "Adjust home layout, content visibility, and poster behavior")
+            SettingsGroupCard(title: "Home Layout", subtitle: "Choose structure and hero source.") {
+                HStack(spacing: dp(12)) {
+                    ForEach([("modern", "Modern View"), ("grid", "Grid View"), ("classic", "Classic View")], id: \.0) { key, label in
+                        HomeLayoutCard(layout: key, title: label, selected: homeLayout == key) { homeLayout = key }
+                    }
+                }
+                .focusSection()
+            }
             SettingsGroupCard(title: "Home Content", subtitle: "Control what appears on home and search.") {
                 SettingsToggleRow(title: "Collapse Sidebar", subtitle: "Hide sidebar by default; show when focused.", isOn: collapseSidebar) { collapseSidebar.toggle() }
                 SettingsToggleRow(title: "Show Hero Section", subtitle: "Display hero carousel at top of home.", isOn: showHero) { showHero.toggle() }
@@ -533,6 +542,78 @@ private struct LayoutSettingsDetail: View {
             }
             .scrollClipDisabled()
             .focusSection()
+        }
+    }
+}
+
+/// LayoutSettingsScreen.kt LayoutCard: a Background card (radius 12) with a 112dp sketch of the layout
+/// and its name (labelLarge) under it, a check when selected; selected 1dp FocusRing, focused 2dp. The
+/// sketches are static (NuvioTV animates them).
+private struct HomeLayoutCard: View {
+    let layout: String
+    let title: String
+    let selected: Bool
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: dp(6)) {
+                sketch.frame(maxWidth: .infinity).frame(height: dp(112))
+                HStack(spacing: dp(6)) {
+                    if selected {
+                        Image("md_check_circle").renderingMode(.template).resizable().frame(width: dp(14), height: dp(14)).foregroundStyle(colors.focusRing)
+                    }
+                    Text(title).font(NuvioType.labelLarge).foregroundStyle(selected || focused ? colors.textPrimary : colors.textSecondary)
+                }
+            }
+            .padding(dp(10))
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: dp(12), style: .continuous).fill(colors.background))
+            .overlay(RoundedRectangle(cornerRadius: dp(12), style: .continuous)
+                .stroke(focused || selected ? colors.focusRing : .clear, lineWidth: focused ? NuvioTokens.Stroke.focus : NuvioTokens.Stroke.hairline))
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .reportsFocus(focused)
+    }
+
+    private var block: Color { colors.textTertiary.opacity(0.45) }
+
+    @ViewBuilder
+    private var sketch: some View {
+        switch layout {
+        case "classic":
+            VStack(alignment: .leading, spacing: dp(5)) {
+                RoundedRectangle(cornerRadius: dp(4)).fill(block.opacity(0.6)).frame(height: dp(44))
+                ForEach(0..<2, id: \.self) { _ in
+                    HStack(spacing: dp(4)) { ForEach(0..<6, id: \.self) { _ in RoundedRectangle(cornerRadius: dp(3)).fill(block) } }
+                        .frame(height: dp(26))
+                }
+            }
+        case "grid":
+            VStack(alignment: .leading, spacing: dp(4)) {
+                RoundedRectangle(cornerRadius: dp(4)).fill(block.opacity(0.6)).frame(height: dp(30))
+                ForEach(0..<3, id: \.self) { _ in
+                    HStack(spacing: dp(4)) { ForEach(0..<7, id: \.self) { _ in RoundedRectangle(cornerRadius: dp(3)).fill(block) } }
+                        .frame(height: dp(22))
+                }
+            }
+        default:
+            VStack(alignment: .leading, spacing: dp(5)) {
+                HStack(spacing: dp(6)) {
+                    VStack(alignment: .leading, spacing: dp(4)) {
+                        RoundedRectangle(cornerRadius: dp(2)).fill(block).frame(width: dp(50), height: dp(8))
+                        RoundedRectangle(cornerRadius: dp(2)).fill(block.opacity(0.7)).frame(width: dp(70), height: dp(5))
+                        RoundedRectangle(cornerRadius: dp(2)).fill(block.opacity(0.7)).frame(width: dp(60), height: dp(5))
+                    }
+                    RoundedRectangle(cornerRadius: dp(4)).fill(block.opacity(0.6))
+                }
+                .frame(height: dp(56))
+                HStack(spacing: dp(4)) { ForEach(0..<6, id: \.self) { _ in RoundedRectangle(cornerRadius: dp(3)).fill(block) } }
+                    .frame(height: dp(40))
+            }
         }
     }
 }
