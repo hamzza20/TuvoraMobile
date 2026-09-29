@@ -87,6 +87,7 @@ class TvPlayerSession(
 
     private var bridge: NuvioPlayerBridge? = null
     private var escalated = false
+    private var languagesApplied = false
     private var wantsToPlay = true
     private var pollJob: Job? = null
     private var seekSaveJob: Job? = null
@@ -159,6 +160,31 @@ class TvPlayerSession(
         scheduleSeekSave()
     }
 
+    /** Audio tracks of the current engine (ids are the engine's own; pass them back to [selectAudio]). */
+    fun audioTracks(): List<TvTrack> {
+        val b = bridge ?: return emptyList()
+        return (0 until b.getAudioTrackCount()).map { i ->
+            TvTrack(b.getAudioTrackId(i).toIntOrNull() ?: i, b.getAudioTrackLabel(i), b.getAudioTrackLang(i), b.isAudioTrackSelected(i))
+        }
+    }
+
+    fun subtitleTracks(): List<TvTrack> {
+        val b = bridge ?: return emptyList()
+        return (0 until b.getSubtitleTrackCount()).map { i ->
+            TvTrack(b.getSubtitleTrackId(i).toIntOrNull() ?: i, b.getSubtitleTrackLabel(i), b.getSubtitleTrackLang(i), b.isSubtitleTrackSelected(i))
+        }
+    }
+
+    fun selectAudio(trackId: Int) { bridge?.selectAudioTrack(trackId) }
+
+    /** -1 turns subtitles off. */
+    fun selectSubtitle(trackId: Int) { bridge?.selectSubtitleTrack(trackId) }
+
+    /** 0 = fit, 1 = fill, 2 = zoom (NuvioPlayerBridge.setResizeMode). */
+    fun setResizeMode(mode: Int) { bridge?.setResizeMode(mode) }
+
+    fun setSpeed(speed: Float) { bridge?.setPlaybackSpeed(speed) }
+
     fun retry() {
         _state.value = _state.value.copy(errorMessage = null, isLoading = true)
         bridge?.retry()
@@ -221,6 +247,14 @@ class TvPlayerSession(
         val lane = _state.value.lane
         if (error != null && handleFailure(lane, error)) return
         if (snapshot.isPlaying && snapshot.positionMs > 0L) TvLaneMemory.put(progressKey, lane)
+        if (!languagesApplied && b.getAudioTrackCount() > 1) {
+            languagesApplied = true
+            val settings = PlayerSettingsRepository.uiState.value
+            listOfNotNull(settings.preferredAudioLanguage, settings.secondaryPreferredAudioLanguage)
+                .filter { it.isNotBlank() && it != com.nuvio.app.features.player.AudioLanguageOption.DEVICE }
+                .takeIf { it.isNotEmpty() }
+                ?.let(b::applyAudioLanguagePreferences)
+        }
         _state.value = _state.value.copy(
             isLoading = snapshot.isLoading,
             isPlaying = snapshot.isPlaying,
@@ -317,6 +351,9 @@ class TvPlayerSession(
         const val SEEK_SAVE_DELAY_MS = 1_000L
     }
 }
+
+/** One audio or subtitle track as the player overlay lists it. */
+data class TvTrack(val id: Int, val label: String, val language: String, val selected: Boolean)
 
 /** A playable address: URL plus the request headers the provider needs. */
 data class TvResolvedSource(val url: String, val headers: Map<String, String>)
