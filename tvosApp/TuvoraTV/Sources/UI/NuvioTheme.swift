@@ -199,7 +199,12 @@ final class PlaybackCoordinator: ObservableObject {
     /// A source/episode picker to open once the player has closed (Next Episode, Episodes panel).
     @Published var pendingPicker: TvCwTargetBox?
 
-    func play(_ session: TvPlayerSession) {
+    /// Live channel zapping (NuvioTV fullscreen: D-pad up/down changes channel): opens the channel
+    /// [offset] away in the list the viewer started from, or nil when there is none.
+    var zapper: ((Int) async -> TvPlayerSession?)?
+
+    func play(_ session: TvPlayerSession, zapper: ((Int) async -> TvPlayerSession?)? = nil) {
+        self.zapper = zapper
         if let current = self.session?.session, current !== session { current.close() }   // switching source
         self.session = TvPlayerSessionBox(session: session)
     }

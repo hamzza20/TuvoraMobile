@@ -378,7 +378,14 @@ private struct LiveGuideView: View {
         if previewing?.contentId == channel.contentId, let previewSession {
             self.previewSession = nil
             previewing = nil
-            playback.play(previewSession)
+            let list = visible
+            var index = list.firstIndex { $0.contentId == channel.contentId } ?? 0
+            playback.play(previewSession) { offset in
+                guard !list.isEmpty else { return nil }
+                index = (index + offset + list.count) % list.count
+                let next = list[index]
+                return try? await TvIptvBrowse.shared.playChannel(contentId: next.contentId, name: next.name, logo: next.logo)
+            }
             return
         }
         previewSession?.close()

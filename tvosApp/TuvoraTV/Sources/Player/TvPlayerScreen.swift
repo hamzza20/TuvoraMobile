@@ -92,6 +92,8 @@ struct TvPlayerScreen: View {
             switch direction {
             case .left where !controlsVisible: skip(-10_000)
             case .right where !controlsVisible: skip(10_000)
+            case .up where !controlsVisible && isLive && playback.zapper != nil: zap(-1)
+            case .down where !controlsVisible && isLive && playback.zapper != nil: zap(1)
             case .down where !controlsVisible: withAnimation(NuvioTokens.Motion.overlay) { panel = .subtitles }
             case .up where !controlsVisible: bumpControls()
             default: bumpControls()
@@ -112,6 +114,16 @@ struct TvPlayerScreen: View {
                 NSLog("SMOKE player lane=%@ gen=%d loading=%d playing=%d pos=%lld dur=%lld err=%@",
                       "\(next.lane)", next.engineGeneration, next.isLoading, next.isPlaying,
                       next.positionMs, next.durationMs, next.errorMessage ?? "-")
+            }
+        }
+    }
+
+    /// Live zapping: the next/previous channel of the list the viewer started from.
+    private func zap(_ offset: Int) {
+        guard let zapper = playback.zapper else { return }
+        Task {
+            if let next = await zapper(offset) {
+                playback.play(next, zapper: zapper)
             }
         }
     }
