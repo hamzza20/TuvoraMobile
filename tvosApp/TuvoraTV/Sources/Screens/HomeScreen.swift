@@ -60,6 +60,14 @@ struct HomeScreen: View {
                             LazyHStack(spacing: NuvioTokens.Layout.itemGap) {
                                 ForEach(continueWatching, id: \.videoId) { item in
                                     ContinueWatchingCard(item: item, onFocus: { focusCw(item) }) { open(item) }
+                                        .contextMenu {
+                                            Button("Remove from Continue Watching", role: .destructive) {
+                                                WatchProgressRepository.shared.removeProgress(
+                                                    contentId: item.parentMetaId,
+                                                    seasonNumber: item.seasonNumber,
+                                                    episodeNumber: item.episodeNumber)
+                                            }
+                                        }
                                 }
                             }
                             .padding(.horizontal, NuvioTokens.Layout.gutter).padding(.vertical, dp(8))
@@ -252,8 +260,7 @@ private struct CatalogRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: NuvioTokens.Layout.itemGap) {
                     ForEach(section.items, id: \.id) { item in
-                        NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster,
-                                        width: size.width, height: size.height, onFocus: { onFocus(item) }) { onOpen(item) }
+                        ExpandingPosterCard(item: item, size: size, onFocus: { onFocus(item) }) { onOpen(item) }
                     }
                 }
                 .padding(.horizontal, NuvioTokens.Layout.gutter).padding(.vertical, dp(8))
@@ -327,4 +334,77 @@ private struct ContinueWatchingCard: View {
 
 private extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+
+/// NuvioTV's focused-poster expand (focused_poster_backdrop_expand_enabled, default on, 3 s): a poster
+/// held in focus widens to 16:9 and shows the backdrop, the logo or title and a two-line synopsis.
+private struct ExpandingPosterCard: View {
+    let item: MetaPreview
+    let size: CGSize
+    let onFocus: () -> Void
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+    @State private var expanded = false
+    @State private var timer: Task<Void, Never>?
+
+    var body: some View {
+        let width = expanded ? size.height * 16 / 9 : size.width
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: dp(8)) {
+                ZStack(alignment: .bottomLeading) {
+                    colors.backgroundCard
+                    if expanded {
+                        CachedPosterArtwork(urlString: item.banner ?? item.landscapePoster ?? item.poster, width: width, height: size.height, maximumWidth: width * 2) { colors.backgroundCard }
+                            .frame(width: width, height: size.height)
+                        LinearGradient(stops: [.init(color: .clear, location: 0.4), .init(color: .black.opacity(0.85), location: 1)], startPoint: .top, endPoint: .bottom)
+                        VStack(alignment: .leading, spacing: dp(6)) {
+                            if let logo = item.logo, !logo.isEmpty {
+                                CachedPosterArtwork(urlString: logo, width: width * 0.5, height: size.height * 0.22, maximumWidth: width) {
+                                    Text(item.name).font(NuvioType.titleMediumSemi).foregroundStyle(.white)
+                                }
+                                .environment(\.artworkContentMode, .fit)
+                                .frame(width: width * 0.5, height: size.height * 0.22, alignment: .bottomLeading)
+                            } else {
+                                Text(item.name).font(NuvioType.titleMediumSemi).foregroundStyle(.white).lineLimit(1)
+                            }
+                            if let description = item.description_ {
+                                Text(description).font(NuvioType.bodySmall).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
+                            }
+                        }
+                        .padding(dp(12))
+                        .transition(.opacity)
+                    } else {
+                        CachedPosterArtwork(urlString: item.poster, width: size.width, height: size.height, maximumWidth: size.width * 2) {
+                            Text(item.name).font(NuvioType.titleMedium).foregroundStyle(colors.textSecondary)
+                                .multilineTextAlignment(.center).lineLimit(3).padding(.horizontal, dp(12))
+                                .frame(width: size.width, height: size.height)
+                        }
+                        .frame(width: size.width, height: size.height)
+                    }
+                }
+                .frame(width: width, height: size.height)
+                .clipShape(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous)
+                    .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+                .hoverEffect(.highlight)
+                Text(item.name).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    .frame(width: width, alignment: .leading)
+            }
+            .animation(.easeInOut(duration: 0.35), value: expanded)
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .reportsFocus(focused)
+        .onChange(of: focused) { _, isFocused in
+            timer?.cancel()
+            if isFocused {
+                onFocus()
+                timer = Task { try? await Task.sleep(nanoseconds: 3_000_000_000); if !Task.isCancelled { expanded = true } }
+            } else {
+                expanded = false
+            }
+        }
+    }
 }
