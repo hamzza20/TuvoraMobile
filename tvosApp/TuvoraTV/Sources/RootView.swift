@@ -20,7 +20,7 @@ struct RootView: View {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count else { return nil }
         let launch = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: args.contains("-smokeLive"), startPositionMs: 0)
-        return TvPlayerSession(launch: launch)
+        return TvPlayerSession(launch: launch, liveReresolve: nil)
     }
 
     private var gate: some View {
@@ -30,7 +30,7 @@ struct RootView: View {
             case .signIn: SignInView()
             case .profilePicker: ProfilePickerView()
             case .switching: ProgressView("Opening your profile")
-            case .main: Text("Home").font(.largeTitle)
+            case .main: MainShell()
             }
         }
         .task {

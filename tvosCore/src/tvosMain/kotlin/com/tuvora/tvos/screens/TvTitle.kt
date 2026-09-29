@@ -1,0 +1,114 @@
+package com.tuvora.tvos.screens
+
+import com.nuvio.app.core.contracts.StreamSourceAccess
+import com.nuvio.app.features.debrid.DirectDebridPlayableResult
+import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
+import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.details.MetaDetailsUiState
+import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.player.PlayerLaunch
+import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.streams.StreamItem
+import com.nuvio.app.features.streams.StreamsRepository
+import com.nuvio.app.features.streams.StreamsUiState
+import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import com.tuvora.tvos.player.TvPlaybackHeaders
+import com.tuvora.tvos.player.TvPlayerSession
+import kotlinx.coroutines.flow.StateFlow
+
+/** What opening a source led to: a player session, or a sentence to show the viewer. */
+sealed class TvOpenResult {
+    data class Play(val session: TvPlayerSession) : TvOpenResult()
+    data class Message(val text: String) : TvOpenResult()
+}
+
+/**
+ * A title's details, its sources, and opening one. Apple TV's port of the phone's
+ * StreamDestination.openSelectedStream (upstream, Compose-bound, excluded from :tvosCore):
+ * deferred Stalker links are minted at play time and debrid links resolved, exactly as there.
+ * Torrent (P2P) and open-in-another-app sources are named gaps on Apple TV.
+ */
+object TvTitle {
+    val details: StateFlow<MetaDetailsUiState> get() = MetaDetailsRepository.uiState
+    val streams: StateFlow<StreamsUiState> get() = StreamsRepository.uiState
+
+    fun load(type: String, id: String) = MetaDetailsRepository.load(type, id)
+
+    /** [season]/[episode] of -1 mean "a movie" (Kotlin nullables don't cross cleanly into Swift). */
+    fun loadStreams(type: String, videoId: String, parentMetaId: String, season: Int, episode: Int) {
+        StreamsRepository.load(
+            type = type,
+            videoId = videoId,
+            parentMetaId = parentMetaId,
+            season = season.takeIf { it >= 0 },
+            episode = episode.takeIf { it >= 0 },
+            manualSelection = true,
+        )
+    }
+
+    fun cancelStreams() = StreamsRepository.cancelLoading()
+
+    /** Where to resume [videoId], in ms; 0 when unwatched or finished. */
+    fun resumePositionMs(videoId: String, parentMetaId: String, season: Int, episode: Int): Long {
+        val entry = WatchProgressRepository.progressForVideo(
+            videoId = videoId,
+            parentMetaId = parentMetaId,
+            seasonNumber = season.takeIf { it >= 0 },
+            episodeNumber = episode.takeIf { it >= 0 },
+        ) ?: return 0L
+        return if (entry.isCompleted) 0L else entry.lastPositionMs.coerceAtLeast(0L)
+    }
+
+    suspend fun open(stream: StreamItem, meta: MetaDetails, video: MetaVideo?, resumeMs: Long): TvOpenResult {
+        var playable = stream
+        // A Stalker source is listed without a play link: mint it now, for this edition only.
+        val access = StreamSourceAccess.current()
+        if (access.isDeferredUrl(playable.playableDirectUrl)) {
+            val minted = access.resolveDeferredUrl(playable.playableDirectUrl.orEmpty(), forceMint = false)
+                ?: return TvOpenResult.Message("This source isn't available right now.")
+            playable = playable.copy(url = minted)
+        }
+        if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(playable)) {
+            when (val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(playable, video?.season, video?.episode)) {
+                is DirectDebridPlayableResult.Success -> playable = resolved.stream
+                DirectDebridPlayableResult.MissingApiKey -> return TvOpenResult.Message("Add your debrid API key in Settings to play this source.")
+                DirectDebridPlayableResult.NotCached -> return TvOpenResult.Message("This source isn't cached by your debrid service yet.")
+                DirectDebridPlayableResult.Stale, DirectDebridPlayableResult.Error -> return TvOpenResult.Message("This source couldn't be opened. Try another one.")
+            }
+        }
+        if (playable.needsLocalDebridResolve) return TvOpenResult.Message("Torrent sources aren't supported on Apple TV yet.")
+        if (playable.shouldOpenExternally) return TvOpenResult.Message("This source opens in another app, which Apple TV doesn't support.")
+        val url = playable.playableDirectUrl ?: return TvOpenResult.Message("This source has no playable link.")
+
+        val videoId = video?.id ?: meta.id
+        val launch = PlayerLaunch(
+            profileId = ProfileRepository.activeProfileId,
+            title = meta.name,
+            sourceUrl = url,
+            sourceHeaders = TvPlaybackHeaders.sanitize(playable.behaviorHints.proxyHeaders?.request),
+            sourceResponseHeaders = TvPlaybackHeaders.sanitize(playable.behaviorHints.proxyHeaders?.response),
+            externalSubtitles = playable.externalSubtitles,
+            streamType = playable.streamType,
+            logo = meta.logo,
+            poster = meta.poster,
+            background = meta.background,
+            seasonNumber = video?.season,
+            episodeNumber = video?.episode,
+            episodeTitle = video?.title,
+            episodeThumbnail = video?.thumbnail,
+            streamTitle = playable.streamLabel,
+            streamSubtitle = playable.streamSubtitle,
+            bingeGroup = playable.behaviorHints.bingeGroup,
+            providerName = playable.addonName,
+            providerAddonId = playable.addonId,
+            contentType = meta.type,
+            videoId = videoId,
+            parentMetaId = meta.id,
+            parentMetaType = meta.type,
+            initialPositionMs = resumeMs,
+        )
+        StreamsRepository.cancelLoading()
+        return TvOpenResult.Play(TvPlayerSession(launch))
+    }
+}

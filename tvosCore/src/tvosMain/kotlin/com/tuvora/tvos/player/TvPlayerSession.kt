@@ -67,7 +67,14 @@ data class TvPlayerState(
  * Swift owns the lifecycle: [attach] when the player screen appears, [detach] when it hides, [close]
  * when the viewer leaves. State is polled only while attached, so nothing runs off screen.
  */
-class TvPlayerSession(private val launch: PlayerLaunch) {
+class TvPlayerSession(
+    private val launch: PlayerLaunch,
+    /**
+     * Live only: fetches a fresh address for a reconnect. Stalker links are single-use (create_link),
+     * so replaying the old URL fails; Xtream/M3U just return the same address. Null = replay.
+     */
+    private val liveReresolve: (suspend () -> TvResolvedSource?)? = null,
+) {
     private val log = Logger.withTag("TvPlayerSession")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val isLive = LivePlaybackRejoinPolicy.rejoinsLiveEdge(launch.streamType, launch.liveReplay != null)
@@ -225,7 +232,7 @@ class TvPlayerSession(private val launch: PlayerLaunch) {
         if (isLive) {
             when (monitor.sample(clock.elapsedNow().inWholeMilliseconds, snapshot, wantsToPlay)) {
                 TvLiveAction.None -> Unit
-                TvLiveAction.Reconnect -> { log.i { "live freeze: reconnecting" }; b.retry() }
+                TvLiveAction.Reconnect -> { log.i { "live freeze: reconnecting" }; reconnectLive() }
                 TvLiveAction.GiveUp -> _state.value = _state.value.copy(errorMessage = "The channel stopped responding")
             }
         } else {
@@ -245,7 +252,7 @@ class TvPlayerSession(private val launch: PlayerLaunch) {
                 // A live error is a stream that ended: same bounded reconnect ladder as a freeze.
                 val ended = snapshot.copy(isEnded = true, isPlaying = false, isLoading = false)
                 when (monitor.sample(clock.elapsedNow().inWholeMilliseconds, ended, wantsToPlay = true)) {
-                    TvLiveAction.Reconnect -> bridge?.retry()
+                    TvLiveAction.Reconnect -> reconnectLive()
                     TvLiveAction.GiveUp -> _state.value = _state.value.copy(errorMessage = error, isLoading = false, isPlaying = false)
                     TvLiveAction.None -> _state.value = _state.value.copy(isLoading = true)
                 }
@@ -264,6 +271,22 @@ class TvPlayerSession(private val launch: PlayerLaunch) {
         open(next, resumeAt)
         TvLaneMemory.put(progressKey, next)
         return true
+    }
+
+    private fun reconnectLive() {
+        val reresolve = liveReresolve ?: run { bridge?.retry(); return }
+        scope.launch {
+            val fresh = runCatching { reresolve() }.getOrNull()
+            if (fresh == null) { bridge?.retry(); return@launch }
+            val headers = TvPlaybackHeaders.sanitize(fresh.headers)
+            bridge?.loadFileWithAudio(
+                videoUrl = fresh.url,
+                audioUrl = null,
+                headersJson = headers.takeIf { it.isNotEmpty() }?.let { Json.encodeToString(it) },
+                subtitlesJson = null,
+                startOption = null,
+            )
+        }
     }
 
     private fun scheduleSeekSave() {
@@ -294,6 +317,9 @@ class TvPlayerSession(private val launch: PlayerLaunch) {
         const val SEEK_SAVE_DELAY_MS = 1_000L
     }
 }
+
+/** A playable address: URL plus the request headers the provider needs. */
+data class TvResolvedSource(val url: String, val headers: Map<String, String>)
 
 /** Swift-friendly launch builders (Kotlin default arguments don't cross into Swift). */
 object TvPlayerLaunches {
