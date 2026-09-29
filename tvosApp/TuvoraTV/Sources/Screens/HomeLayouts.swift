@@ -240,6 +240,12 @@ private struct HeroCarousel: View {
         }
         .onChange(of: focused) { _, f in onFocusChange(f) }
         .onChange(of: index) { _, i in onActive(items[min(i, items.count - 1)]) }
+        // The hero list refreshes after first load (often reordered): the slide redraws items[index],
+        // so the backdrop must follow it too, or the text and backdrop show different titles.
+        .onChange(of: items.map(\.id)) { _, _ in
+            if index >= items.count { index = 0 }
+            onActive(items[min(index, items.count - 1)])
+        }
         .onAppear { onActive(item) }
         .task(id: focused) {
             guard items.count > 1, !focused else { return }
