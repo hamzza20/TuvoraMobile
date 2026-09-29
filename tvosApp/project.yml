@@ -70,6 +70,10 @@ targets:
       - name: Copy string tables
         script: exec "$SRCROOT/Scripts/copy-string-tables.sh"
         basedOnDependencyAnalysis: false
+      # Stops a wrong-platform / mismatched-minimum framework before App Store Connect does (ITMS-90208).
+      - name: Check embedded frameworks
+        script: exec "$SRCROOT/Scripts/check-embedded-frameworks.sh"
+        basedOnDependencyAnalysis: false
       # Release only: sends the dSYM to PostHog so tvOS crash stacks symbolicate (same script as iOS;
       # it fails an archive without POSTHOG_CLI_API_KEY and only warns on a plain Release build).
       - name: Upload dSYM to PostHog
