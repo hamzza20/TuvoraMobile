@@ -177,6 +177,7 @@
 "Go to details" = "詳細へ";
 "Go to trakt.tv/activate and enter this code:" = "trakt.tv/activate にアクセスしてこのコードを入力してください:";
 "Grid View" = "グリッドビュー";
+"Hidden" = "非表示";
 "Hide" = "非表示";
 "Hide sidebar by default; show when focused." = "デフォルトでサイドバーを非表示にし、フォーカス時に表示";
 "Hide sources below the selected resolution." = "選択した解像度未満のソースを非表示にします。";
