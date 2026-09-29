@@ -1,16 +1,18 @@
 import SwiftUI
 import TuvoraCore
 
-// NuvioTV "Who's watching?" (ui/screens/profile/ProfileSelectionScreen.kt), selection mode: the
-// avatar-tinted background, wordmark, heading, profile cards with the focus ring + scale, and the PIN
-// unlock overlay (ProfilePinOverlay / ProfilePinBoxes). All sizes are NuvioTV dp ×2.
+// NuvioTV "Who's watching?" / "Manage Profiles" (ui/screens/profile/ProfileSelectionScreen.kt): the
+// avatar-tinted background, wordmark, heading, profile cards with the focus ring + scale, the Add
+// Profile card, and the PIN overlay (ProfilePinOverlay / ProfilePinBoxes) in unlock, set/confirm and
+// verify-current modes. Management (options, create/edit, delete) is in ProfileManageViews.swift.
+// All sizes are NuvioTV dp ×2.
 //
-// Not ported: profile management (create / edit / delete / PIN set) — NuvioTV reaches it by
-// long-pressing a card; Apple TV has no profile editor yet, so the "Hold to manage profile" hint is
-// left out rather than promising something that does nothing.
+// Entry points: long-press a card (the tvOS context menu, NuvioTV's hold-to-manage), the Add Profile
+// card, and Settings → Profiles → Manage Profiles, which opens this screen in manage mode (OK on a
+// card opens its options; Menu returns to the app).
 
 /// ProfileSelectionSpacing (ProfileSelectionScreen.kt:125-161).
-private enum PickerMetrics {
+enum PickerMetrics {
     static let screenPaddingH = dp(56), screenPaddingV = dp(48)
     static let logoHeight = dp(44), logoToHeading = dp(28), headingToSub = dp(12)
     static let gridGap = dp(28), compactGridGap = dp(12)
@@ -24,25 +26,56 @@ private enum PickerMetrics {
     static let primaryGold = Color(argb: 0xFFFFB300)
 }
 
+/// Settings → Manage Profiles asks for manage mode before opening the picker (TvAppLifecycle knows
+/// only that the picker was opened on purpose).
+@MainActor
+enum ProfilePickerLaunch {
+    static var manageRequested = false
+    static func consumeManage() -> Bool {
+        defer { manageRequested = false }
+        return manageRequested || ProcessInfo.processInfo.arguments.contains("-smokeManage")
+    }
+}
+
+/// What sits over the profile row.
+enum ProfileOverlay: Equatable {
+    case options(Int32)
+    case editor(Int32?)          // nil = create
+    case deleteConfirm(Int32)
+    case pin(Int32, TvPinMode)
+}
+
 struct ProfilePickerView: View {
     @State private var profiles: [NuvioProfile] = []
     @State private var avatars: [AvatarCatalogItem] = []
     @State private var loaded = false
     @State private var focusedIndex: Int32?
-    @State private var pinProfile: NuvioProfile?
+    @State private var manage = ProfilePickerLaunch.consumeManage()
+    @State private var overlay: ProfileOverlay?
+    @State private var toast: String?
     @FocusState private var focus: Int32?
+
+    /// Focus value of the Add Profile card.
+    static let addCard: Int32 = -1
 
     var body: some View {
         ZStack {
-            ProfileSelectionBackground(avatarHex: (pinProfile ?? focusedProfile)?.avatarColorHex)
-            if let pinProfile {
-                ProfilePinOverlay(profile: pinProfile) { self.pinProfile = nil; restoreFocus(pinProfile.profileIndex) }
+            ProfileSelectionBackground(avatarHex: backgroundProfile?.avatarColorHex)
+            if case .pin(let index, let mode) = overlay, let profile = profile(index) {
+                ProfilePinOverlay(profile: profile, mode: mode, onClose: closeOverlay, onFinished: finished,
+                                  onConfirmDelete: { overlay = .deleteConfirm(index) })
+                    .id("\(index)-\(mode)")
                     .transition(.opacity.combined(with: .offset(x: dp(40))))
             } else {
-                main.transition(.opacity.combined(with: .offset(x: -dp(40))))
+                main
+                    .disabled(overlay != nil)
+                    .transition(.opacity.combined(with: .offset(x: -dp(40))))
             }
+            manageLayer
+            if let toast { ProfileToast(text: toast).frame(maxHeight: .infinity, alignment: .bottom).transition(.opacity) }
         }
-        .animation(.timingCurve(0.2, 0, 0, 1, duration: 0.32), value: pinProfile?.profileIndex)
+        .animation(.timingCurve(0.2, 0, 0, 1, duration: 0.32), value: isPinOverlay)
+        .animation(NuvioTokens.Motion.fast, value: toast)
         .ignoresSafeArea()
         .task { for await items in AvatarRepository.shared.avatars { avatars = items } }
         .task {
@@ -56,42 +89,74 @@ struct ProfilePickerView: View {
                 runSmokeHooks(state.profiles)
             }
         }
+        .task(id: toast) {
+            guard toast != nil else { return }
+            try? await Task.sleep(nanoseconds: 2_600_000_000)
+            if !Task.isCancelled { toast = nil }
+        }
     }
 
-    private var focusedProfile: NuvioProfile? { profiles.first { $0.profileIndex == focusedIndex } ?? profiles.first }
+    private var isPinOverlay: Bool { if case .pin = overlay { return true } else { return false } }
+
+    private var backgroundProfile: NuvioProfile? {
+        if case .pin(let index, _) = overlay { return profile(index) }
+        return focusedProfile
+    }
+
+    private func profile(_ index: Int32) -> NuvioProfile? { profiles.first { $0.profileIndex == index } }
+
+    private var focusedProfile: NuvioProfile? {
+        if focusedIndex == Self.addCard { return nil }
+        return profiles.first { $0.profileIndex == focusedIndex } ?? profiles.first
+    }
+
+    private var canAdd: Bool { TvProfileManagePolicy.shared.canAddProfile(profileCount: Int32(profiles.count)) }
 
     private var main: some View {
         VStack(spacing: 0) {
             Image("app_logo_wordmark").resizable().scaledToFit().frame(height: PickerMetrics.logoHeight)
             Spacer().frame(height: PickerMetrics.logoToHeading)
-            Text("Who's watching?")
+            Text(manage ? "Manage Profiles" : "Who's watching?")
                 .font(NuvioType.inter(44, .bold)).tracking(-1)
                 .foregroundStyle(NuvioPrimitives.white)
             Spacer().frame(height: PickerMetrics.headingToSub)
-            Text("Select a profile to continue")
+            Text(manage ? "Select a profile to edit, switch, or create a new one" : "Select a profile to continue")
                 .font(NuvioType.inter(18, .medium))
                 .foregroundStyle(NuvioPrimitives.neutral400)
             Spacer(minLength: 0)
             grid
             Spacer(minLength: 0)
+            if !profiles.isEmpty {
+                Text(manage ? "Select a profile to manage" : "Hold to manage profile")
+                    .font(NuvioType.inter(14, .medium))
+                    .foregroundStyle(NuvioPrimitives.neutral600.opacity(0.9))
+            }
         }
         .padding(.horizontal, PickerMetrics.screenPaddingH)
         .padding(.vertical, PickerMetrics.screenPaddingV)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onExitCommand {
+            // Manage mode came from Settings: Menu goes back to the profile in use.
+            if manage, overlay == nil, let active = ProfileRepository.shared.state.value.activeProfile {
+                TvAppLifecycle.shared.pickProfile(profileIndex: active.profileIndex)
+            }
+        }
     }
 
     @ViewBuilder
     private var grid: some View {
-        if profiles.isEmpty {
+        if profiles.isEmpty && !canAdd {
             if loaded {
                 Text("No profiles found").font(NuvioType.inter(18, .medium)).foregroundStyle(NuvioPrimitives.neutral400)
             } else {
                 ProgressView()
             }
+        } else if profiles.isEmpty && !loaded {
+            ProgressView()
         } else {
             GeometryReader { geo in
                 let layout = TvProfileGridLayout.shared.layout(
-                    itemCount: Int32(profiles.count), maxWidth: Float(geo.size.width),
+                    itemCount: Int32(profiles.count + (canAdd ? 1 : 0)), maxWidth: Float(geo.size.width),
                     cardWidth: Float(PickerMetrics.cardWidth), compactCardWidth: Float(PickerMetrics.compactCardWidth),
                     gap: Float(PickerMetrics.gridGap), compactGap: Float(PickerMetrics.compactGridGap))
                 let row = HStack(alignment: .top, spacing: CGFloat(layout.gap)) {
@@ -99,6 +164,11 @@ struct ProfilePickerView: View {
                         ProfileCard(profile: profile, avatarURL: avatarURL(profile), compact: layout.compact,
                                     focused: focus == profile.profileIndex) { select(profile) }
                             .focused($focus, equals: profile.profileIndex)
+                            .contextMenu { contextMenu(profile) }
+                    }
+                    if canAdd {
+                        AddProfileCard(compact: layout.compact, focused: focus == Self.addCard) { overlay = .editor(nil) }
+                            .focused($focus, equals: Self.addCard)
                     }
                 }
                 .padding(.vertical, dp(12))
@@ -113,9 +183,67 @@ struct ProfilePickerView: View {
             }
             .frame(height: PickerMetrics.avatarContainer + dp(120))
             .focusSection()
-            .defaultFocus($focus, focusedIndex ?? profiles.first?.profileIndex)
+            .defaultFocus($focus, focusedIndex ?? profiles.first?.profileIndex ?? Self.addCard)
             .onChange(of: focus) { _, new in if let new { focusedIndex = new } }
         }
+    }
+
+    /// Long-press: NuvioTV's Profile Options, as the native tvOS context menu.
+    @ViewBuilder
+    private func contextMenu(_ profile: NuvioProfile) -> some View {
+        ForEach(TvProfileManagePolicy.shared.options(profileIndex: profile.profileIndex, pinEnabled: profile.pinEnabled), id: \.self) { option in
+            Button(TvProfileManagePolicy.shared.optionTitle(option: option), role: option == .delete ? .destructive : nil) {
+                choose(option, for: profile)
+            }
+        }
+    }
+
+    // MARK: Management layer
+
+    @ViewBuilder
+    private var manageLayer: some View {
+        switch overlay {
+        case .options(let index):
+            if let profile = profile(index) {
+                ProfileOptionsDialog(profile: profile, onChoose: { choose($0, for: profile) }, onDismiss: closeOverlay)
+            }
+        case .editor(let index):
+            ProfileEditorOverlay(profile: index.flatMap(profile), avatars: avatars,
+                                 onDismiss: closeOverlay,
+                                 onSaved: { closeOverlay() })
+        case .deleteConfirm(let index):
+            if let profile = profile(index) {
+                ProfileDeleteDialog(profile: profile, onDismiss: closeOverlay) {
+                    NSLog("SMOKE profile delete index=%d", index)
+                    closeOverlay()
+                    Task { try? await ProfileRepository.shared.deleteProfile(profileIndex: index) }
+                }
+            }
+        case .pin, .none:
+            EmptyView()
+        }
+    }
+
+    private func choose(_ option: TvProfileOption, for profile: NuvioProfile) {
+        let policy = TvProfileManagePolicy.shared
+        if let mode = policy.pinModeFor(option: option, pinEnabled: profile.pinEnabled) {
+            overlay = .pin(profile.profileIndex, mode)
+        } else if option == .edit {
+            overlay = .editor(profile.profileIndex)
+        } else if option == .delete {
+            overlay = .deleteConfirm(profile.profileIndex)
+        }
+    }
+
+    private func closeOverlay() {
+        let returnTo = focusedIndex
+        overlay = nil
+        if let returnTo { DispatchQueue.main.async { focus = returnTo } }
+    }
+
+    private func finished(_ message: String?) {
+        closeOverlay()
+        toast = message
     }
 
     private func avatarURL(_ profile: NuvioProfile) -> String? {
@@ -124,34 +252,46 @@ struct ProfilePickerView: View {
     }
 
     private func select(_ profile: NuvioProfile) {
-        if profile.pinEnabled {
-            pinProfile = profile
+        if manage {
+            overlay = .options(profile.profileIndex)
+        } else if profile.pinEnabled {
+            overlay = .pin(profile.profileIndex, .unlock)
         } else {
             NSLog("SMOKE pick profile=%d", profile.profileIndex)
             TvAppLifecycle.shared.pickProfile(profileIndex: profile.profileIndex)
         }
     }
 
-    private func restoreFocus(_ index: Int32) {
-        DispatchQueue.main.async { focus = index }
-    }
-
-    /// Simulator hooks: `-smokePickProfile <index>` picks without a remote; `-smokePin <index>` opens
-    /// that profile's PIN overlay (for screenshots).
+    /// Simulator hooks: `-smokePickProfile <i>` picks; `-smokePin <i>` opens the unlock overlay;
+    /// `-smokeSetPin <i>` the set-PIN overlay; `-smokeProfileOptions <i>`, `-smokeEditProfile <i|new>`
+    /// and `-smokeDeleteProfile <i>` the management overlays; `-smokeManage` opens manage mode.
     @State private var smokeHandled = false
     private func runSmokeHooks(_ profiles: [NuvioProfile]) {
-        guard !smokeHandled else { return }
+        guard !smokeHandled, !profiles.isEmpty else { return }
         let args = ProcessInfo.processInfo.arguments
-        func index(after flag: String) -> Int32? {
+        func value(after flag: String) -> String? {
             guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
-            return Int32(args[i + 1])
+            return args[i + 1]
         }
-        if let index = index(after: "-smokePickProfile"), profiles.contains(where: { $0.profileIndex == index }) {
-            smokeHandled = true
-            TvAppLifecycle.shared.pickProfile(profileIndex: index)
-        } else if let index = index(after: "-smokePin"), let profile = profiles.first(where: { $0.profileIndex == index }) {
-            smokeHandled = true
-            pinProfile = profile
+        func index(after flag: String) -> Int32? {
+            guard let v = value(after: flag), let i = Int32(v), profiles.contains(where: { $0.profileIndex == i }) else { return nil }
+            return i
+        }
+        smokeHandled = true
+        if let i = index(after: "-smokePickProfile") {
+            TvAppLifecycle.shared.pickProfile(profileIndex: i)
+        } else if let i = index(after: "-smokePin") {
+            overlay = .pin(i, .unlock)
+        } else if let i = index(after: "-smokeSetPin") {
+            overlay = .pin(i, .set)
+        } else if let i = index(after: "-smokeProfileOptions") {
+            overlay = .options(i)
+        } else if let i = index(after: "-smokeDeleteProfile") {
+            overlay = .deleteConfirm(i)
+        } else if let v = value(after: "-smokeEditProfile") {
+            overlay = .editor(v == "new" ? nil : Int32(v))
+        } else {
+            smokeHandled = false
         }
     }
 }
@@ -299,8 +439,10 @@ struct ProfileAvatarCircle: View {
 
 // MARK: - PIN overlay
 
-/// ProfilePinOverlay (ProfileSelectionScreen.kt:2044-2360), unlock mode: heading, four PIN boxes,
-/// support / error line, the forgot-PIN hint and the back hint. The fourth digit submits.
+/// ProfilePinOverlay (ProfileSelectionScreen.kt:2044-2360): heading, four PIN boxes, support / error
+/// line, the forgot-PIN hint and the back hint; the fourth digit submits. Modes (TvPinMode): unlock,
+/// set (enter + confirm), and verify-current for change / remove / delete. The flow's decisions are
+/// TvProfileManagePolicy; this view only runs the calls it asks for.
 ///
 /// Input: a focusable 0–9 digit row under the boxes plus delete, the way tvOS's own passcode screens
 /// (Restrictions, parental controls) take a PIN with the Siri Remote — the boxes stay visible and the
@@ -308,8 +450,13 @@ struct ProfileAvatarCircle: View {
 /// and delete keys also work (NuvioTV: "Use your remote or keyboard").
 struct ProfilePinOverlay: View {
     let profile: NuvioProfile
-    let onDismiss: () -> Void
+    let onClose: () -> Void
+    /// A PIN was saved or removed: close with NuvioTV's confirmation toast.
+    let onFinished: (String?) -> Void
+    /// Delete-verify passed: show the delete confirmation.
+    let onConfirmDelete: () -> Void
     @Environment(\.nuvio) private var colors
+    @State private var flow: TvPinFlowState
     @State private var pin = ""
     @State private var working = false
     @State private var error: String?
@@ -317,27 +464,41 @@ struct ProfilePinOverlay: View {
     @FocusState private var focusedKey: String?
 
     private static let keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "⌫"]
+    private var policy: TvProfileManagePolicy { TvProfileManagePolicy.shared }
+
+    init(profile: NuvioProfile, mode: TvPinMode, onClose: @escaping () -> Void,
+         onFinished: @escaping (String?) -> Void = { _ in }, onConfirmDelete: @escaping () -> Void = {}) {
+        self.profile = profile
+        self.onClose = onClose
+        self.onFinished = onFinished
+        self.onConfirmDelete = onConfirmDelete
+        _flow = State(initialValue: TvPinFlowState(mode: mode, confirming: false, draft: nil, currentPin: nil, localError: nil))
+    }
+
+    private var shownError: String? { error ?? flow.localError }
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("Enter your PIN to access \(profile.name).")
+            Text(policy.heading(state: flow, name: profile.name))
                 .font(NuvioType.inter(42, .bold)).lineSpacing(dp(6))
                 .foregroundStyle(colors.textPrimary)
                 .multilineTextAlignment(.center)
             Spacer().frame(height: PickerMetrics.pinHeadingToBoxes)
-            PinBoxes(value: pin, working: working, error: error != nil)
+            PinBoxes(value: pin, working: working, error: shownError != nil)
                 .offset(x: shake)
             Spacer().frame(height: PickerMetrics.pinBoxesToSupport)
             Text(supportText)
                 .font(NuvioType.inter(18, .medium))
-                .foregroundStyle(error != nil ? Color(argb: 0xFFFF8E8E) : colors.textSecondary)
+                .foregroundStyle(shownError != nil ? Color(argb: 0xFFFF8E8E) : colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: PickerMetrics.pinSupportMaxWidth)
-            Spacer().frame(height: dp(10))
-            Text("Forgot PIN? Reset it from your Tuvora account on tuvora website.")
-                .font(NuvioType.inter(14, .medium)).foregroundStyle(colors.textTertiary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: PickerMetrics.pinSupportMaxWidth)
+            if policy.showsForgotHint(mode: flow.mode) {
+                Spacer().frame(height: dp(10))
+                Text("Forgot PIN? Reset it from your Tuvora account on tuvora website.")
+                    .font(NuvioType.inter(14, .medium)).foregroundStyle(colors.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: PickerMetrics.pinSupportMaxWidth)
+            }
             Spacer().frame(height: dp(14))
             Text("Press back to cancel").font(NuvioType.inter(14, .medium)).foregroundStyle(colors.textTertiary)
             Spacer().frame(height: dp(28))
@@ -345,7 +506,7 @@ struct ProfilePinOverlay: View {
         }
         .padding(.horizontal, PickerMetrics.screenPaddingH)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onExitCommand(perform: onDismiss)
+        .onExitCommand(perform: onClose)
         .onKeyPress(phases: .down) { press in
             if press.key == .delete { type("⌫"); return .handled }
             let chars = press.characters
@@ -356,9 +517,9 @@ struct ProfilePinOverlay: View {
     }
 
     private var supportText: String {
-        if let error { return error }
-        if working { return "Verifying…" }
-        return "Use your remote or keyboard to enter 4 digits."
+        if let shownError { return shownError }
+        if working { return policy.workingText(mode: flow.mode) }
+        return policy.support(state: flow)
     }
 
     private var keypad: some View {
@@ -373,36 +534,81 @@ struct ProfilePinOverlay: View {
     }
 
     private func type(_ key: String) {
-        let policy = TvProfilePinPolicy.shared
+        let pinPolicy = TvProfilePinPolicy.shared
         if key == "⌫" {
-            pin = policy.backspace(pin: pin, isWorking: working)
+            pin = pinPolicy.backspace(pin: pin, isWorking: working)
         } else if let digit = key.utf16.first {
-            pin = policy.append(pin: pin, digit: digit, isWorking: working)
+            pin = pinPolicy.append(pin: pin, digit: digit, isWorking: working)
         }
         error = nil
-        if policy.isComplete(pin: pin) { submit() }
+        if pinPolicy.isComplete(pin: pin) { submit() }
     }
 
     private func submit() {
         let submitted = pin
         pin = ""
+        let action = policy.submit(state: flow, pin: submitted)
+        switch action.kind {
+        case .advance:
+            flow = action.next
+            if action.next.localError != nil { Task { await playErrorShake() } }
+        case .verify:
+            run { await verify(submitted) }
+        case .setPin:
+            run {
+                let result = try? await ProfileRepository.shared.setPin(profileIndex: profile.profileIndex, pin: submitted, currentPin: action.currentPin)
+                let outcome = policy.afterSet(state: flow, result: result)
+                if outcome.kind == .saved {
+                    NSLog("SMOKE pin saved profile=%d", profile.profileIndex)
+                    onFinished("PIN saved for \(profile.name).")
+                    return
+                }
+                if let next = outcome.next { flow = next }
+                error = outcome.message
+                await playErrorShake()
+            }
+        case .clearPin:
+            run {
+                let result = try? await ProfileRepository.shared.clearPin(profileIndex: profile.profileIndex, currentPin: action.currentPin)
+                let outcome = policy.afterClear(result: result)
+                if outcome.kind == .saved {
+                    NSLog("SMOKE pin cleared profile=%d", profile.profileIndex)
+                    onFinished("PIN lock removed for \(profile.name).")
+                    return
+                }
+                error = outcome.message
+                await playErrorShake()
+            }
+        default: break
+        }
+    }
+
+    private func run(_ work: @escaping () async -> Void) {
         working = true
-        Task {
-            let result = try? await ProfileRepository.shared.verifyPin(profileIndex: profile.profileIndex, pin: submitted)
-            let outcome = TvProfilePinPolicy.shared.outcome(result: result)
-            working = false
-            switch outcome.kind {
-            case .unlocked:
+        Task { await work(); working = false }
+    }
+
+    private func verify(_ submitted: String) async {
+        let result = try? await ProfileRepository.shared.verifyPin(profileIndex: profile.profileIndex, pin: submitted)
+        let outcome = TvProfilePinPolicy.shared.outcome(result: result)
+        switch outcome.kind {
+        case .unlocked:
+            switch policy.verified(mode: flow.mode) {
+            case .openProfile:
                 NSLog("SMOKE pin unlocked profile=%d", profile.profileIndex)
                 TvAppLifecycle.shared.pickProfile(profileIndex: profile.profileIndex)
-                return
-            case .locked: error = "Profile is locked. Try again in \(outcome.retryAfterSeconds)s."
-            case .incorrect: error = "Current PIN is incorrect."
-            default: error = "Could not verify PIN. Try again."
+            case .startNewPin:
+                flow = policy.startNewPin(currentPin: submitted)
+            default:
+                onConfirmDelete()
             }
-            NSLog("SMOKE pin rejected profile=%d", profile.profileIndex)
-            await playErrorShake()
+            return
+        case .locked: error = "Profile is locked. Try again in \(outcome.retryAfterSeconds)s."
+        case .incorrect: error = "Current PIN is incorrect."
+        default: error = "Could not verify PIN. Try again."
         }
+        NSLog("SMOKE pin rejected profile=%d", profile.profileIndex)
+        await playErrorShake()
     }
 
     /// NuvioTV's shake: -22, 18, -14, 10, -6, 0 px at 42 ms a step.

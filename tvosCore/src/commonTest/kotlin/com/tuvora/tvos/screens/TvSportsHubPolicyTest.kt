@@ -112,4 +112,31 @@ class TvSportsHubPolicyTest {
         assertEquals(listOf<String?>(null), single.map { it.label })
         assertTrue(TvSportsHubPolicy.groupMatches(emptyList(), null).isEmpty())
     }
+
+    @Test
+    fun `league page splits upcoming from recent results and tracks follow and loading`() {
+        val league = RadarLeague(id = "4328", name = "Premier League", sport = "Soccer")
+        val notLoaded = TvSportsHubPolicy.leaguePage(RadarUiState(catalog = catalog), league, now)
+        assertEquals("Soccer · Loading…", notLoaded.subtitle)
+        assertFalse(notLoaded.loaded || notLoaded.empty || notLoaded.followed)
+
+        val state = RadarUiState(
+            catalog = catalog,
+            follows = listOf(RadarFollow(leagueId = "4328")),
+            fixturesByLeague = mapOf(
+                "4328" to listOf(
+                    fixture("past", "4328", "2026-09-20T14:00:00").copy(sport = "Soccer", homeScore = "2", awayScore = "0"),
+                    fixture("next", "4328", "2026-09-30T14:00:00").copy(sport = "Soccer"),
+                ),
+            ),
+        )
+        val page = TvSportsHubPolicy.leaguePage(state, league, now)
+        assertEquals(listOf("next"), page.upcoming.map { it.id })
+        assertEquals(listOf("past"), page.recent.map { it.id })
+        assertTrue(page.followed)
+        assertEquals("Soccer · 1 upcoming", page.subtitle)
+
+        val empty = TvSportsHubPolicy.leaguePage(state.copy(fixturesByLeague = mapOf("4328" to emptyList())), league, now)
+        assertTrue(empty.empty)
+    }
 }

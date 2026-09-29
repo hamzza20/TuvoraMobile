@@ -23,6 +23,9 @@ struct SportsScreen: View {
     @State private var radar: RadarUiState?
     @State private var now: Int64 = TvSports.shared.nowMs()
     @State private var page: FixturesPage?
+    @State private var leaguePage: RadarLeague?
+    /// A league picked in the browse dialog opens once the dialog has gone.
+    @State private var pendingLeague: RadarLeague?
     @State private var browse: RadarCategory?
     @State private var sheet: MatchSheetTarget?
     @State private var pendingPlay: TvPlayerSession?
@@ -31,7 +34,10 @@ struct SportsScreen: View {
     var body: some View {
         Group {
             if let radar {
-                if let page {
+                if let league = leaguePage {
+                    LeaguePageView(league: league, radar: radar, now: now) { open($0) }
+                        .onExitCommand { leaguePage = nil }
+                } else if let page {
                     FixturesPageView(page: page, radar: radar, now: now) { open($0) }
                         .onExitCommand { self.page = nil }
                 } else {
@@ -48,6 +54,13 @@ struct SportsScreen: View {
                 now = TvSports.shared.nowMs()
                 NSLog("SMOKE sports follows=%d fixtures=%d loading=%d", next.follows.count, next.fixturesByLeague.count, next.loadingFixtures)
                 // Simulator smoke hook: `-smokeSportsMatch` opens the first upcoming match's channel sheet.
+                // `-smokeSportsLeague <leagueId>` opens a league page.
+                let args = ProcessInfo.processInfo.arguments
+                if !smokeMatchOpened, let i = args.firstIndex(of: "-smokeSportsLeague"), i + 1 < args.count,
+                   let league = next.leagueById(id: args[i + 1]) {
+                    smokeMatchOpened = true
+                    showLeague(league)
+                }
                 if !smokeMatchOpened, ProcessInfo.processInfo.arguments.contains("-smokeSportsMatch"),
                    let first = TvSports.shared.hub(state: next, nowMs: now).upcoming.first {
                     smokeMatchOpened = true
@@ -68,8 +81,14 @@ struct SportsScreen: View {
             guard scenePhase == .active else { return }
             try? await TvSports.shared.refreshWhileVisible()
         }
-        .fullScreenCover(item: $browse) { category in
-            CategoryDialog(category: category).environment(\.nuvio, colors)
+        .fullScreenCover(item: $browse, onDismiss: {
+            if let league = pendingLeague { pendingLeague = nil; showLeague(league) }
+        }) { category in
+            CategoryDialog(category: category) { league in
+                pendingLeague = league
+                browse = nil
+            }
+            .environment(\.nuvio, colors)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black.opacity(0.6).ignoresSafeArea())
                 .presentationBackground(.clear)
@@ -105,7 +124,7 @@ struct SportsScreen: View {
                         }
                         rail(hub.featured, id: \.event.id) { featured in
                             FeaturedBannerCard(featured: featured) {
-                                if let league = radar.leagueById(id: featured.event.leagueId) { showLeague(league, radar) }
+                                if let league = radar.leagueById(id: featured.event.leagueId) { showLeague(league) }
                             }
                         }
                     }
@@ -132,7 +151,7 @@ struct SportsScreen: View {
                     VStack(alignment: .leading, spacing: 0) {
                         SportsRowTitle(text: row.title, badge: row.badge) {
                             if let league = row.league {
-                                showLeague(league, radar)
+                                showLeague(league)
                             } else {
                                 page = FixturesPage(title: row.title, fixtures: row.fixtures)
                             }
@@ -158,10 +177,10 @@ struct SportsScreen: View {
         .scrollClipDisabled()
     }
 
-    /// "See all" on a league: every upcoming fixture of it (loads the league if it isn't followed).
-    private func showLeague(_ league: RadarLeague, _ radar: RadarUiState) {
-        RadarRepository.shared.ensureLeagueLoaded(leagueId: league.id)
-        page = FixturesPage(title: league.name, fixtures: radar.upcoming(leagueIds: [league.id], nowMs: now, cap: 40), leagueId: league.id)
+    /// Into a league (NuvioTV LeagueFixturesPage); browsing loads it without following it.
+    private func showLeague(_ league: RadarLeague) {
+        TvSports.shared.ensureLeagueLoaded(league: league)
+        leaguePage = league
     }
 
     private func matchRail(_ fixtures: [RadarFixture], _ radar: RadarUiState) -> some View {
@@ -201,7 +220,6 @@ private struct IdentifiedItem<ID: Hashable, Item>: Identifiable {
 struct FixturesPage {
     let title: String
     let fixtures: [RadarFixture]
-    var leagueId: String? = nil
 }
 
 private struct MatchSheetTarget: Identifiable {
@@ -216,6 +234,9 @@ extension RadarCategory: @retroactive Identifiable {
 // MARK: - Rows and cards
 
 /// RowTitle (SportsHubScreen.kt:1531-1577): optional 22dp badge, titleMedium SemiBold, "See all".
+/// The crest hangs in the gutter to the left of the title, so every title starts on the gutter line
+/// whether or not it has a crest (inline, crested and crest-less titles — or a crest still loading —
+/// started at different x).
 private struct SportsRowTitle: View {
     let text: String
     var badge: String? = nil
@@ -224,8 +245,12 @@ private struct SportsRowTitle: View {
 
     var body: some View {
         HStack(spacing: dp(8)) {
-            if let badge, !badge.isEmpty { BadgeImage(url: badge, size: dp(22)) }
             Text(text).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).lineLimit(1)
+                .overlay(alignment: .leading) {
+                    if let badge, !badge.isEmpty {
+                        BadgeImage(url: badge, size: dp(22)).offset(x: -dp(30))
+                    }
+                }
             if let onSeeAll { SeeAllButton(action: onSeeAll).padding(.leading, dp(4)) }
             Spacer()
         }
@@ -462,11 +487,7 @@ private struct FixturesPageView: View {
     let onMatch: (RadarFixture) -> Void
     @Environment(\.nuvio) private var colors
 
-    private var fixtures: [RadarFixture] {
-        // A league page follows the repository as the league's fixtures arrive.
-        if let leagueId = page.leagueId { return radar.upcoming(leagueIds: [leagueId], nowMs: now, cap: 40) }
-        return page.fixtures
-    }
+    private var fixtures: [RadarFixture] { page.fixtures }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -486,6 +507,72 @@ private struct FixturesPageView: View {
             .padding(.horizontal, SportsMetrics.gutter).padding(.vertical, dp(24))
         }
         .scrollClipDisabled()
+    }
+}
+
+/// LeagueFixturesPage (SportsHubScreen.kt:1255-1354): the league's crest (56dp), name and
+/// "sport · N upcoming", a Follow toggle, then Live & Upcoming and Recent results. Loads the league on
+/// demand, so browsing never requires following.
+private struct LeaguePageView: View {
+    let league: RadarLeague
+    let radar: RadarUiState
+    let now: Int64
+    let onMatch: (RadarFixture) -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var followFocused: Bool
+
+    var body: some View {
+        let page = TvSports.shared.leaguePage(state: radar, league: league, nowMs: now)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: dp(12)) {
+                HStack(spacing: dp(12)) {
+                    if let badge = league.badge, !badge.isEmpty { BadgeImage(url: badge, size: dp(56)) }
+                    VStack(alignment: .leading, spacing: dp(2)) {
+                        Text(league.name).font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary).lineLimit(1)
+                        Text(page.subtitle).font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                    }
+                    Spacer()
+                    Button { TvSports.shared.toggleFollow(league: league) } label: {
+                        Text(page.followed ? "★ Following" : "Follow").font(NuvioType.labelLarge)
+                            .foregroundStyle(page.followed ? (followFocused ? colors.textPrimary : colors.secondary) : colors.textPrimary)
+                            .padding(.horizontal, dp(12)).padding(.vertical, dp(8))
+                            .background(RoundedRectangle(cornerRadius: dp(8)).fill(followFocused ? colors.primary : .clear))
+                    }
+                    .buttonStyle(PlainNoChromeButtonStyle())
+                    .focused($followFocused)
+                    .reportsFocus(followFocused)
+                }
+                .focusSection()
+                if !page.upcoming.isEmpty { section("Live & Upcoming", page.upcoming) }
+                if !page.recent.isEmpty { section("Recent results", page.recent) }
+                if page.empty {
+                    Text("No scheduled matches right now.").font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                        .padding(.vertical, dp(12))
+                }
+                if !page.loaded {
+                    HStack(spacing: dp(12)) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            NuvioShimmer(cornerRadius: dp(12)).frame(width: SportsMetrics.matchCardWidth, height: dp(140))
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, SportsMetrics.gutter).padding(.vertical, dp(24))
+        }
+        .scrollClipDisabled()
+        .onAppear { DispatchQueue.main.async { followFocused = true } }
+    }
+
+    private func section(_ title: String, _ fixtures: [RadarFixture]) -> some View {
+        VStack(alignment: .leading, spacing: dp(8)) {
+            Text(title).font(NuvioType.titleMediumSemi).foregroundStyle(colors.textPrimary).padding(.vertical, dp(8))
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: SportsMetrics.matchCardWidth), spacing: dp(12))], alignment: .leading, spacing: dp(12)) {
+                ForEach(fixtures, id: \.self) { fixture in
+                    MatchCard(fixture: fixture, radar: radar, now: now) { onMatch(fixture) }
+                }
+            }
+            .focusSection()
+        }
     }
 }
 
@@ -515,24 +602,26 @@ private struct FocusableRow<Content: View>: View {
     }
 }
 
-/// Browse: a category's leagues; OK follows or unfollows (followed leagues get their own rail).
+/// Browse: a category's leagues; OK goes into the league (discovery first — following happens on its
+/// page), as NuvioTV's browse dialog does.
 private struct CategoryDialog: View {
     let category: RadarCategory
+    let onOpen: (RadarLeague) -> Void
     @Environment(\.nuvio) private var colors
     @Environment(\.dismiss) private var dismiss
     @State private var followed: Set<String> = []
 
     var body: some View {
-        NuvioDialog(title: category.name, subtitle: "Select a league to follow it") {
+        NuvioDialog(title: category.name, subtitle: "Select a league to see its matches") {
             ForEach(category.leagues, id: \.id) { league in
-                FocusableRow(action: { TvSports.shared.toggleFollow(league: league) }) {
+                FocusableRow(action: { onOpen(league) }) {
                     Group {
                         if let badge = league.badge, !badge.isEmpty { BadgeImage(url: badge, size: dp(32)) } else { Color.clear }
                     }
                     .frame(width: dp(32), height: dp(32))
                     Text(league.name).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary).lineLimit(1)
                     Spacer(minLength: 0)
-                    Text(followed.contains(league.id) ? "★ Following" : "+ Follow").font(NuvioType.labelLarge)
+                    Text(followed.contains(league.id) ? "★ Following" : "›").font(NuvioType.labelLarge)
                         .foregroundStyle(followed.contains(league.id) ? colors.secondary : colors.textSecondary)
                 }
             }

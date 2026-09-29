@@ -152,6 +152,8 @@ struct SettingsDialogButton: View {
     var primary = false
     var destructive = false
     var fullWidth = false
+    /// Take focus when the dialog appears (e.g. Cancel beside an irreversible action).
+    var initialFocus = false
     let action: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
@@ -168,6 +170,7 @@ struct SettingsDialogButton: View {
         .buttonStyle(PlainNoChromeButtonStyle())
         .focused($focused)
         .reportsFocus(focused)
+        .onAppear { if initialFocus { DispatchQueue.main.async { focused = true } } }
     }
 
     private var fill: Color {

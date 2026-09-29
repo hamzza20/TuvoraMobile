@@ -59,6 +59,12 @@ object TvSports {
 
     fun toggleFollow(league: RadarLeague) = RadarRepository.toggleFollow(league)
 
+    /** Browsing a league must not require following it: fetch its fixtures on demand. */
+    fun ensureLeagueLoaded(league: RadarLeague) = RadarRepository.ensureLeagueLoaded(league.id)
+
+    fun leaguePage(state: RadarUiState, league: RadarLeague, nowMs: Long): TvLeaguePage =
+        TvSportsHubPolicy.leaguePage(state, league, nowMs)
+
     /**
      * Refreshes fixtures while the Sports screen is on screen, per [TvSportsRefreshCadence]. The
      * caller runs this in a SwiftUI `.task` tied to the screen being visible and the scene active, so
