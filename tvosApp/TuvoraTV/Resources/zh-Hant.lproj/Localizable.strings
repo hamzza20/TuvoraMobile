@@ -39,6 +39,7 @@
 "Audience Score" = "觀眾分數";
 "Audio" = "音訊";
 "Audio & Video" = "音訊與影片";
+"Audio Delay" = "音訊延遲";
 "Audio controls and video compatibility." = "音訊控制和影片相容性。";
 "Auto (Best for Content)" = "自動 (最適合內容)";
 "Auto Stream Selection" = "自動串流選擇";
@@ -47,10 +48,12 @@
 "Auto-play regex match" = "自動播放正規表示式匹配";
 "Available when Trakt is the Watch Progress source" = "當 Trakt 為觀看進度來源時可用";
 "Back" = "返回";
+"Background" = "背景";
 "Balanced" = "平衡";
 "Basic Info" = "基本資訊";
 "Best quality first" = "最佳品質優先";
 "Bold" = "粗體";
+"Bottom Offset" = "底部偏移";
 "Browse and play files already in your connected accounts." = "瀏覽並播放已連線帳戶中的檔案。";
 "Cancel" = "取消";
 "Card" = "卡片";
@@ -173,6 +176,7 @@
 "Filters & Sorting" = "過濾器與排序";
 "Finish connection approval" = "完成連線批准";
 "Focus an avatar to view its name" = "聚焦頭像以檢視其名稱";
+"Font Size" = "字體大小";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "忘記 PIN？請從 nuvio 網站上的 Tuvora 帳戶重設。";
 "Friends" = "好友";
 "General" = "一般";
@@ -316,9 +320,12 @@
 "Remove" = "移除";
 "Remove anyway" = "仍要移除";
 "Remove from library" = "從媒體庫移除";
+"Report Issue" = "報告問題";
+"Report Sent" = "已傳送";
 "Required to fetch ratings from MDBList" = "從 MDBList 獲取評分所需";
 "Required to fetch skip timestamps from anime-skip.com" = "從 anime-skip.com 獲取跳過時間戳所需";
 "Requires TMDB enrichment to be enabled" = "需要啟用 TMDB 增強";
+"Reset" = "重設";
 "Reset to Default" = "重設為預設";
 "Resolve playable links" = "解析可播放連結";
 "Resolve playable links before playback starts." = "在播放開始前解析可播放連結。";
@@ -387,6 +394,7 @@
 "Start saving your favorites to see them here" = "開始儲存您的最愛，在此顯示";
 "Starting %@ connection…" = "正在啟動 %1$@ 連線…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "停止從此個人資料傳送觀看更新。您的 MDBList 歷史記錄將保留。";
+"Style" = "樣式";
 "Subtitles" = "字幕";
 "Subtitles Delay" = "字幕延遲";
 "Sync" = "同步";
@@ -404,6 +412,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "電視";
 "Terms" = "服務條款";
+"Text Color" = "文字顏色";
 "These integrations are experimental and may be kept, changed, or removed later." = "這些整合為實驗性功能，可能會被保留、變更或移除。";
 "This item does not expose a playable video file." = "此項目未暴露可播放的影片檔案。";
 "This removes the Simkl account and cached Simkl data from this profile." = "這將從此個人資料移除 Simkl 帳戶和快取的 Simkl 資料。";

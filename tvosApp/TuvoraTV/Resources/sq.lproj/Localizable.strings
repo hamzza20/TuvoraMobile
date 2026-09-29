@@ -37,6 +37,7 @@
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Kërkoji një shërbimi të lidhur lidhje të luajtshme kur një rezultat ka nevojë për to. Kjo mund ta shtojë artikullin në atë shërbim.";
 "Audience Score" = "Pikët e audiencës";
 "Audio & Video" = "Audio dhe video";
+"Audio Delay" = "Vonesa e audios";
 "Audio controls and video compatibility." = "Kontrollet e audios dhe përputhshmëria e videos.";
 "Auto (Best for Content)" = "Automatik (më i miri për përmbajtjen)";
 "Auto Stream Selection" = "Zgjedhja automatike e transmetimit";
@@ -45,10 +46,12 @@
 "Auto-play regex match" = "Luaj automatikisht përputhjen regex";
 "Available when Trakt is the Watch Progress source" = "E disponueshme kur Trakt është burimi i progresit të shikimit";
 "Back" = "Kthehu";
+"Background" = "Sfondi";
 "Balanced" = "I balancuar";
 "Basic Info" = "Informacion bazë";
 "Best quality first" = "Cilësia më e mirë e para";
 "Bold" = "Trashë";
+"Bottom Offset" = "Zhvendosja nga fundi";
 "Browse and play files already in your connected accounts." = "Shfleto dhe luaj skedarët që tashmë gjenden në llogaritë e tua të lidhura.";
 "Cancel" = "Anulo";
 "Card" = "Kartë";
@@ -167,6 +170,7 @@
 "Filters & Sorting" = "Filtrat dhe renditja";
 "Finish connection approval" = "Përfundo miratimin e lidhjes";
 "Focus an avatar to view its name" = "Fokuso një avatar për të parë emrin e tij";
+"Font Size" = "Madhësia e fontit";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Harrove PIN-in? Rivendose nga llogaria jote Nuvio në faqen e internetit të Nuvio.";
 "Friends" = "Miqtë";
 "General" = "Të përgjithshme";
@@ -304,9 +308,12 @@
 "Remove" = "Hiq";
 "Remove anyway" = "Hiq gjithsesi";
 "Remove from library" = "Hiq nga biblioteka";
+"Report Issue" = "Raporto problem";
+"Report Sent" = "Raporti u dërgua";
 "Required to fetch ratings from MDBList" = "Kërkohet për të marrë vlerësime nga MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Kërkohet për të marrë kohëshënuesit e kapërcimit nga anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Kërkon që pasurimi TMDB të jetë i aktivizuar";
+"Reset" = "Rivendos";
 "Reset to Default" = "Rikthe në parazgjedhje";
 "Resolve playable links" = "Zgjidh lidhjet e luajtshme";
 "Resolve playable links before playback starts." = "Zgjidh lidhjet e luajtshme para se të fillojë riprodhimi.";
@@ -371,6 +378,7 @@
 "Start next episode automatically when prompt appears." = "Fillo automatikisht episodin tjetër kur shfaqet kërkesa.";
 "Start saving your favorites to see them here" = "Fillo të ruash të preferuarat për t’i parë këtu";
 "Starting %@ connection…" = "Duke nisur lidhjen me %1$@…";
+"Style" = "Stili";
 "Subtitles" = "Titrat";
 "Subtitles Delay" = "Vonesa e titrave";
 "Sync" = "Sinkronizo";
@@ -386,6 +394,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Sfondet e rekomandimeve TMDB në faqen e detajeve";
 "TUVORA" = "NUVIO";
 "Terms" = "Kushtet";
+"Text Color" = "Ngjyra e tekstit";
 "These integrations are experimental and may be kept, changed, or removed later." = "Këto integrime janë eksperimentale dhe mund të ruhen, ndryshohen ose hiqen më vonë.";
 "This item does not expose a playable video file." = "Ky artikull nuk ofron skedar video të luajtshëm.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Kjo heq llogarinë Simkl dhe të dhënat Simkl në cache nga ky profil.";

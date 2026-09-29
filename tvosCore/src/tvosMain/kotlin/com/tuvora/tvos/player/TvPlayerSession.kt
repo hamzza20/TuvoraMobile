@@ -82,7 +82,20 @@ data class TvPlayerState(
     val addonSubtitleId: String? = null,
     /** How many skip segments the providers returned for this title (diagnostics / smoke log). */
     val skipSegmentCount: Int = 0,
+    val audioDelayMs: Int = 0,
+    /** Whether the current engine can shift audio (libmpv yes, AVPlayer no). */
+    val audioDelaySupported: Boolean = false,
+    /** Whether the current engine draws the subtitle style (libmpv yes, AVPlayer uses the system style). */
+    val subtitleStyleSupported: Boolean = false,
 )
+
+/**
+ * Engine controls the shared NuvioPlayerBridge doesn't carry. Apple TV's libmpv bridge implements this;
+ * AVPlayer has no audio-delay control, so the player says it's unavailable there.
+ */
+interface TvAudioDelayControl {
+    fun setAudioDelayMs(delayMs: Int)
+}
 
 /**
  * One Apple TV playback: Apple TV's counterpart of the phone's PlayerScreenRuntime (upstream,
@@ -156,6 +169,7 @@ class TvPlayerSession(
     // Subtitles: the add-on subtitle to load once the engine is ready, and the saved delay.
     private var pendingAddonSubtitleUrl: String? = null
     private var subtitleDelayApplied = false
+    private var audioDelayApplied = false
     private var addonSubtitlesRequested = false
     private var pollJob: Job? = null
     private var seekSaveJob: Job? = null
@@ -432,6 +446,10 @@ class TvPlayerSession(
     private fun applyPendingSubtitleState(b: NuvioPlayerBridge) {
         if (snapshot.isLoading || snapshot.durationMs <= 0L) return
         pendingAddonSubtitleUrl?.let { url -> pendingAddonSubtitleUrl = null; b.setSubtitleUrl(url) }
+        if (!audioDelayApplied) {
+            audioDelayApplied = true
+            _state.value.audioDelayMs.takeIf { it != 0 }?.let { (b as? TvAudioDelayControl)?.setAudioDelayMs(it) }
+        }
         if (!subtitleDelayApplied) {
             subtitleDelayApplied = true
             val saved = PlayerTrackPreferenceStorage.loadSubtitleDelayMs(currentVideoId) ?: 0
@@ -459,9 +477,70 @@ class TvPlayerSession(
         bridge?.destroy()
         bridge = null
         subtitleDelayApplied = false
+        audioDelayApplied = false
         _state.value = _state.value.copy(lane = lane, engineGeneration = _state.value.engineGeneration + 1, isLoading = true)
         open(lane, resumeAt)
         TvLaneMemory.put(progressKey, lane)
+    }
+
+    // ---- Audio delay (NuvioTV Audio Delay) ------------------------------------------------------
+
+    fun setAudioDelay(delayMs: Int) {
+        val clamped = TvAudioDelay.clamp(delayMs)
+        _state.value = _state.value.copy(audioDelayMs = clamped)
+        (bridge as? TvAudioDelayControl)?.setAudioDelayMs(clamped)
+    }
+
+    // ---- Subtitle style (in-player, persisted through the shared subtitle settings) ------------
+
+    fun subtitleStyleView(): TvSubtitleStyleView = TvSubtitleStyleEditor.view(PlayerSettingsRepository.uiState.value.subtitleStyle)
+
+    fun subtitleSizeStep(up: Boolean) = editStyle { TvSubtitleStyleEditor.size(it, up) }
+    fun subtitleOffsetStep(up: Boolean) = editStyle { TvSubtitleStyleEditor.offset(it, up) }
+    fun setSubtitleTextColor(index: Int) = editStyle { TvSubtitleStyleEditor.textColor(it, index) }
+    fun setSubtitleBackground(index: Int) = editStyle { TvSubtitleStyleEditor.background(it, index) }
+    fun toggleSubtitleBold() = editStyle { TvSubtitleStyleEditor.bold(it) }
+    fun toggleSubtitleOutline() = editStyle { TvSubtitleStyleEditor.outline(it) }
+    fun resetSubtitleStyle() = editStyle { TvSubtitleStyleEditor.reset(it) }
+
+    private fun editStyle(edit: (com.nuvio.app.features.player.SubtitleStyleState) -> com.nuvio.app.features.player.SubtitleStyleState): TvSubtitleStyleView {
+        PlayerSettingsRepository.ensureLoaded()
+        PlayerSettingsRepository.setSubtitleStyle(edit(PlayerSettingsRepository.uiState.value.subtitleStyle))
+        bridge?.let(::applySubtitleStyle)
+        return subtitleStyleView()
+    }
+
+    private fun applySubtitleStyle(b: NuvioPlayerBridge) {
+        val subStyle = TvSubtitleStyle.forMpv(PlayerSettingsRepository.uiState.value.subtitleStyle)
+        b.applySubtitleStyle(
+            textColor = subStyle.textColor, backgroundColor = subStyle.backgroundColor, outlineColor = subStyle.outlineColor,
+            outlineSize = subStyle.outlineSize, bold = subStyle.bold, fontSize = subStyle.fontSize,
+            subPos = subStyle.subPos, stripSdh = subStyle.stripSdh,
+        )
+    }
+
+    // ---- Playback-issue report --------------------------------------------------------------
+
+    /**
+     * NuvioTV's "Report Issue". NuvioTV uploads to its own report endpoint, which Tuvora doesn't
+     * configure; here the report goes to the log and, as an analytics event, through AnalyticsSink
+     * (PostHog once it is wired on Apple TV). No stream address, host or credentials are sent.
+     */
+    fun reportIssue(trigger: String) {
+        val st = _state.value
+        val b = bridge
+        val engine = if (st.lane == PlaybackLane.AvPlayer) "AVPlayer" else "libmpv"
+        val info = b?.let { runCatching { decodePlayerStreamInfo(it.getStreamInfoJson(), engine) }.getOrNull() }
+        val props = TvPlaybackIssueReport.properties(
+            trigger = trigger, lane = engine, isLive = st.isLive,
+            contentType = launch.contentType ?: launch.parentMetaType,
+            positionMs = st.positionMs, durationMs = st.durationMs, isLoading = st.isLoading, isPlaying = st.isPlaying,
+            errorMessage = st.errorMessage, videoCodec = info?.videoCodec,
+            resolution = info?.let { com.nuvio.app.features.player.StreamInfoFormat.qualityLabel(it.videoWidth, it.videoHeight) },
+            audioCodec = info?.audioCodec, speed = st.speed, audioDelayMs = st.audioDelayMs, subtitleDelayMs = st.subtitleDelayMs,
+        )
+        log.w { "playback issue reported: $props" }
+        com.nuvio.app.core.analytics.AnalyticsSink.capture(TvPlaybackIssueReport.EVENT, props)
     }
 
     private fun open(lane: PlaybackLane, startMs: Long): NuvioPlayerBridge? {
@@ -490,11 +569,11 @@ class TvPlayerSession(
             saturation = settings.iosSaturation,
             gamma = settings.iosGamma,
         )
-        val subStyle = TvSubtitleStyle.forMpv(settings.subtitleStyle)
-        created.applySubtitleStyle(
-            textColor = subStyle.textColor, backgroundColor = subStyle.backgroundColor, outlineColor = subStyle.outlineColor,
-            outlineSize = subStyle.outlineSize, bold = subStyle.bold, fontSize = subStyle.fontSize,
-            subPos = subStyle.subPos, stripSdh = subStyle.stripSdh,
+        applySubtitleStyle(created)
+        val delayControl = created as? TvAudioDelayControl
+        _state.value = _state.value.copy(
+            audioDelaySupported = delayControl != null,
+            subtitleStyleSupported = lane == PlaybackLane.Libmpv,
         )
         created.setIsLiveStream(isLive)
         val headers = TvPlaybackHeaders.sanitize(launch.sourceHeaders)
@@ -604,6 +683,8 @@ class TvPlayerSession(
         // One connection at a time: release the failed engine before the next one opens the stream.
         bridge?.destroy()
         bridge = null
+        subtitleDelayApplied = false
+        audioDelayApplied = false
         _state.value = _state.value.copy(lane = next, engineGeneration = _state.value.engineGeneration + 1, isLoading = true)
         open(next, resumeAt)
         TvLaneMemory.put(progressKey, next)

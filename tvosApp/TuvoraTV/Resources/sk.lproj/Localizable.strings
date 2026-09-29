@@ -38,6 +38,7 @@
 "Audience Score" = "Hodnotenie divákov";
 "Audio" = "Zvuk";
 "Audio & Video" = "Audio a video";
+"Audio Delay" = "Oneskorenie audia";
 "Audio controls and video compatibility." = "Kompatibilita videa a ovládanie audia.";
 "Auto (Best for Content)" = "Automaticky (Najlepšie pre obsah)";
 "Auto Stream Selection" = "Automatický výber streamu";
@@ -46,10 +47,12 @@
 "Auto-play regex match" = "Automaticky prehrať podľa regexu";
 "Available when Trakt is the Watch Progress source" = "Dostupné, keď je Trakt nastavený ako zdroj priebehu sledovania";
 "Back" = "Späť";
+"Background" = "Pozadie";
 "Balanced" = "Vyvážená";
 "Basic Info" = "Základné informácie";
 "Best quality first" = "Najlepšia kvalita najskôr";
 "Bold" = "Tučné";
+"Bottom Offset" = "Spodný posun";
 "Browse and play files already in your connected accounts." = "Prehliadajte a prehrávajte súbory, ktoré už máte vo svojich pripojených účtoch.";
 "Cancel" = "Zrušiť";
 "Card" = "Karta";
@@ -172,6 +175,7 @@
 "Finish connection approval" = "Dokončiť schválenie pripojenia";
 "Fit" = "Prispôsobiť";
 "Focus an avatar to view its name" = "Zamerajte avatar pre zobrazenie jeho názvu";
+"Font Size" = "Veľkosť písma";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Zabudli ste PIN? Resetujte ho zo svojho Tuvora účtu na webovej stránke Tuvora.";
 "Friends" = "Priatelia";
 "General" = "Všeobecné";
@@ -315,9 +319,12 @@
 "Remove" = "Odstrániť";
 "Remove anyway" = "Aj tak odstrániť";
 "Remove from library" = "Odstrániť z knižnice";
+"Report Issue" = "Nahlásiť problém";
+"Report Sent" = "Správa odoslaná";
 "Required to fetch ratings from MDBList" = "Vyžaduje sa pre získanie hodnotení z MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Vyžaduje sa na načítanie časových značiek preskočenia z anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Vyžaduje povolené TMDB obohatenie";
+"Reset" = "Obnoviť";
 "Reset to Default" = "Obnoviť predvolené";
 "Resolve playable links" = "Rozlišovať prehrateľné odkazy";
 "Resolve playable links before playback starts." = "Rozlíšiť prehrateľné odkazy ešte pred spustením prehrávania.";
@@ -386,6 +393,7 @@
 "Start saving your favorites to see them here" = "Začnite si ukladať obľúbené položky a zobrazia sa tu";
 "Starting %@ connection…" = "Spúšťa sa pripojenie k %1$@…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "Prestať odosielať aktualizácie o sledovaní z tohto profilu. Vaša história na MDBList sa zachová.";
+"Style" = "Štýl";
 "Subtitles" = "Titulky";
 "Subtitles Delay" = "Oneskorenie titulkov";
 "Sync" = "Synchronizovať";
@@ -402,6 +410,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Pozadia odporúčaní z TMDB na detailnej stránke";
 "TUVORA" = "NUVIO";
 "Terms" = "Podmienkami";
+"Text Color" = "Farba textu";
 "These integrations are experimental and may be kept, changed, or removed later." = "Tieto integrácie sú experimentálne a môžu byť neskôr zachované, zmenené alebo odstránené.";
 "This item does not expose a playable video file." = "Táto položka neobsahuje prehrateľný videosúbor.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Týmto sa z tohto profilu odstráni účet Simkl aj zakašírované dáta Simkl.";

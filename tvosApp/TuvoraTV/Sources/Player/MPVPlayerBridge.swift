@@ -6,7 +6,9 @@ import TuvoraCore
 
 // MARK: - Player Bridge Implementation (Kotlin protocol conformance)
 
-final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
+final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge, TvAudioDelayControl {
+    func setAudioDelayMs(delayMs: Int32) { playerVC?.setAudioDelayMs(Int(delayMs)) }
+
 
     private var playerVC: MPVPlayerViewController?
     /// Mirrors the user's Picture-in-Picture setting so a view controller created later still gets
@@ -1082,6 +1084,13 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         var delaySeconds = Double(max(-60_000, min(60_000, delayMs))) / 1000.0
         checkError(mpv_set_property(mpv, "sub-delay", MPV_FORMAT_DOUBLE, &delaySeconds))
+    }
+
+    /// NuvioTV's Audio Delay: mpv's `audio-delay` (seconds; positive delays the audio).
+    func setAudioDelayMs(_ delayMs: Int) {
+        guard mpv != nil else { return }
+        var delaySeconds = Double(max(-3_000, min(3_000, delayMs))) / 1000.0
+        checkError(mpv_set_property(mpv, "audio-delay", MPV_FORMAT_DOUBLE, &delaySeconds))
     }
 
     func applySubtitleStyle(

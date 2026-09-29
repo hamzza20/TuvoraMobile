@@ -39,6 +39,7 @@
 "Audience Score" = "ציון קהל";
 "Audio" = "שמע";
 "Audio & Video" = "שמע ווידאו";
+"Audio Delay" = "השהיית שמע";
 "Audio controls and video compatibility." = "פקדי שמע ותאימות וידאו.";
 "Auto (Best for Content)" = "אוטומטי (הטוב ביותר לתוכן)";
 "Auto Stream Selection" = "בחירת מקור אוטומטית";
@@ -47,10 +48,12 @@
 "Auto-play regex match" = "הפעל לפי תבנית regex";
 "Available when Trakt is the Watch Progress source" = "זמין כאשר Trakt הוא מקור התקדמות הצפייה";
 "Back" = "חזרה";
+"Background" = "רקע";
 "Balanced" = "מאוזן";
 "Basic Info" = "מידע בסיסי";
 "Best quality first" = "האיכות הטובה ביותר קודם";
 "Bold" = "מודגש";
+"Bottom Offset" = "היסט תחתון";
 "Browse and play files already in your connected accounts." = "עיין ונגן קבצים שכבר נמצאים בחשבונות המחוברים שלך.";
 "Cancel" = "ביטול";
 "Card" = "כרטיס";
@@ -174,6 +177,7 @@
 "Finish connection approval" = "השלם את אישור החיבור";
 "Fit" = "התאמה";
 "Focus an avatar to view its name" = "התמקד באווטאר כדי לראות את שמו";
+"Font Size" = "גודל גופן";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "שכחת סיסמה? אפס אותה מחשבון ה-Tuvora באתר שלך Tuvora";
 "Friends" = "חברים";
 "General" = "כללי";
@@ -315,9 +319,12 @@
 "Remove" = "הסרה";
 "Remove anyway" = "הסר בכל זאת";
 "Remove from library" = "הסרה מהספרייה";
+"Report Issue" = "דווח על תקלה";
+"Report Sent" = "הדיווח נשלח";
 "Required to fetch ratings from MDBList" = "נדרש לאחזור דירוגים מ-MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "נדרש לאחזור חותמות זמן דילוג מ-anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "דורש הפעלה של העשרת מידע מ-TMDB";
+"Reset" = "איפוס";
 "Reset to Default" = "אפס לברירת מחדל";
 "Resolve playable links" = "פענח קישורים ניתנים לצפייה";
 "Resolve playable links before playback starts." = "פענוח קישורים ניתנים להפעלה עוד לפני תחילת ההפעלה.";
@@ -386,6 +393,7 @@
 "Start saving your favorites to see them here" = "התחל לשמור מועדפים כדי לראותם כאן";
 "Starting %@ connection…" = "מתחיל חיבור ל-%1$@…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "הפסקת שליחת עדכוני צפייה מהפרופיל הזה. היסטוריית ה-MDBList נשמרת.";
+"Style" = "סגנון";
 "Subtitles" = "כתוביות";
 "Subtitles Delay" = "עיכוב כתוביות";
 "Sync" = "סנכרן";
@@ -403,6 +411,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "טלוויזיה";
 "Terms" = "תנאי השימוש";
+"Text Color" = "צבע טקסט";
 "These integrations are experimental and may be kept, changed, or removed later." = "אינטגרציות אלו הן ניסיוניות וייתכן שיישארו, ישתנו או יוסרו בהמשך.";
 "This item does not expose a playable video file." = "פריט זה לא חושף קובץ וידאו הניתן להפעלה.";
 "This removes the Simkl account and cached Simkl data from this profile." = "פעולה זו תסיר את חשבון ה-Simkl ואת נתוני ה-Simkl השמורים בפרופיל זה.";

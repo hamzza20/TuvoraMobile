@@ -40,6 +40,7 @@
 "Audience Score" = "Оценка зрителей (Audience)";
 "Audio" = "Аудио";
 "Audio & Video" = "Аудио и видео";
+"Audio Delay" = "Задержка аудио";
 "Audio controls and video compatibility." = "Настройки аудио и совместимость видео.";
 "Auto (Best for Content)" = "Авто (Лучшее для контента)";
 "Auto Stream Selection" = "Автоматический выбор потока";
@@ -48,10 +49,12 @@
 "Auto-play regex match" = "Автовоспроизведение по совпадению Regex";
 "Available when Trakt is the Watch Progress source" = "Доступно, когда Trakt используется как источник прогресса просмотра";
 "Back" = "Назад";
+"Background" = "Фон";
 "Balanced" = "Сбалансированное";
 "Basic Info" = "Базовая информация";
 "Best quality first" = "Лучшее качество";
 "Bold" = "Жирный";
+"Bottom Offset" = "Смещение снизу";
 "Browse and play files already in your connected accounts." = "Просматривайте и воспроизводите файлы, уже находящиеся в подключённых аккаунтах.";
 "Cancel" = "Отмена";
 "Card" = "Карточка";
@@ -174,6 +177,7 @@
 "Finish connection approval" = "Завершить подтверждение подключения";
 "Fit" = "Вписать";
 "Focus an avatar to view its name" = "Сфокусируйтесь на аватаре, чтобы увидеть его имя";
+"Font Size" = "Размер шрифта";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Забыли PIN? Сбросьте его в вашем аккаунте Tuvora на веб-сайте Tuvora.";
 "Friends" = "Для друзей";
 "General" = "Общие";
@@ -315,9 +319,12 @@
 "Remove" = "Удалить";
 "Remove anyway" = "Всё равно удалить";
 "Remove from library" = "Удалить из библиотеки";
+"Report Issue" = "Сообщить о проблеме";
+"Report Sent" = "Отчёт отправлен";
 "Required to fetch ratings from MDBList" = "Требуется для получения рейтингов из MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Требуется для получения таймкодов с anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Требуется включенное обогащение TMDB";
+"Reset" = "Сброс";
 "Reset to Default" = "Сбросить по умолчанию";
 "Resolve playable links" = "Получать воспроизводимые ссылки";
 "Resolve playable links before playback starts." = "Получать воспроизводимые ссылки до начала воспроизведения.";
@@ -384,6 +391,7 @@
 "Start next episode automatically when prompt appears." = "Запускать следующий эпизод автоматически при появлении подсказки.";
 "Start saving your favorites to see them here" = "Начните сохранять любимое, чтобы увидеть это здесь";
 "Starting %@ connection…" = "Подключение к %1$@…";
+"Style" = "Стиль";
 "Subtitles" = "Субтитры";
 "Subtitles Delay" = "Задержка субтитров";
 "Sync" = "Синхронизация";
@@ -400,6 +408,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "ТВ";
 "Terms" = "Условиями использования";
+"Text Color" = "Цвет текста";
 "The Movie Database (TMDB)" = "База данных фильмов (TMDB)";
 "These integrations are experimental and may be kept, changed, or removed later." = "Эти интеграции экспериментальные и могут быть сохранены, изменены или удалены позже.";
 "This item does not expose a playable video file." = "Этот элемент не содержит воспроизводимого видеофайла.";

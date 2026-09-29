@@ -32,6 +32,7 @@
 "Basic Info" = "Informații de bază";
 "Best quality first" = "Cea mai bună calitate mai întâi";
 "Bold" = "Îngroșat";
+"Bottom Offset" = "Decalaj jos";
 "Browse and play files already in your connected accounts." = "Răsfoiește și redă fișierele existente deja în conturile tale conectate.";
 "Cancel" = "Anulează";
 "Card" = "Card peisaj";
@@ -114,6 +115,7 @@
 "Fill" = "Umple";
 "Finish connection approval" = "Finalizează autentificarea Trakt în browser";
 "Fit" = "Potrivește";
+"Font Size" = "Dimensiune font";
 "Generating QR…" = "Se generează QR…";
 "Genre" = "Gen";
 "Go to details" = "Accesează detalii";
@@ -217,6 +219,7 @@
 "Remove from library" = "Elimină din bibliotecă";
 "Required to fetch ratings from MDBList" = "Necesară pentru a obține ratinguri de la MDBList";
 "Requires TMDB enrichment to be enabled" = "Necesită activarea îmbunătățirii TMDB";
+"Reset" = "Resetează";
 "Reset to Default" = "Resetează la implicit";
 "Resolve playable links" = "Rezolvă linkurile redate";
 "Resolve playable links before playback starts." = "Rezolvă linkurile redabile înainte ca redarea să înceapă.";
@@ -268,6 +271,7 @@
 "Start from beginning" = "Începe de la început";
 "Start next episode automatically when prompt appears." = "Pornește automat episodul următor când apare promptul.";
 "Start saving your favorites to see them here" = "Începeți să salvați favoritele pentru a le vedea aici";
+"Style" = "Stil";
 "Subtitles" = "Subtitrări";
 "Subtitles Delay" = "Întârziere subtitrări";
 "Sync your library, watch progress, addons, and plugins across devices." = "Sincronizați biblioteca, progresul vizionărilor, suplimentele și plugin-urile pe toate dispozitivele.";
@@ -278,6 +282,7 @@
 "TMDB movie collections in release order" = "Colecții de filme TMDB în ordinea lansării";
 "TMDB recommendation backdrops on detail and post-play screens" = "Fundaluri de recomandare TMDB pe pagina de detalii";
 "Terms" = "Termenii";
+"Text Color" = "Culoarea textului";
 "These integrations are experimental and may be kept, changed, or removed later." = "Aceste integrări sunt experimentale și pot fi păstrate, modificate sau eliminate ulterior.";
 "This item does not expose a playable video file." = "Acest element nu oferă un fișier video redabil.";
 "This will disconnect your Trakt account from Tuvora." = "Aceasta va deconecta contul tău Trakt de Tuvora.";

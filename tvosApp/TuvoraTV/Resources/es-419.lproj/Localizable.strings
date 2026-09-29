@@ -37,6 +37,7 @@
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Solicita enlaces reproducibles a un servicio conectado cuando un resultado lo necesite. Esto puede agregar el elemento a ese servicio.";
 "Audience Score" = "Puntuación del Público";
 "Audio & Video" = "Audio y video";
+"Audio Delay" = "Retraso de audio";
 "Audio controls and video compatibility." = "Controles de audio y compatibilidad de video.";
 "Auto (Best for Content)" = "Automático (Mejor para el contenido)";
 "Auto Stream Selection" = "Selección Automática de Fuente";
@@ -45,10 +46,12 @@
 "Auto-play regex match" = "Auto-reproducir coincidencia regex";
 "Available when Trakt is the Watch Progress source" = "Disponible cuando Trakt es la fuente del progreso de visualización";
 "Back" = "Atrás";
+"Background" = "Fondo";
 "Balanced" = "Equilibrado";
 "Basic Info" = "Información Básica";
 "Best quality first" = "Mejor calidad primero";
 "Bold" = "Negrita";
+"Bottom Offset" = "Desplazamiento Inferior";
 "Browse and play files already in your connected accounts." = "Explora y reproduce archivos ya disponibles en tus cuentas conectadas.";
 "Cancel" = "Cancelar";
 "Card" = "Tarjeta";
@@ -171,6 +174,7 @@
 "Filters & Sorting" = "Filtros y orden";
 "Finish connection approval" = "Completar la aprobación de la conexión";
 "Focus an avatar to view its name" = "Enfoca un avatar para ver su nombre";
+"Font Size" = "Tamaño de Fuente";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "¿Olvidaste el PIN? Restablécelo desde tu cuenta de Tuvora en el sitio web de Tuvora.";
 "Friends" = "Amigos";
 "Generating QR…" = "Generando QR…";
@@ -312,9 +316,12 @@
 "Remove" = "Eliminar";
 "Remove anyway" = "Eliminar de todos modos";
 "Remove from library" = "Eliminar de la biblioteca";
+"Report Issue" = "Reportar problema";
+"Report Sent" = "Reporte enviado";
 "Required to fetch ratings from MDBList" = "Necesaria para obtener calificaciones desde MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Requerido para obtener marcas de tiempo de salto desde anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Requiere que el enriquecimiento de TMDB esté activado";
+"Reset" = "Restablecer";
 "Reset to Default" = "Restablecer a Predeterminado";
 "Resolve playable links" = "Resolver enlaces reproducibles";
 "Resolve playable links before playback starts." = "Resolver enlaces reproducibles antes de iniciar la reproducción.";
@@ -381,6 +388,7 @@
 "Start saving your favorites to see them here" = "Comienza a guardar tus favoritos para verlos aquí";
 "Starting %@ connection…" = "Iniciando conexión con %1$@…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "Dejar de enviar las actualizaciones de reproducción desde este perfil. Tu historial de MDBList se conservará.";
+"Style" = "Estilo";
 "Subtitles" = "Subtítulos";
 "Subtitles Delay" = "Retraso de Subtítulos";
 "Sync" = "Sincronizar";
@@ -397,6 +405,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Fondos de recomendaciones de TMDB en la página de detalles";
 "TUVORA" = "NUVIO";
 "Terms" = "Términos";
+"Text Color" = "Color del Texto";
 "These integrations are experimental and may be kept, changed, or removed later." = "Estas integraciones son experimentales y pueden mantenerse, modificarse o eliminarse más adelante.";
 "This item does not expose a playable video file." = "Este elemento no contiene un archivo de video reproducible.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Esto elimina la cuenta de Simkl y los datos en caché de Simkl de este perfil.";

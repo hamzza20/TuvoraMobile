@@ -36,6 +36,7 @@
 "Audience Score" = "Оценка на публиката";
 "Audio" = "Аудио";
 "Audio & Video" = "Аудио и видео";
+"Audio Delay" = "Аудио забавяне";
 "Audio controls and video compatibility." = "Контроли за аудио и съвместимост на видео.";
 "Auto (Best for Content)" = "Автоматично (най-добро за съдържанието)";
 "Auto Stream Selection" = "Автоматичен избор на поток";
@@ -47,6 +48,7 @@
 "Basic Info" = "Основна информация";
 "Best quality first" = "Най-добро качество първо";
 "Bold" = "Удебелен";
+"Bottom Offset" = "Отместване отдолу";
 "Browse and play files already in your connected accounts." = "Преглеждай и пускай файлове, които вече са в свързаните ти акаунти.";
 "Cancel" = "Отказ";
 "Card" = "Картичка";
@@ -163,6 +165,7 @@
 "Finish connection approval" = "Завърши влизането в Trakt в браузъра си";
 "Fit" = "Побери";
 "Focus an avatar to view its name" = "Фокусирай аватар, за да видиш името му";
+"Font Size" = "Размер на шрифта";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Забрави ли PIN? Нулирай го от Tuvora акаунта си на nuvio уебсайта.";
 "Friends" = "Приятели";
 "General" = "Общи";
@@ -302,6 +305,7 @@
 "Required to fetch ratings from MDBList" = "Задължителен за извличане на рейтинги от MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Задължителен за извличане на времеви маркери от anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Изисква активирано TMDB обогатяване";
+"Reset" = "Възстанови";
 "Reset to Default" = "Възстанови по подразбиране";
 "Resolve playable links" = "Разрешавай възпроизводими връзки";
 "Resolve playable links before playback starts." = "Разрешавай възпроизводими връзки преди стартиране на възпроизвеждането.";
@@ -363,6 +367,7 @@
 "Start from beginning" = "Започни от началото";
 "Start next episode automatically when prompt appears." = "Стартирай следващия епизод автоматично, когато се появи подсказката.";
 "Start saving your favorites to see them here" = "Започни да запазваш любимите си, за да ги видиш тук";
+"Style" = "Стил";
 "Subtitles" = "Субтитри";
 "Subtitles Delay" = "Забавяне на субтитрите";
 "Sync" = "Синхронизирай";
@@ -379,6 +384,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "Сериал";
 "Terms" = "Условията";
+"Text Color" = "Цвят на текста";
 "These integrations are experimental and may be kept, changed, or removed later." = "Тези интеграции са експериментални и може да бъдат запазени, променени или премахнати по-късно.";
 "This item does not expose a playable video file." = "Този елемент не предоставя възпроизводим видео файл.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Това премахва акаунта и кешираните данни от този профил.";

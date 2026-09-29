@@ -31,6 +31,7 @@
 "Artwork" = "Gambar Visual";
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Minta layanan debrid menyediakan link ketika dibutuhkan. Hal ini dapat menambahkan item ke layanan itu.";
 "Audience Score" = "Skor Penonton";
+"Audio Delay" = "Penundaan Audio";
 "Audio controls and video compatibility." = "Kontrol audio dan kompatibilitas video.";
 "Auto (Best for Content)" = "Otomatis (Terbaik untuk Konten)";
 "Auto Stream Selection" = "Pemilihan Stream Otomatis";
@@ -42,6 +43,7 @@
 "Basic Info" = "Info Dasar";
 "Best quality first" = "Kualitas, dari yang tertinggi";
 "Bold" = "Tebal";
+"Bottom Offset" = "Batas Bawah";
 "Browse and play files already in your connected accounts." = "Telusuri dan mainkan file yang tersedia di akun Anda.";
 "Cancel" = "Batal";
 "Cast with photos, director, and writer from TMDB" = "Pemeran dengan foto, sutradara, dan penulis dari TMDB";
@@ -148,6 +150,7 @@
 "Finish connection approval" = "Selesaikan masuk Trakt di browser Anda";
 "Fit" = "Sesuaikan";
 "Focus an avatar to view its name" = "Fokuskan avatar untuk melihat namanya";
+"Font Size" = "Ukuran Font";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Lupa PIN? Setel ulang dari akun Tuvora Anda di situs web nuvio.";
 "Friends" = "Teman";
 "General" = "Umum";
@@ -280,6 +283,7 @@
 "Required to fetch ratings from MDBList" = "Diperlukan untuk mengambil rating dari MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Diperlukan untuk mengambil cap waktu lewati dari anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Memerlukan pengayaan TMDB untuk diaktifkan";
+"Reset" = "Setel Ulang";
 "Reset to Default" = "Setelan Bawaan";
 "Resolve playable links" = "Uraikan link yang dapat diputar";
 "Resolve playable links before playback starts." = "Siapkan sumber video sebelum mulai pemutaran dimulai.";
@@ -339,6 +343,7 @@
 "Start from beginning" = "Mulai dari awal";
 "Start next episode automatically when prompt appears." = "Mulai episode berikutnya secara otomatis saat prompt muncul.";
 "Start saving your favorites to see them here" = "Mulai simpan favorit Anda untuk melihatnya di sini";
+"Style" = "Gaya";
 "Subtitles" = "Subtitle";
 "Subtitles Delay" = "Penundaan Subtitle";
 "Sync" = "Sinkronisasi";
@@ -352,6 +357,7 @@
 "TMDB movie collections in release order" = "Koleksi film TMDB dalam urutan rilis";
 "TMDB recommendation backdrops on detail and post-play screens" = "Backdrop rekomendasi TMDB di halaman detail";
 "TUVORA" = "NUVIO";
+"Text Color" = "Warna Teks";
 "These integrations are experimental and may be kept, changed, or removed later." = "Integrasi ini masih bersifat eksperimental dan dapat dipertahankan, diubah, atau dihapus di sewaktu-waktu.";
 "This item does not expose a playable video file." = "Item ini tidak terlihat seperti file video yang dapat diputar.";
 "This will disconnect your Trakt account from Tuvora." = "Ini akan memutuskan akun Trakt Anda dari Tuvora.";

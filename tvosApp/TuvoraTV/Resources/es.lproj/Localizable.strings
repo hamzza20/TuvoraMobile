@@ -38,6 +38,7 @@
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Solicita enlaces reproducibles a un servicio conectado cuando un resultado lo necesite. Esto puede añadir el elemento a ese servicio.";
 "Audience Score" = "Puntuación de audiencia";
 "Audio & Video" = "Audio y vídeo";
+"Audio Delay" = "Retraso de audio";
 "Audio controls and video compatibility." = "Controles de audio y compatibilidad de vídeo.";
 "Auto (Best for Content)" = "Automático (Mejor para el contenido)";
 "Auto Stream Selection" = "Selección automática de transmisión";
@@ -46,10 +47,12 @@
 "Auto-play regex match" = "Reproducción automática coincidencia regex";
 "Available when Trakt is the Watch Progress source" = "Disponible cuando Trakt es la fuente de progreso de visualización";
 "Back" = "Atrás";
+"Background" = "Fondo";
 "Balanced" = "Equilibrado";
 "Basic Info" = "Información básica";
 "Best quality first" = "Mejor calidad primero";
 "Bold" = "Negrita";
+"Bottom Offset" = "Desplazamiento inferior";
 "Browse and play files already in your connected accounts." = "Explora y reproduce archivos que ya están en tus cuentas conectadas.";
 "Cancel" = "Cancelar";
 "Card" = "Tarjeta";
@@ -174,6 +177,7 @@
 "Finish connection approval" = "Finalizar aprobación de conexión";
 "Fit" = "Ajustar";
 "Focus an avatar to view its name" = "Enfoca un avatar para ver su nombre";
+"Font Size" = "Tamaño de fuente";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "¿Olvidaste el PIN? Restablécelo desde tu cuenta de Tuvora en sitio web de nuvio.";
 "Friends" = "Amigos";
 "Generating QR…" = "Generando QR…";
@@ -316,9 +320,12 @@
 "Remove" = "Eliminar";
 "Remove anyway" = "Eliminar de todos modos";
 "Remove from library" = "Eliminar de biblioteca";
+"Report Issue" = "Reportar problema";
+"Report Sent" = "Informe enviado";
 "Required to fetch ratings from MDBList" = "Requerido para obtener calificaciones de MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Requerido para obtener marcas de tiempo de salto de anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Requiere que el enriquecimiento de TMDB esté activado";
+"Reset" = "Restablecer";
 "Reset to Default" = "Restablecer predeterminado";
 "Resolve playable links" = "Resolver enlaces reproducibles";
 "Resolve playable links before playback starts." = "Resuelve enlaces reproducibles antes de que comience la reproducción.";
@@ -387,6 +394,7 @@
 "Start saving your favorites to see them here" = "Comienza a guardar tus favoritos para verlos aquí";
 "Starting %@ connection…" = "Iniciando conexión con %1$@…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "Deja de enviar actualizaciones de visualización desde este perfil. Tu historial de MDBList se conserva.";
+"Style" = "Estilo";
 "Subtitles" = "Subtítulos";
 "Subtitles Delay" = "Retraso de subtítulos";
 "Sync" = "Sincronizar";
@@ -403,6 +411,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Telones de fondo recomendados de TMDB en página de detalles";
 "TUVORA" = "NUVIO";
 "Terms" = "Términos";
+"Text Color" = "Color del texto";
 "The Movie Database (TMDB)" = "La base de datos de películas (TMDB)";
 "These integrations are experimental and may be kept, changed, or removed later." = "Estas integraciones son experimentales y pueden mantenerse, cambiarse o eliminarse más adelante.";
 "This item does not expose a playable video file." = "Este elemento no expone ningún archivo de vídeo reproducible.";

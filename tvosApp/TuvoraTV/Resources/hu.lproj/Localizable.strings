@@ -29,6 +29,7 @@
 "Basic Info" = "Alapinformációk";
 "Best quality first" = "Legjobb minőség elöl";
 "Bold" = "Félkövér";
+"Bottom Offset" = "Alsó eltolás";
 "Browse and play files already in your connected accounts." = "A csatlakoztatott fiókjaidban már meglévő fájlok böngészése és lejátszása.";
 "Cancel" = "Mégse";
 "Card" = "Kártya";
@@ -94,6 +95,7 @@
 "Fill" = "Kitöltés";
 "Finish connection approval" = "Fejezd be a Trakt bejelentkezést a böngésződben";
 "Fit" = "Illesztés";
+"Font Size" = "Betűméret";
 "General" = "Általános";
 "Go to details" = "Ugrás a részletekhez";
 "Hide" = "Elrejtés";
@@ -167,6 +169,7 @@
 "Remove from library" = "Eltávolítás a könyvtárból";
 "Required to fetch ratings from MDBList" = "Szükséges az értékelések lekéréséhez az MDBList-ről";
 "Requires TMDB enrichment to be enabled" = "A TMDB adatbővítés engedélyezése szükséges hozzá";
+"Reset" = "Alaphelyzet";
 "Reset to Default" = "Alapértelmezés visszaállítása";
 "Resolve playable links" = "Források engedélyezése";
 "Resolve playable links before playback starts." = "Az elsődleges források feloldása a lejátszás megkezdése előtt.";
@@ -203,6 +206,7 @@
 "Standard" = "Szabványos";
 "Start from beginning" = "Indítás az elejétől";
 "Start next episode automatically when prompt appears." = "A következő epizód automatikus indítása, amikor a felhívás megjelenik.";
+"Style" = "Stílus";
 "Subtitles" = "Feliratok";
 "Sync now" = "Szinkronizálás most";
 "Sync your watchlist, watch progress, continue watching, scrobbles, and personal lists with Trakt." = "Szinkronizáld a megnézendők listáját, a megtekintési előrehaladást, a lejátszás folytatását, a scrobble-öket és a személyes listáidat a Trakttal.";
@@ -210,6 +214,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "A TMDB metaadatok (cím, logó és engedélyezett mezők) nyelve";
 "TMDB movie collections in release order" = "TMDB filmgyűjtemények megjelenési sorrendben";
 "Terms" = "Felhasználási feltételeket";
+"Text Color" = "Szöveg színe";
 "These integrations are experimental and may be kept, changed, or removed later." = "A Debrid támogatás kísérleti jellegű; a későbbiekben megtartható, módosítható vagy eltávolítható.";
 "This item does not expose a playable video file." = "Ez az elem nem tartalmaz lejátszható videofájlt.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Ez eltávolítja a Simkl-fiókot és a gyorsítótárazott Simkl-adatokat erről a profilról.";

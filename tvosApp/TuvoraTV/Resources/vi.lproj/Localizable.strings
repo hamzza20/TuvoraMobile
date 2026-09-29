@@ -39,6 +39,7 @@
 "Audience Score" = "Điểm khán giả";
 "Audio" = "Âm thanh";
 "Audio & Video" = "Âm thanh & Video";
+"Audio Delay" = "Độ trễ âm thanh";
 "Audio controls and video compatibility." = "Điều khiển âm thanh và tương thích video.";
 "Auto (Best for Content)" = "Tự động (Tốt nhất cho Nội dung)";
 "Auto Stream Selection" = "Tự động chọn luồng";
@@ -47,10 +48,12 @@
 "Auto-play regex match" = "Tự động phát theo biểu thức chính quy";
 "Available when Trakt is the Watch Progress source" = "Khả dụng khi Trakt là nguồn Tiến độ xem";
 "Back" = "Quay lại";
+"Background" = "Hình nền";
 "Balanced" = "Cân bằng";
 "Basic Info" = "Thông tin cơ bản";
 "Best quality first" = "Chất lượng cao nhất trước";
 "Bold" = "In đậm";
+"Bottom Offset" = "Khoảng cách lề dưới";
 "Browse and play files already in your connected accounts." = "Duyệt và phát các tệp đã có sẵn trong tài khoản đã kết nối.";
 "Cancel" = "Huỷ";
 "Card" = "Thẻ";
@@ -174,6 +177,7 @@
 "Finish connection approval" = "Hoàn tất phê duyệt kết nối";
 "Fit" = "Vừa màn hình";
 "Focus an avatar to view its name" = "Chọn ảnh đại diện để xem tên";
+"Font Size" = "Cỡ chữ";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Quên mã PIN? Vui lòng đặt lại mã PIN từ tài khoản Tuvora trên trang web Tuvora.";
 "Friends" = "Bạn bè";
 "General" = "Chung";
@@ -315,9 +319,12 @@
 "Remove" = "Xóa";
 "Remove anyway" = "Vẫn xóa";
 "Remove from library" = "Xóa khỏi thư viện";
+"Report Issue" = "Báo cáo lỗi";
+"Report Sent" = "Báo cáo đã gửi";
 "Required to fetch ratings from MDBList" = "Cần thiết để lấy điểm đánh giá từ MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Cần thiết để lấy mốc thời gian từ anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Yêu cầu bật tính năng bổ sung dữ liệu từ TMDB.";
+"Reset" = "Đặt lại";
 "Reset to Default" = "Đặt lại mặc định";
 "Resolve playable links" = "Phân giải liên kết phát được";
 "Resolve playable links before playback starts." = "Phân giải các liên kết phát được trước khi bắt đầu phát.";
@@ -386,6 +393,7 @@
 "Start saving your favorites to see them here" = "Bắt đầu lưu mục yêu thích để xem ở đây";
 "Starting %@ connection…" = "Đang bắt đầu %1$@ kết nối…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "Dừng gửi cập nhật xem từ hồ sơ này. Lịch sử MDBList của bạn vẫn được giữ lại.";
+"Style" = "Kiểu";
 "Subtitles" = "Phụ đề";
 "Subtitles Delay" = "Độ trễ phụ đề";
 "Sync" = "Đồng bộ";
@@ -402,6 +410,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Phông nền phim đề xuất từ TMDB trên trang chi tiết";
 "TUVORA" = "NUVIO";
 "Terms" = "Điều khoản sử dụng";
+"Text Color" = "Màu chữ";
 "These integrations are experimental and may be kept, changed, or removed later." = "Các tích hợp này đang thử nghiệm và có thể được giữ lại, thay đổi hoặc gỡ bỏ sau này.";
 "This item does not expose a playable video file." = "Không tìm thấy tệp video để phát";
 "This removes the Simkl account and cached Simkl data from this profile." = "Thao tác này sẽ xóa tài khoản Simkl và dữ liệu Simkl đã lưu trong hồ sơ này.";

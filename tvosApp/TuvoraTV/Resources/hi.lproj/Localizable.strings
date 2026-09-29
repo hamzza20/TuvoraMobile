@@ -28,6 +28,7 @@
 "Balanced" = "बैलेंस्ड";
 "Basic Info" = "बेसिक जानकारी";
 "Bold" = "बोल्ड";
+"Bottom Offset" = "बॉटम ऑफसेट";
 "Cancel" = "रद्द करें";
 "Cast with photos, director, and writer from TMDB" = "TMDB से फोटो सहित कास्ट, डायरेक्टर और राइटर";
 "Catalog" = "कैटलॉग";
@@ -90,6 +91,7 @@
 "Fetch ratings from external providers in metadata detail screen" = "मेटाडेटा डिटेल स्क्रीन में बाहरी प्रोवाइडर से रेटिंग प्राप्त करें";
 "Fetch skip timestamps from anime-skip.com" = "anime-skip.com से स्किप टाइमस्टैम्प प्राप्त करें";
 "Focus an avatar to view its name" = "उसका नाम देखने के लिए अवतार पर फोकस करें";
+"Font Size" = "फ़ॉन्ट आकार";
 "General" = "सामान्य";
 "Generating QR…" = "QR बनाया जा रहा है…";
 "Genre" = "जॉनर";
@@ -177,6 +179,7 @@
 "Remove from library" = "लाइब्रेरी से हटाएँ";
 "Required to fetch ratings from MDBList" = "MDBList से रेटिंग प्राप्त करने के लिए आवश्यक";
 "Required to fetch skip timestamps from anime-skip.com" = "anime-skip.com से स्किप टाइमस्टैम्प प्राप्त करने के लिए आवश्यक";
+"Reset" = "रीसेट";
 "Reset to Default" = "डिफ़ॉल्ट पर रीसेट करें";
 "Resume" = "जारी रखें";
 "Retry" = "फिर से कोशिश करें";
@@ -217,6 +220,7 @@
 "Start from beginning" = "शुरुआत से चलाएँ";
 "Start next episode automatically when prompt appears." = "प्रॉम्प्ट दिखाई देने पर अगला एपिसोड अपने आप शुरू करें।";
 "Start saving your favorites to see them here" = "यहाँ देखने के लिए अपने पसंदीदा सेव करना शुरू करें";
+"Style" = "स्टाइल";
 "Subtitles" = "सबटाइटल";
 "Subtitles Delay" = "सबटाइटल देरी";
 "Sync your library, watch progress, addons, and plugins across devices." = "अपनी लाइब्रेरी, वॉच प्रोग्रेस, ऐडऑन और प्लगइन को डिवाइसों के बीच सिंक करें।";
@@ -227,6 +231,7 @@
 "TMDB movie collections in release order" = "रिलीज़ क्रम में TMDB मूवी कलेक्शन";
 "TMDB recommendation backdrops on detail and post-play screens" = "डिटेल पेज पर TMDB रिकमेंडेशन बैकड्रॉप";
 "TV" = "टीवी";
+"Text Color" = "टेक्स्ट रंग";
 "This will disconnect your Trakt account from Tuvora." = "यह आपके Trakt अकाउंट को Tuvora से डिस्कनेक्ट कर देगा।";
 "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone." = "यह प्रोफाइल और उससे जुड़ा सभी डेटा स्थायी रूप से हटा देगा जिसमें लाइब्रेरी, वॉच हिस्ट्री और ऐडऑन सेटिंग शामिल हैं। इसे वापस नहीं किया जा सकता।";
 "Title A-Z" = "टाइटल A-Z";

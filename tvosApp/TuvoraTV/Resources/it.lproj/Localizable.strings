@@ -35,6 +35,7 @@
 "Artwork" = "Immagine";
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Chiede a un servizio collegato i link riproducibili quando un risultato lo richiede. Questo può aggiungere l'elemento a quel servizio.";
 "Audience Score" = "Punteggio del pubblico";
+"Audio Delay" = "Ritardo audio";
 "Audio controls and video compatibility." = "Controlli audio e compatibilità video.";
 "Auto (Best for Content)" = "Automatico (Il migliore per i contenuti)";
 "Auto Stream Selection" = "Selezione automatica dello stream";
@@ -43,10 +44,12 @@
 "Auto-play regex match" = "Riproduzione automatica tramite regex";
 "Available when Trakt is the Watch Progress source" = "Disponibile quando Trakt è la fonte dei progressi di visione";
 "Back" = "Indietro";
+"Background" = "Sfondo";
 "Balanced" = "Bilanciato";
 "Basic Info" = "Informazioni di base";
 "Best quality first" = "Migliore qualità prima";
 "Bold" = "Grassetto";
+"Bottom Offset" = "Offset inferiore";
 "Browse and play files already in your connected accounts." = "Sfoglia e riproduci i file già presenti nei tuoi account collegati.";
 "Cancel" = "Annulla";
 "Card" = "Scheda";
@@ -166,6 +169,7 @@
 "Finish connection approval" = "Completa l'approvazione della connessione";
 "Fit" = "Adatta";
 "Focus an avatar to view its name" = "Seleziona un avatar per vedere il suo nome";
+"Font Size" = "Dimensioni Font";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "PIN dimenticato? Reimpostalo dall'account Tuvora sul sito.";
 "Friends" = "Amici";
 "General" = "Generale";
@@ -302,9 +306,12 @@
 "Remove" = "Rimuovi";
 "Remove anyway" = "Rimuovi comunque";
 "Remove from library" = "Rimuovi dalla libreria";
+"Report Issue" = "Segnala problema";
+"Report Sent" = "Resoconto inviato";
 "Required to fetch ratings from MDBList" = "Richiesta per recuperare le valutazioni da MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Necessario per ottenere i timestamps per saltare le scene da anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Richiede che l'arricchimento TMDB sia abilitato";
+"Reset" = "Ripristina";
 "Reset to Default" = "Ripristina Predefiniti";
 "Resolve playable links" = "Risolvi link riproducibili";
 "Resolve playable links before playback starts." = "Risolvi i link riproducibili prima dell'inizio della riproduzione.";
@@ -370,6 +377,7 @@
 "Start next episode automatically when prompt appears." = "Avvia automaticamente il prossimo episodio quando appare il prompt.";
 "Start saving your favorites to see them here" = "Inizia a salvare i tuoi preferiti per vederli qui";
 "Starting %@ connection…" = "Avvio connessione %1$@…";
+"Style" = "Stile";
 "Subtitles" = "Sottotitoli";
 "Subtitles Delay" = "Ritardo sottotitoli";
 "Sync" = "Sincronizza";
@@ -385,6 +393,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Sfondi delle raccomandazioni TMDB nella pagina dei dettagli";
 "TUVORA" = "NUVIO";
 "Terms" = "Termini";
+"Text Color" = "Colore del testo";
 "These integrations are experimental and may be kept, changed, or removed later." = "Queste integrazioni sono sperimentali e potrebbero essere mantenute, modificate o rimosse in futuro.";
 "This item does not expose a playable video file." = "Questo elemento non espone un file video riproducibile.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Questo rimuove l'account Simkl e i dati Simkl in cache da questo profilo.";

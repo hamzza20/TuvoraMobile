@@ -24,6 +24,7 @@
 "Audience Score" = "பார்வையாளர் மதிப்பெண்";
 "Audio" = "ஒலி";
 "Audio & Video" = "ஒலி & வீடியோ";
+"Audio Delay" = "ஒலி தாமதம்";
 "Audio controls and video compatibility." = "ஒலி கட்டுப்பாடுகள் மற்றும் வீடியோ இணக்கத்தன்மை.";
 "Auto (Best for Content)" = "தானாக (உள்ளடக்கத்திற்கு சிறந்தது)";
 "Auto Stream Selection" = "தானியங்கு ஸ்ட்ரீம் தேர்வு";
@@ -34,6 +35,7 @@
 "Balanced" = "சமநிலை";
 "Basic Info" = "அடிப்படை தகவல்";
 "Bold" = "தடித்த";
+"Bottom Offset" = "கீழ் இடைவெளி";
 "Cancel" = "ரத்து செய்";
 "Cast with photos, director, and writer from TMDB" = "புகைப்படங்களுடன் நடிகர்கள், இயக்குநர் மற்றும் எழுத்தாளர் டிஎம்டிபியிலிருந்து";
 "Catalog" = "கேட்டலாக்";
@@ -118,6 +120,7 @@
 "Fetch skip timestamps from anime-skip.com" = "anime-skip.com இலிருந்து தவிர்ப்பு நேரக்குறிகளை பெறு";
 "File" = "கோப்பு";
 "Focus an avatar to view its name" = "அதன் பெயரை காண ஒரு அவதாரில் கவனம் செலுத்தவும்";
+"Font Size" = "எழுத்தளவு";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "பின் மறந்துவிட்டதா? Tuvora இணையதளத்தில் உங்கள் Tuvora கணக்கிலிருந்து மீட்டமைக்கவும்.";
 "Friends" = "நண்பர்கள்";
 "General" = "பொது";
@@ -237,6 +240,7 @@
 "Required to fetch ratings from MDBList" = "எம்டிபிலிஸ்டிலிருந்து மதிப்பீடுகளை பெற அவசியம்";
 "Required to fetch skip timestamps from anime-skip.com" = "anime-skip.com இலிருந்து தவிர்ப்பு நேரக்குறிகளை பெற அவசியம்";
 "Requires TMDB enrichment to be enabled" = "டிஎம்டிபி மேம்படுத்தல் இயக்கப்பட்டிருக்க வேண்டும்";
+"Reset" = "மீட்டமை";
 "Reset to Default" = "இயல்புநிலைக்கு மீட்டமை";
 "Resume" = "தொடர்க";
 "Retry" = "மீண்டும் முயற்சி";
@@ -285,6 +289,7 @@
 "Start from beginning" = "தொடக்கத்திலிருந்து தொடங்கு";
 "Start next episode automatically when prompt appears." = "அறிவிப்பு தோன்றும் போது அடுத்த எபிசோடை தானாக தொடங்கு.";
 "Start saving your favorites to see them here" = "உங்கள் விருப்பங்களை சேமித்து இங்கே காணுங்கள்";
+"Style" = "பாணி";
 "Subtitles" = "உபதலைப்புகள்";
 "Subtitles Delay" = "சப்டைட்டில் தாமதம்";
 "Sync" = "ஒத்திசை";
@@ -301,6 +306,7 @@
 "TRAKT" = "ட்ராக்ட்";
 "TUVORA" = "நூவியோ";
 "TV" = "தொலைக்காட்சி";
+"Text Color" = "உரை நிறம்";
 "The Movie Database (TMDB)" = "தி மூவி டேட்டாபேஸ் (TMDB)";
 "This will disconnect your Trakt account from Tuvora." = "இது உங்கள் ட்ராக்ட் கணக்கை Tuvoraவிலிருந்து துண்டிக்கும்.";
 "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone." = "இது இந்த சுயவிவரத்தையும் அதன் அனைத்து தரவுகளையும், நூலகம், பார்வை வரலாறு மற்றும் அடான் அமைப்புகள் உட்பட நிரந்தரமாக நீக்கும். இதை மீட்டெடுக்க முடியாது.";

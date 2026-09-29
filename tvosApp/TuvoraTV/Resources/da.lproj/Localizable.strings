@@ -32,6 +32,7 @@
 "Audience Score" = "Publikumsscore";
 "Audio" = "Lyd";
 "Audio & Video" = "Lyd & video";
+"Audio Delay" = "Lydforsinkelse";
 "Audio controls and video compatibility." = "Lydkontrol og videokompatibilitet.";
 "Auto (Best for Content)" = "Auto (bedst til indhold)";
 "Auto Stream Selection" = "Automatisk streamvalg";
@@ -43,6 +44,7 @@
 "Basic Info" = "Grundoplysninger";
 "Best quality first" = "Bedste kvalitet først";
 "Bold" = "Fed";
+"Bottom Offset" = "Bundforskydning";
 "Browse and play files already in your connected accounts." = "Gennemse og afspil filer, der allerede findes i dine tilknyttede konti.";
 "Cancel" = "Annuller";
 "Cast with photos, director, and writer from TMDB" = "Medvirkende med fotos, instruktør og manuskriptforfatter fra TMDB";
@@ -145,6 +147,7 @@
 "Filter sources by video codec." = "Filtrer kilder efter videocodec.";
 "Filters & Sorting" = "Filtre & Sortering";
 "Focus an avatar to view its name" = "Fokusér på en avatar for at se dens navn";
+"Font Size" = "Skriftstørrelse";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Glemt PIN? Nulstil den fra din Tuvora-konto på Tuvora-webstedet.";
 "Friends" = "Venner";
 "General" = "Generelt";
@@ -273,6 +276,7 @@
 "Required to fetch ratings from MDBList" = "Kræves for at hente bedømmelser fra MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Påkrævet for at hente spring-tidsstempler fra anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Kræver at TMDB-berigelse er aktiveret";
+"Reset" = "Nulstil";
 "Reset to Default" = "Nulstil til standard";
 "Resolve playable links" = "Aktivér afspilbare links";
 "Resolve playable links before playback starts." = "Løs afspilbare links op, inden afspilningen starter.";
@@ -327,6 +331,7 @@
 "Start from beginning" = "Start fra begyndelsen";
 "Start next episode automatically when prompt appears." = "Start næste episode automatisk når prompten vises.";
 "Start saving your favorites to see them here" = "Begynd at gemme dine favoritter for at se dem her";
+"Style" = "Stil";
 "Subtitles" = "Undertekster";
 "Subtitles Delay" = "Undertekst-forsinkelse";
 "Sync" = "Synkronisér";
@@ -340,6 +345,7 @@
 "TMDB movie collections in release order" = "TMDB-filmsamlinger i udgivelsesrækkefølge";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB-anbefalingsbaggrunde på detaljesiden";
 "TUVORA" = "NUVIO";
+"Text Color" = "Tekstfarve";
 "These integrations are experimental and may be kept, changed, or removed later." = "Disse integrationer er eksperimentelle og kan blive bevaret, ændret eller fjernet senere.";
 "This item does not expose a playable video file." = "Dette element har ingen afspilbar videofil.";
 "This will disconnect your Trakt account from Tuvora." = "Dette vil afbryde din Trakt-konto fra Tuvora.";

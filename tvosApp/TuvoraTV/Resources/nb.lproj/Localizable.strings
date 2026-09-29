@@ -38,10 +38,12 @@
 "Auto-play regex match" = "Autoavspill regex match";
 "Available when Trakt is the Watch Progress source" = "Tilgjengelig når Trakt er kilden for seer-fremdrift";
 "Back" = "Tilbake";
+"Background" = "Bakgrunn";
 "Balanced" = "Balansert";
 "Basic Info" = "Grunnleggende informasjon";
 "Best quality first" = "Beste kvalitet først";
 "Bold" = "Fet";
+"Bottom Offset" = "Nedre offset";
 "Browse and play files already in your connected accounts." = "Bla gjennom og spill filer som allerede finnes i tilkoblede kontoer.";
 "Cancel" = "Avbryt";
 "Card" = "Kort";
@@ -138,6 +140,7 @@
 "Finish connection approval" = "Fullfør Trakt-innlogging i nettleseren din";
 "Fit" = "Tilpass";
 "Focus an avatar to view its name" = "Fokuser en avatar for å vise dens navn";
+"Font Size" = "Skriftstørrelse";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Glemt PIN? Tilbakestill det fra Tuvora-kontoen din på Tuvora-nettstedet.";
 "General" = "Generelt";
 "Generating QR…" = "Genererer QR…";
@@ -255,6 +258,7 @@
 "Required to fetch ratings from MDBList" = "Kreves for å hente vurderinger fra MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Kreves for å hente hopptidsmerker fra anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Krever at TMDB-berikelse er aktivert";
+"Reset" = "Tilbakestill";
 "Reset to Default" = "Tilbakestill til standardverdier";
 "Resolve playable links" = "Løs spillbare lenker";
 "Resolve playable links before playback starts." = "Løs spillbare lenker før avspilling starter.";
@@ -309,6 +313,7 @@
 "Start from beginning" = "Start fra begynnelsen";
 "Start next episode automatically when prompt appears." = "Start neste episode automatisk når oppfordring vises.";
 "Start saving your favorites to see them here" = "Start lagring av favoritter for å se dem her";
+"Style" = "Stil";
 "Subtitles" = "Undertekster";
 "Subtitles Delay" = "Undertekst forsinkelse";
 "Sync now" = "Synkroniser nå";
@@ -320,6 +325,7 @@
 "TMDB movie collections in release order" = "TMDB filmsamlinger i utgivelsesrekkefølge";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB-anbefalings bakgrunner på detaljerside";
 "Terms" = "Vilkår";
+"Text Color" = "Tekstfarge";
 "These integrations are experimental and may be kept, changed, or removed later." = "Disse integrasjonene er eksperimentelle og kan endres eller fjernes senere.";
 "This item does not expose a playable video file." = "Dette elementet har ingen spillbar videofil.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Dette fjerner Simkl-kontoen og bufrede Simkl-data fra denne profilen.";

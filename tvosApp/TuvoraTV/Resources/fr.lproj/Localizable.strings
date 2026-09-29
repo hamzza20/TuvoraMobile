@@ -36,6 +36,7 @@
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Afficher les résultats lisibles depuis les comptes connectés.";
 "Audience Score" = "Note du public";
 "Audio & Video" = "Audio et vidéo";
+"Audio Delay" = "Délai audio";
 "Audio controls and video compatibility." = "Contrôles audio et compatibilité vidéo.";
 "Auto (Best for Content)" = "Auto (meilleur pour le contenu)";
 "Auto Stream Selection" = "Sélection automatique du flux";
@@ -47,6 +48,7 @@
 "Basic Info" = "Informations de base";
 "Best quality first" = "Meilleure qualité en premier";
 "Bold" = "Gras";
+"Bottom Offset" = "Décalage inférieur";
 "Browse and play files already in your connected accounts." = "Parcourez et lisez les fichiers déjà présents dans vos comptes connectés.";
 "Cancel" = "Annuler";
 "Card" = "Carte";
@@ -154,6 +156,7 @@
 "Finish connection approval" = "Terminez la connexion Trakt dans votre navigateur";
 "Fit" = "Ajuster";
 "Focus an avatar to view its name" = "Sélectionnez un avatar pour voir son nom";
+"Font Size" = "Taille de la police";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Code PIN oublié ? Réinitialisez-le depuis votre compte Tuvora sur le site web.";
 "Friends" = "Amis";
 "General" = "Général";
@@ -284,9 +287,12 @@
 "Refresh cloud library" = "Actualiser la bibliothèque cloud";
 "Remove" = "Supprimer";
 "Remove from library" = "Retirer de la bibliothèque";
+"Report Issue" = "Signaler un problème";
+"Report Sent" = "Rapport envoyé";
 "Required to fetch ratings from MDBList" = "Requise pour récupérer les notes depuis MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Requis pour récupérer les horodatages de saut depuis anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Nécessite que l’enrichissement TMDB soit activé";
+"Reset" = "Réinitialiser";
 "Reset to Default" = "Réinitialiser les valeurs par défaut";
 "Resolve playable links" = "Activer les sources";
 "Resolve playable links before playback starts." = "Résoudre les premières sources avant le début de la lecture.";
@@ -359,6 +365,7 @@
 "TUVORA" = "Tuvora";
 "TV" = "Séries";
 "Terms" = "Conditions d’utilisation";
+"Text Color" = "Couleur du texte";
 "These integrations are experimental and may be kept, changed, or removed later." = "La prise en charge de Debrid est expérimentale et pourra être conservée, modifiée ou supprimée par la suite.";
 "This item does not expose a playable video file." = "Cet élément ne contient aucun fichier vidéo lisible.";
 "This will disconnect your Trakt account from Tuvora." = "Cela déconnectera votre compte Trakt de Tuvora.";

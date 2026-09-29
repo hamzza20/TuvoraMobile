@@ -37,6 +37,7 @@
 "Audience Score" = "Nota do Público";
 "Audio" = "Áudio";
 "Audio & Video" = "Áudio e Vídeo";
+"Audio Delay" = "Atraso de áudio";
 "Audio controls and video compatibility." = "Ajustes de som e opções de reprodução de vídeo.";
 "Auto (Best for Content)" = "Automático (Melhor para conteúdo)";
 "Auto Stream Selection" = "Seleção automática de fonte";
@@ -45,10 +46,12 @@
 "Auto-play regex match" = "Reprodução automática por palavra-chave (Regex)";
 "Available when Trakt is the Watch Progress source" = "Disponível quando o Trakt é a fonte de Progresso de Assistidos";
 "Back" = "Voltar";
+"Background" = "Plano de fundo";
 "Balanced" = "Equilibrado";
 "Basic Info" = "Informações básicas";
 "Best quality first" = "Melhor qualidade primeiro";
 "Bold" = "Negrito";
+"Bottom Offset" = "Altura da legenda";
 "Browse and play files already in your connected accounts." = "Explore e assista aos arquivos que já estão salvos nas suas contas Debrid conectadas.";
 "Cancel" = "Cancelar";
 "Card" = "Cartão";
@@ -169,6 +172,7 @@
 "Filters & Sorting" = "Filtros e Ordenação";
 "Finish connection approval" = "Finalizar aprovação da conexão";
 "Focus an avatar to view its name" = "Selecione um avatar para ver o nome.";
+"Font Size" = "Tamanho da fonte";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Esqueceu o PIN? Redefina-o pelo site do Tuvora na sua conta.";
 "Friends" = "Amigos";
 "General" = "Geral";
@@ -308,9 +312,12 @@
 "Remove" = "Remover";
 "Remove anyway" = "Remover mesmo assim";
 "Remove from library" = "Remover da biblioteca";
+"Report Issue" = "Relatar problema";
+"Report Sent" = "Relatório enviado";
 "Required to fetch ratings from MDBList" = "Insira a chave necessária para as avaliações.";
 "Required to fetch skip timestamps from anime-skip.com" = "Insira o ID necessário para buscar os dados.";
 "Requires TMDB enrichment to be enabled" = "Requer enriquecimento do TMDB ativado";
+"Reset" = "Redefinir";
 "Reset to Default" = "Redefinir para Padrão";
 "Resolve playable links" = "Resolver links de vídeo";
 "Resolve playable links before playback starts." = "Resolver links de vídeo antes do início da reprodução.";
@@ -376,6 +383,7 @@
 "Start next episode automatically when prompt appears." = "Iniciar o próximo episódio automaticamente após o aviso..";
 "Start saving your favorites to see them here" = "Comece a salvar seus favoritos para vê-los aqui";
 "Starting %@ connection…" = "Iniciando conexão com %1$@…";
+"Style" = "Estilo";
 "Subtitles" = "Legendas";
 "Subtitles Delay" = "Atraso da legenda";
 "Sync" = "Sincronizar";
@@ -392,6 +400,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "Séries e TV";
 "Terms" = "Termos";
+"Text Color" = "Cor do texto";
 "These integrations are experimental and may be kept, changed, or removed later." = "Essas integrações são experimentais e podem ser alteradas ou removidas no futuro.";
 "This item does not expose a playable video file." = "Este item não contém um arquivo de vídeo suportado.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Isso remove a conta Simkl e os dados em cache do Simkl deste perfil.";

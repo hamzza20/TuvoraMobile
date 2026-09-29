@@ -39,6 +39,7 @@
 "Audience Score" = "观众分数";
 "Audio" = "音频";
 "Audio & Video" = "音频与视频";
+"Audio Delay" = "音频延迟";
 "Audio controls and video compatibility." = "音频控制和视频兼容性。";
 "Auto (Best for Content)" = "自动 (最适合内容)";
 "Auto Stream Selection" = "自动流选择";
@@ -47,10 +48,12 @@
 "Auto-play regex match" = "自动播放正则表达式匹配";
 "Available when Trakt is the Watch Progress source" = "当 Trakt 为观看进度来源时可用";
 "Back" = "返回";
+"Background" = "背景";
 "Balanced" = "平衡";
 "Basic Info" = "基本信息";
 "Best quality first" = "最佳品质优先";
 "Bold" = "粗体";
+"Bottom Offset" = "底部偏移";
 "Browse and play files already in your connected accounts." = "浏览并播放已连接账户中的文件。";
 "Cancel" = "取消";
 "Card" = "卡片";
@@ -173,6 +176,7 @@
 "Filters & Sorting" = "过滤器与排序";
 "Finish connection approval" = "完成连接批准";
 "Focus an avatar to view its name" = "聚焦头像以查看其名称";
+"Font Size" = "字体大小";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "忘记 PIN？请从 nuvio 网站上的 Tuvora 账户重置。";
 "Friends" = "好友";
 "General" = "常规";
@@ -316,9 +320,12 @@
 "Remove" = "移除";
 "Remove anyway" = "仍要移除";
 "Remove from library" = "从媒体库移除";
+"Report Issue" = "报告问题";
+"Report Sent" = "已发送";
 "Required to fetch ratings from MDBList" = "从 MDBList 获取评分所需";
 "Required to fetch skip timestamps from anime-skip.com" = "从 anime-skip.com 获取跳过时间戳所需";
 "Requires TMDB enrichment to be enabled" = "需要启用 TMDB 增强";
+"Reset" = "重置";
 "Reset to Default" = "重置为默认";
 "Resolve playable links" = "解析可播放链接";
 "Resolve playable links before playback starts." = "在播放开始前解析可播放链接。";
@@ -387,6 +394,7 @@
 "Start saving your favorites to see them here" = "开始保存您的最爱，在此显示";
 "Starting %@ connection…" = "正在启动 %1$@ 连接…";
 "Stop sending watch updates from this profile. Your MDBList history is kept." = "停止从此个人资料发送观看更新。您的 MDBList 历史记录将保留。";
+"Style" = "样式";
 "Subtitles" = "字幕";
 "Subtitles Delay" = "字幕延迟";
 "Sync" = "同步";
@@ -404,6 +412,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "电视";
 "Terms" = "服务条款";
+"Text Color" = "文字颜色";
 "These integrations are experimental and may be kept, changed, or removed later." = "这些集成为实验性功能，可能会被保留、更改或移除。";
 "This item does not expose a playable video file." = "此项目未暴露可播放的视频文件。";
 "This removes the Simkl account and cached Simkl data from this profile." = "这将从此个人资料移除 Simkl 账户和缓存的 Simkl 数据。";

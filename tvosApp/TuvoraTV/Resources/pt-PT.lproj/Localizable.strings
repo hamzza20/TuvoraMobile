@@ -36,6 +36,7 @@
 "Audience Score" = "Pontuação do público";
 "Audio" = "Áudio";
 "Audio & Video" = "Áudio e vídeo";
+"Audio Delay" = "Atraso do Áudio";
 "Audio controls and video compatibility." = "Controlos de áudio e compatibilidade de vídeo.";
 "Auto (Best for Content)" = "Auto (Melhor para o Conteúdo)";
 "Auto Stream Selection" = "Seleção automática de stream";
@@ -47,6 +48,7 @@
 "Basic Info" = "Informação Básica";
 "Best quality first" = "Melhor qualidade primeiro";
 "Bold" = "Negrito";
+"Bottom Offset" = "Deslocamento inferior";
 "Browse and play files already in your connected accounts." = "Navega e reproduz ficheiros que já se encontram nas tuas contas ligadas.";
 "Cancel" = "Cancelar";
 "Card" = "Cartão";
@@ -158,6 +160,7 @@
 "Finish connection approval" = "Conclui o início de sessão do Trakt no teu navegador";
 "Fit" = "Ajustar";
 "Focus an avatar to view its name" = "Foca num avatar para ver o teu nome";
+"Font Size" = "Tamanho da Letra";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Esqueceste-te do PIN? Repõe-no a partir da tua conta Tuvora no site do nuvio.";
 "Friends" = "Amigos";
 "General" = "Geral";
@@ -291,6 +294,7 @@
 "Required to fetch ratings from MDBList" = "Necessária para obter as classificações do MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Necessário para obter as marcas de tempo para saltar a partir de anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Requer que o enriquecimento do TMDB esteja ativado";
+"Reset" = "Repor";
 "Reset to Default" = "Repor predefinições";
 "Resolve playable links" = "Resolver ligações reproduzíveis";
 "Resolve playable links before playback starts." = "Resolver as ligações reproduzíveis antes de a reprodução iniciar.";
@@ -350,6 +354,7 @@
 "Start from beginning" = "Começar do início";
 "Start next episode automatically when prompt appears." = "Iniciar o episódio seguinte automaticamente quando o aviso aparecer.";
 "Start saving your favorites to see them here" = "Começa a guardar os teus favoritos para os veres aqui";
+"Style" = "Estilo";
 "Subtitles" = "Legendas";
 "Subtitles Delay" = "Atraso das Legendas";
 "Sync" = "Sincronizar";
@@ -364,6 +369,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Fundos de recomendações do TMDB na página de detalhes";
 "TUVORA" = "NUVIO";
 "TV" = "Televisão";
+"Text Color" = "Cor do texto";
 "These integrations are experimental and may be kept, changed, or removed later." = "Estas integrações são experimentais e podem ser mantidas, alteradas ou removidas mais tarde.";
 "This item does not expose a playable video file." = "Este item não disponibiliza um ficheiro de vídeo reproduzível.";
 "This will disconnect your Trakt account from Tuvora." = "Isto irá desligar a tua conta Trakt do Tuvora.";
