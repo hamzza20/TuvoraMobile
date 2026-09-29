@@ -1,0 +1,330 @@
+import SwiftUI
+import TuvoraCore
+
+/// NuvioTV's Modern home (ui/screens/home/ModernHomeContent.kt, ModernHomeHero.kt, ModernHomeRows.kt,
+/// components/ContinueWatchingSection.kt), translated: a hero that follows the focused card over the
+/// top of the screen, and the rows in the bottom 52% — Continue Watching first, then the catalogs.
+struct HomeScreen: View {
+    @EnvironmentObject private var playback: PlaybackCoordinator
+    @Environment(\.nuvio) private var colors
+    @State private var rows: HomeUiState?
+    @State private var continueWatching: [TvCwItem] = []
+    @State private var hero: HeroContent?
+    @State private var pendingHero: HeroContent?
+    @State private var details: PreviewBox?
+    @State private var streamTarget: TvCwTargetBox?
+
+    var body: some View {
+        GeometryReader { geo in
+            let viewport = geo.size.height * 0.52
+            ZStack(alignment: .topLeading) {
+                colors.background.ignoresSafeArea()
+                if let hero {
+                    HomeHero(content: hero, width: geo.size.width, height: geo.size.height - viewport + dp(24) + dp(14),
+                             textBottomInset: viewport + dp(16))
+                        .id(hero.id)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.48)))
+                }
+                VStack(spacing: 0) {
+                    Spacer(minLength: geo.size.height - viewport)
+                    rowsList.frame(height: viewport)
+                }
+            }
+        }
+        .task {
+            TvHome.shared.start()
+            for await next in TvHome.shared.rows { rows = next; if hero == nil, let first = next.heroItems.first ?? next.sections.first?.items.first { hero = HeroContent(preview: first) } }
+        }
+        .task { for await next in TvHome.shared.continueWatching { continueWatching = next } }
+        .task(id: pendingHero) {
+            // Hero changes are debounced 450 ms (ModernHomeHero), so fast scrolling doesn't strobe.
+            guard let pending = pendingHero else { return }
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            if !Task.isCancelled { withAnimation(.easeInOut(duration: 0.48)) { hero = pending } }
+        }
+        .fullScreenCover(item: $details) { box in
+            TitleDetailsScreen(preview: box.preview).environmentObject(playback).environment(\.nuvio, colors)
+        }
+        .fullScreenCover(item: $streamTarget) { box in
+            StreamPickerScreen(meta: box.target.meta, video: box.target.video).environmentObject(playback).environment(\.nuvio, colors)
+        }
+    }
+
+    private var rowsList: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(alignment: .leading, spacing: NuvioTokens.Layout.rowGap) {
+                if !continueWatching.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        NuvioShelfHeader(title: "Continue Watching") { EmptyView() }
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: NuvioTokens.Layout.itemGap) {
+                                ForEach(continueWatching, id: \.videoId) { item in
+                                    ContinueWatchingCard(item: item, onFocus: { focusCw(item) }) { open(item) }
+                                }
+                            }
+                            .padding(.horizontal, NuvioTokens.Layout.gutter).padding(.vertical, dp(8))
+                        }
+                        .scrollClipDisabled()
+            .focusSection()
+                    }
+                }
+                if let rows {
+                    if rows.sections.isEmpty && rows.isLoading {
+                        ForEach(0..<2, id: \.self) { _ in shimmerRow }
+                    }
+                    ForEach(rows.sections, id: \.key) { section in
+                        CatalogRow(section: section, onFocus: { pendingHero = HeroContent(preview: $0) }) { details = PreviewBox(preview: $0) }
+                    }
+                    if rows.sections.isEmpty && !rows.isLoading && continueWatching.isEmpty {
+                        NuvioStateMessage(title: "Nothing to show yet",
+                                          message: rows.errorMessage ?? "Install add-ons or add a playlist to fill your home screen.")
+                            .frame(height: dp(200))
+                    }
+                }
+            }
+            .padding(.bottom, dp(48))
+        }
+    }
+
+    private var shimmerRow: some View {
+        let size = ModernCardSize.portrait
+        return HStack(spacing: NuvioTokens.Layout.itemGap) {
+            ForEach(0..<7, id: \.self) { _ in NuvioShimmer().frame(width: size.width, height: size.height) }
+        }
+        .padding(.leading, NuvioTokens.Layout.gutter)
+    }
+
+    /// The hero for a Continue Watching card shows the title's facts, like NuvioTV: type · genre · year,
+    /// the time left, IMDb and the synopsis — fetched from the title's details (cached by the repository).
+    private func focusCw(_ item: TvCwItem) {
+        pendingHero = HeroContent(cw: item, meta: nil)
+        Task {
+            if let target = try? await TvHome.shared.resolve(item: item), pendingHero?.id == "cw:" + item.videoId {
+                pendingHero = HeroContent(cw: item, meta: target.meta)
+            }
+        }
+    }
+
+    private func open(_ item: TvCwItem) {
+        Task {
+            if let target = try? await TvHome.shared.resolve(item: item) {
+                streamTarget = TvCwTargetBox(target: target)
+            } else {
+                playback.notify("\(item.title) couldn't be opened right now.")
+            }
+        }
+    }
+}
+
+struct TvCwTargetBox: Identifiable {
+    let target: TvCwTarget
+    var id: String { target.video?.id ?? target.meta.id }
+}
+
+/// Card sizes from the poster preference (ModernHomeContent.kt:647-668).
+enum ModernCardSize {
+    static var portrait: CGSize {
+        let w = NuvioCardSize.posterWidthDp
+        return CGSize(width: dp(w * 0.84 * 1.08), height: dp(w * 1.5 * 0.9072))
+    }
+    static var landscape: CGSize {
+        let width = dp(NuvioCardSize.posterWidthDp * 1.24 * 1.34)
+        return CGSize(width: width, height: width / 1.77)
+    }
+}
+
+// MARK: - Hero
+
+struct HeroContent: Identifiable, Equatable {
+    let id: String
+    let backdrop: String?
+    let logo: String?
+    let title: String
+    let meta: [String]
+    let status: String?
+    let rating: String?
+    let description: String?
+
+    init(preview: MetaPreview) {
+        id = preview.id
+        backdrop = preview.banner ?? preview.landscapePoster ?? preview.poster
+        logo = preview.logo
+        title = preview.name
+        meta = [preview.type == "series" ? "Series" : "Movie", preview.genres.first, preview.releaseInfo].compactMap { $0 }
+        status = nil
+        rating = preview.imdbRating
+        description = preview.description_
+    }
+
+    init(cw: TvCwItem, meta details: MetaDetails?) {
+        id = "cw:" + cw.videoId
+        backdrop = details?.background ?? cw.background ?? cw.artwork
+        logo = details?.logo ?? cw.logo
+        title = cw.title
+        let kind = cw.seasonNumber == nil ? "Movie" : "Series"
+        meta = [kind, details?.genres.first, details?.releaseInfo].compactMap { $0 }
+        status = [TvContinueWatching.shared.episodeLabel(item: cw), TvContinueWatching.shared.badge(item: cw)?.uppercased()]
+            .compactMap { $0 }.joined(separator: " · ").nilIfEmpty
+        rating = details?.imdbRating
+        description = details?.description_
+    }
+}
+
+/// ModernHomeHero: backdrop 72% wide, top-trailing, pushed 56dp past the edge; left scrim over 45%
+/// (1 / .86 / .56 / .16 / 0) and bottom strip from 82%; text block bottom-left, 42% wide.
+private struct HomeHero: View {
+    let content: HeroContent
+    let width: CGFloat
+    let height: CGFloat
+    let textBottomInset: CGFloat
+    @Environment(\.nuvio) private var colors
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            let backdropWidth = width * 0.72
+            CachedPosterArtwork(urlString: content.backdrop, width: backdropWidth, height: height, maximumWidth: 1920) { Color.clear }
+                .frame(width: backdropWidth, height: height)
+                .clipped()
+                .overlay(LinearGradient(stops: [
+                    .init(color: colors.background, location: 0), .init(color: colors.background.opacity(0.86), location: 0.22 * 0.45),
+                    .init(color: colors.background.opacity(0.56), location: 0.46 * 0.45), .init(color: colors.background.opacity(0.16), location: 0.76 * 0.45),
+                    .init(color: .clear, location: 0.45),
+                ], startPoint: .leading, endPoint: .trailing))
+                .overlay(LinearGradient(stops: [
+                    .init(color: .clear, location: 0.82), .init(color: colors.background.opacity(0.25), location: 0.82 + 0.18 * 0.4),
+                    .init(color: colors.background.opacity(0.65), location: 0.82 + 0.18 * 0.75), .init(color: colors.background, location: 1),
+                ], startPoint: .top, endPoint: .bottom))
+                .offset(x: width - backdropWidth + dp(56))
+
+            VStack(alignment: .leading, spacing: dp(8)) {
+                Spacer()
+                if let logo = content.logo, !logo.isEmpty {
+                    CachedPosterArtwork(urlString: logo, width: dp(220), height: dp(100), maximumWidth: dp(440)) { titleText }
+                        .environment(\.artworkContentMode, .fit)
+                        .frame(maxWidth: dp(220), maxHeight: dp(100), alignment: .bottomLeading)
+                } else {
+                    titleText
+                }
+                HStack(spacing: dp(8)) {
+                    ForEach(Array(content.meta.enumerated()), id: \.offset) { index, part in
+                        if index > 0 { Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3)) }
+                        Text(part).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
+                    }
+                }
+                if content.status != nil || content.rating != nil {
+                    HStack(spacing: dp(8)) {
+                        if let status = content.status { Text(status).font(NuvioType.labelMedium).foregroundStyle(colors.textPrimary) }
+                        if let rating = content.rating {
+                            if content.status != nil { Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3)) }
+                            ImdbBadge()
+                            Text(rating).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
+                        }
+                    }
+                }
+                if let description = content.description {
+                    Text(description).font(NuvioType.inter(14 * 0.9, .regular)).foregroundStyle(colors.textPrimary).lineLimit(4)
+                }
+            }
+            .frame(width: width * 0.42, alignment: .leading)
+            .padding(.leading, NuvioTokens.Layout.gutter)
+            .padding(.bottom, textBottomInset - (UIScreen.main.bounds.height - height))
+            .frame(height: height, alignment: .bottomLeading)
+        }
+        .frame(width: width, height: height, alignment: .topLeading)
+    }
+
+    private var titleText: some View {
+        Text(content.title).font(NuvioType.inter(28 * 0.92, .semibold)).foregroundStyle(colors.textPrimary).lineLimit(2)
+    }
+}
+
+// MARK: - Rows
+
+private struct CatalogRow: View {
+    let section: HomeCatalogSection
+    let onFocus: (MetaPreview) -> Void
+    let onOpen: (MetaPreview) -> Void
+
+    var body: some View {
+        let size = ModernCardSize.portrait
+        VStack(alignment: .leading, spacing: 0) {
+            NuvioShelfHeader(title: section.title) { EmptyView() }
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: NuvioTokens.Layout.itemGap) {
+                    ForEach(section.items, id: \.id) { item in
+                        NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster,
+                                        width: size.width, height: size.height, onFocus: { onFocus(item) }) { onOpen(item) }
+                    }
+                }
+                .padding(.horizontal, NuvioTokens.Layout.gutter).padding(.vertical, dp(8))
+            }
+            .scrollClipDisabled()
+            .focusSection()
+        }
+    }
+}
+
+/// ContinueWatchingSection (CARD style): landscape artwork, gradient from 45% to Background 95%, badge
+/// top-trailing (labelSmall on Background 80%), text inside at the bottom (12dp padding), a 3dp
+/// Secondary progress bar inset 10dp and 4dp from the bottom; 2dp FocusRing, no scale.
+private struct ContinueWatchingCard: View {
+    let item: TvCwItem
+    let onFocus: () -> Void
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let size = ModernCardSize.landscape
+        Button(action: action) {
+            ZStack(alignment: .bottomLeading) {
+                colors.backgroundCard
+                CachedPosterArtwork(urlString: item.artwork, width: size.width, height: size.height, maximumWidth: size.width * 2) { colors.backgroundCard }
+                    .frame(width: size.width, height: size.height)
+                LinearGradient(stops: [.init(color: .clear, location: 0.45), .init(color: colors.background.opacity(0.7), location: 0.72),
+                                       .init(color: colors.background.opacity(0.95), location: 1)], startPoint: .top, endPoint: .bottom)
+                VStack(alignment: .leading, spacing: dp(2)) {
+                    if let label = TvContinueWatching.shared.episodeLabel(item: item) {
+                        Text(label).font(NuvioType.labelMedium).foregroundStyle(colors.textPrimary)
+                    }
+                    Text(item.title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    if let episode = item.episodeTitle {
+                        Text(episode).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary).lineLimit(1)
+                    }
+                }
+                .padding(dp(12)).padding(.bottom, item.isNextUp ? 0 : dp(6))
+                if !item.isNextUp && item.progress > 0 {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: dp(1.5)).fill(Color.black.opacity(0.3))
+                            RoundedRectangle(cornerRadius: dp(1.5)).fill(colors.secondary).frame(width: geo.size.width * CGFloat(item.progress))
+                        }
+                    }
+                    .frame(height: dp(3))
+                    .padding(.horizontal, dp(10)).padding(.bottom, dp(4))
+                }
+            }
+            .frame(width: size.width, height: size.height)
+            .overlay(alignment: .topTrailing) {
+                if let badge = TvContinueWatching.shared.badge(item: item) {
+                    Text(badge).font(NuvioType.labelSmall).foregroundStyle(colors.textPrimary)
+                        .padding(.horizontal, dp(6)).padding(.vertical, dp(3))
+                        .background(RoundedRectangle(cornerRadius: NuvioTokens.Radius.badge).fill(colors.background.opacity(0.8)))
+                        .padding(dp(8))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous)
+                .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+            .hoverEffect(.highlight)
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .reportsFocus(focused)
+        .onChange(of: focused) { _, isFocused in if isFocused { onFocus() } }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
+}

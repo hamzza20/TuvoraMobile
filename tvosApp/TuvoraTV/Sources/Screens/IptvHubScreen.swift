@@ -14,9 +14,10 @@ struct IptvHubScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             if let hub, hub.accountsLoaded, !hub.accounts.isEmpty {
                 header(hub)
-                    .padding(.top, dp(24)).padding(.horizontal, NuvioTokens.Layout.gutter)
+                    .padding(.top, 60).padding(.horizontal, NuvioTokens.Layout.gutter)
                     .padding(.bottom, dp(16))
-                    .focusSection()
+                    .scrollClipDisabled()
+            .focusSection()
                 if let error = hub.loadError {
                     NuvioStateMessage(title: "Couldn't load this playlist", message: error.detail) { TvIptvBrowse.shared.retry() }
                 } else if hub.section == .live {
@@ -128,6 +129,7 @@ private struct IptvShelf: View {
                 .padding(.horizontal, NuvioTokens.Layout.gutter)
                 .padding(.vertical, dp(8))
             }
+            .scrollClipDisabled()
             .focusSection()
         }
         .onAppear { if !category.loaded && !category.loading { TvIptvBrowse.shared.loadCategory(categoryId: category.id) } }
@@ -291,7 +293,8 @@ private struct LiveGuideView: View {
                     .padding(.vertical, dp(4))
                 }
                 .focused($channelsFocused)
-                .focusSection()
+                .scrollClipDisabled()
+            .focusSection()
                 .overlay(alignment: .topLeading) { nowLine }
             }
         }

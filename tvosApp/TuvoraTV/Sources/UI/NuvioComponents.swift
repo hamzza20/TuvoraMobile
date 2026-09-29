@@ -59,6 +59,7 @@ struct NuvioPosterCard: View {
     let width: CGFloat
     let height: CGFloat
     var showLabel = true
+    var onFocus: (() -> Void)? = nil
     let action: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
@@ -79,7 +80,7 @@ struct NuvioPosterCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous)
                     .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
-                .hoverEffect(.lift)   // tvOS-native focus: lift, parallax and shadow under the Tuvora ring
+                .hoverEffect(.highlight)   // tvOS-native focus: lift, parallax and shadow under the Tuvora ring
                 if showLabel {
                     VStack(alignment: .leading, spacing: dp(2)) {
                         Text(title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
@@ -93,6 +94,7 @@ struct NuvioPosterCard: View {
         .buttonStyle(PlainNoChromeButtonStyle())
         .focused($focused)
         .reportsFocus(focused)
+        .onChange(of: focused) { _, isFocused in if isFocused { onFocus?() } }
     }
 }
 
@@ -191,4 +193,14 @@ enum NuvioCardSize {
     static var hubPortrait: CGSize { CGSize(width: dp(posterWidthDp * 0.9072), height: dp(posterWidthDp * 0.9072 * 1.5)) }
     /// Hub live tile: 1.6616 × pref wide at 1.77:1.
     static var hubLandscape: CGSize { let w = dp(posterWidthDp * 1.6616); return CGSize(width: w, height: w / 1.77) }
+}
+
+
+/// The IMDb badge NuvioTV draws beside ratings: yellow (#F5C518) rounded tag with bold black "IMDb".
+struct ImdbBadge: View {
+    var body: some View {
+        Text("IMDb").font(NuvioType.inter(10, .heavy)).foregroundStyle(.black)
+            .padding(.horizontal, dp(4)).padding(.vertical, dp(1))
+            .background(RoundedRectangle(cornerRadius: dp(3)).fill(NuvioPrimitives.imdb))
+    }
 }

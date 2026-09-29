@@ -58,7 +58,7 @@ struct MainShell: View {
             colors.background.ignoresSafeArea()
 
             content
-                .padding(.leading, NuvioTokens.Layout.sidebarContentOffset)
+                .padding(.leading, dp(80))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .overlay(Color.black.opacity(expanded ? 0.55 : 0).allowsHitTesting(false).ignoresSafeArea())
                 .animation(NuvioTokens.Motion.medium, value: expanded)
@@ -89,7 +89,7 @@ struct MainShell: View {
     @ViewBuilder
     private var content: some View {
         switch destination {
-        case .home: PlaceholderScreen(title: "Home")
+        case .home: HomeScreen()
         case .search: PlaceholderScreen(title: "Search")
         case .library: PlaceholderScreen(title: "Library")
         case .iptv: IptvHubScreen()
@@ -121,31 +121,26 @@ private struct Sidebar: View {
     let profile: NuvioProfile?
     @Environment(\.nuvio) private var colors
 
+    /// NuvioTV's Modern floating sidebar (ModernSidebarBlurPanel.kt), drawn in Liquid Glass: a rounded
+    /// (30dp) panel inset from the edge, icons only until focus arrives, then labels.
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            (expanded ? colors.background : Color.clear)
-                .frame(width: expanded ? NuvioTokens.Layout.sidebarExpanded : NuvioTokens.Layout.sidebarCollapsed)
-                .ignoresSafeArea()
-
+        VStack(alignment: .leading, spacing: dp(10)) {
             if expanded {
-                header.padding(.top, dp(30)).padding(.leading, dp(20)).transition(.opacity)
+                header.padding(.bottom, dp(12)).transition(.opacity)
             }
-
-            VStack(alignment: .leading, spacing: dp(10)) {
-                ForEach(MainShell.Destination.allCases) { item in
-                    SidebarItem(item: item, selected: destination == item, expanded: expanded, focused: focus.wrappedValue == item) {
-                        destination = item
-                        focus.wrappedValue = nil
-                    }
-                    .focused(focus, equals: item)
-                    .disabled(!engaged)
+            ForEach(MainShell.Destination.allCases) { item in
+                SidebarItem(item: item, selected: destination == item, expanded: expanded, focused: focus.wrappedValue == item) {
+                    destination = item
+                    focus.wrappedValue = nil
                 }
+                .focused(focus, equals: item)
+                .disabled(!engaged)
             }
-            .padding(.horizontal, dp(12))
-            .frame(maxHeight: .infinity)
-            .offset(y: dp(28))
         }
-        .frame(width: expanded ? NuvioTokens.Layout.sidebarExpanded : NuvioTokens.Layout.sidebarCollapsed, alignment: .leading)
+        .padding(dp(10))
+        .navigationGlass(in: RoundedRectangle(cornerRadius: dp(30), style: .continuous))
+        .padding(.leading, dp(12))
+        .frame(maxHeight: .infinity)
         .focusSection()
         .defaultFocus(focus, destination, priority: .userInitiated)
         .animation(NuvioTokens.Motion.fast, value: expanded)
@@ -157,12 +152,13 @@ private struct Sidebar: View {
     @ViewBuilder
     private var header: some View {
         if let profile {
-            HStack(spacing: dp(12)) {
-                ProfileAvatar(profile: profile, size: dp(34))
+            HStack(spacing: dp(10)) {
+                ProfileAvatar(profile: profile, size: dp(30))
                 Text(profile.name).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
             }
+            .padding(.leading, dp(6))
         } else {
-            Image("app_logo_wordmark").resizable().scaledToFit().frame(height: dp(42))
+            Image("app_logo_wordmark").resizable().scaledToFit().frame(height: dp(36))
         }
     }
 }
@@ -177,39 +173,30 @@ private struct SidebarItem: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 0) {
+            HStack(spacing: dp(14)) {
                 Image(item.icon).renderingMode(.template).resizable().scaledToFit()
                     .frame(width: dp(22), height: dp(22))
-                    .foregroundStyle(iconColor)
-                    .padding(.leading, dp(13))
+                    .foregroundStyle(selected ? colors.secondary : colors.textPrimary.opacity(focused ? 1 : 0.8))
                 if expanded {
-                    Text(item.title).font(NuvioType.titleMedium).foregroundStyle(textColor)
-                        .padding(.leading, dp(54) - dp(13) - dp(22))
-                        .lineLimit(1)
+                    Text(item.title).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
             }
-            .frame(width: expanded ? dp(148) : dp(48), height: dp(52))
+            .padding(.horizontal, dp(13))
+            .frame(width: expanded ? dp(190) : dp(48), height: dp(48), alignment: .leading)
             .background(Capsule().fill(fill))
-            .scaleEffect(focused ? 1.1 : 1, anchor: .leading)
+            .scaleEffect(focused ? 1.05 : 1)
             .animation(NuvioTokens.Motion.fast, value: focused)
         }
         .buttonStyle(PlainNoChromeButtonStyle())
     }
 
+    /// Modern sidebar item fills: focused+selected accent 28%, focused white 12%, selected accent 15%.
     private var fill: Color {
-        if focused { return colors.focusBackground }
-        if expanded && selected { return colors.secondary }
+        if focused && selected { return colors.secondary.opacity(0.28) }
+        if focused { return Color.white.opacity(0.12) }
+        if selected && expanded { return colors.secondary.opacity(0.15) }
         return .clear
-    }
-    private var iconColor: Color {
-        if focused { return colors.textPrimary }
-        if selected { return expanded ? colors.onSecondary : colors.secondary }
-        return colors.textTertiary
-    }
-    private var textColor: Color {
-        if focused { return colors.textPrimary }
-        return expanded && selected ? colors.onSecondary : colors.textPrimary
     }
 }
 

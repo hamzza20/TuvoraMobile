@@ -171,7 +171,8 @@ enum NuvioTokens {
 
 /// Type.kt — Inter (res/font/inter_variable.ttf), sizes ×2.
 enum NuvioType {
-    static func inter(_ sp: CGFloat, _ weight: Font.Weight) -> Font { .custom("Inter", size: dp(sp)).weight(weight) }
+    /// HIG › Typography: tvOS text is never below 23 pt (NuvioTV's 10sp labels would be 20 pt).
+    static func inter(_ sp: CGFloat, _ weight: Font.Weight) -> Font { .custom("Inter", size: max(23, dp(sp))).weight(weight) }
     static let displayMedium = inter(36, .bold)
     static let headlineLarge = inter(28, .semibold)
     static let headlineMedium = inter(24, .semibold)
@@ -207,4 +208,18 @@ final class PlaybackCoordinator: ObservableObject {
 struct TvPlayerSessionBox: Identifiable {
     let id = UUID()
     let session: TvPlayerSession
+}
+
+
+extension View {
+    /// Liquid Glass for the navigation layer (HIG › Materials: never on content). tvOS 26 draws real
+    /// glass (Apple TV 4K 2nd gen and newer); tvOS 17.5–18 falls back to the ultra-thin material.
+    @ViewBuilder
+    func navigationGlass<S: Shape>(in shape: S) -> some View {
+        if #available(tvOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
 }

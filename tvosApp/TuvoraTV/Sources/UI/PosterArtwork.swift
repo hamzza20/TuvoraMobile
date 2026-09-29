@@ -28,7 +28,17 @@ struct ArtworkPlaceholder: View {
     }
 }
 
+/// Tuvora addition: logos fit inside their box instead of filling it (`.environment(\.artworkContentMode, .fit)`).
+private struct ArtworkContentModeKey: EnvironmentKey { static let defaultValue = ContentMode.fill }
+extension EnvironmentValues {
+    var artworkContentMode: ContentMode {
+        get { self[ArtworkContentModeKey.self] }
+        set { self[ArtworkContentModeKey.self] = newValue }
+    }
+}
+
 struct CachedPosterArtwork<Placeholder: View>: View {
+    @Environment(\.artworkContentMode) private var artworkContentMode
     let urlString: String?
     var preloadURLString: String? = nil
     let width: CGFloat
@@ -97,8 +107,8 @@ struct CachedPosterArtwork<Placeholder: View>: View {
             if let image = displayedImage {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: width, height: height, alignment: .center)
+                    .aspectRatio(contentMode: artworkContentMode)
+                    .frame(width: width, height: height, alignment: artworkContentMode == .fit ? .bottomLeading : .center)
                     .clipped()
             } else {
                 placeholder

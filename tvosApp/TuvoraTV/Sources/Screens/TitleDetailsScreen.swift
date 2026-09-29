@@ -53,6 +53,7 @@ struct TitleDetailsScreen: View {
                 CachedPosterArtwork(urlString: logo, width: dp(384), height: dp(100), maximumWidth: dp(768)) {
                     Text(meta.name).font(NuvioType.displayMedium).foregroundStyle(colors.textPrimary)
                 }
+                .environment(\.artworkContentMode, .fit)
                 .frame(maxWidth: dp(384), maxHeight: dp(100), alignment: .leading)
             } else {
                 Text(meta.name).font(NuvioType.displayMedium).foregroundStyle(colors.textPrimary).lineLimit(2)
@@ -62,6 +63,7 @@ struct TitleDetailsScreen: View {
                     .prefersDefaultFocus(true, in: namespace)
                 CircleIconButton(icon: "library_add_plus") {}
             }
+            .scrollClipDisabled()
             .focusSection()
             metaRow(meta)
             if let description = meta.description_ {
@@ -81,7 +83,7 @@ struct TitleDetailsScreen: View {
             }
             if let rating = meta.imdbRating {
                 Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3))
-                Image("imdb_logo").resizable().scaledToFit().frame(height: dp(14))
+                ImdbBadge()
                 Text(rating).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary)
             }
         }
@@ -121,7 +123,8 @@ struct TitleDetailsScreen: View {
                     }
                     .padding(.vertical, dp(6))
                 }
-                .focusSection()
+                .scrollClipDisabled()
+            .focusSection()
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: dp(16)) {
@@ -131,6 +134,7 @@ struct TitleDetailsScreen: View {
                 }
                 .padding(.vertical, dp(8))
             }
+            .scrollClipDisabled()
             .focusSection()
         }
     }
@@ -269,7 +273,7 @@ private struct EpisodeCard: View {
             .clipShape(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.posterCard, style: .continuous)
                 .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
-            .hoverEffect(.lift)
+            .hoverEffect(.highlight)
         }
         .buttonStyle(PlainNoChromeButtonStyle())
         .focused($focused)
@@ -307,6 +311,7 @@ struct StreamPickerScreen: View {
                         CachedPosterArtwork(urlString: logo, width: dp(300), height: dp(120), maximumWidth: dp(600)) {
                             Text(meta.name).font(NuvioType.headlineMedium).foregroundStyle(colors.textPrimary)
                         }
+                        .environment(\.artworkContentMode, .fit)
                         .frame(maxWidth: dp(300), maxHeight: dp(120), alignment: .leading)
                     } else {
                         Text(meta.name).font(NuvioType.headlineMedium).foregroundStyle(colors.textPrimary)
@@ -351,6 +356,7 @@ struct StreamPickerScreen: View {
                 }
                 .padding(.vertical, dp(8))
             }
+            .scrollClipDisabled()
             .focusSection()
         }
     }

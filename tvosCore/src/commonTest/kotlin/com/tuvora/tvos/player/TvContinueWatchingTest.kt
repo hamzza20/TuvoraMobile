@@ -1,0 +1,34 @@
+package com.tuvora.tvos.player
+
+import com.tuvora.tvos.screens.TvContinueWatching
+import com.tuvora.tvos.screens.TvCwItem
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class TvContinueWatchingTest {
+    private fun item(series: String, video: String, updated: Long, nextUp: Boolean = false, pos: Long = 0, dur: Long = 0, s: Int? = null, e: Int? = null) =
+        TvCwItem(series, "series", video, "T", null, s, e, null, null, null, pos, dur, updated, nextUp)
+
+    @Test
+    fun `newest first and next up hidden for a series already in progress`() {
+        val merged = TvContinueWatching.merge(
+            inProgress = listOf(item("a", "a:1:2", 10), item("b", "b:1:1", 30)),
+            nextUp = listOf(item("a", "a:1:3", 50, nextUp = true), item("c", "c:2:1", 20, nextUp = true)),
+        )
+        assertEquals(listOf("b", "c", "a"), merged.map { it.parentMetaId })
+    }
+
+    @Test
+    fun `the row is capped`() {
+        val many = (0 until 40).map { item("s$it", "v$it", it.toLong()) }
+        assertEquals(TvContinueWatching.MAX_ITEMS, TvContinueWatching.merge(many, emptyList()).size)
+    }
+
+    @Test
+    fun `badges read like the TV app`() {
+        assertEquals("8m left", TvContinueWatching.badge(item("a", "v", 0, pos = 52 * 60_000L, dur = 60 * 60_000L)))
+        assertEquals("1h 49m left", TvContinueWatching.badge(item("a", "v", 0, pos = 11 * 60_000L, dur = 120 * 60_000L)))
+        assertEquals("Next Up", TvContinueWatching.badge(item("a", "v", 0, nextUp = true)))
+        assertEquals("S2 E1", TvContinueWatching.episodeLabel(item("a", "v", 0, s = 2, e = 1)))
+    }
+}
