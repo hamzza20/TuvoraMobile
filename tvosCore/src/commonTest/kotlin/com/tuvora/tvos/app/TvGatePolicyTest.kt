@@ -110,4 +110,13 @@ class TvGatePolicyTest {
         )
         assertEquals(TvGateDecision.Stay, decision)
     }
+
+    @Test
+    fun `a sign-in still restoring never sends an open app back to the picker`() {
+        // Simulator 2026-09-28: picked a cached profile while the session was still restoring; the
+        // gate reached Main and was re-evaluated on the screen change, bouncing Main -> picker -> Main.
+        val twoProfiles = listOf(alice, bob)
+        assertEquals(TvGateDecision.Stay, TvGatePolicy.decide(input(auth = AuthState.Loading, profiles = twoProfiles, current = TvGateScreen.Main)))
+        assertEquals(TvGateDecision.Stay, TvGatePolicy.decide(input(auth = AuthState.Unauthenticated, profiles = twoProfiles, current = TvGateScreen.Main)))
+    }
 }

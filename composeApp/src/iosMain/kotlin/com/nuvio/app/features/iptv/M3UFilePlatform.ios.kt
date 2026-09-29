@@ -1,5 +1,6 @@
 package com.nuvio.app.features.iptv
 
+import com.nuvio.app.core.storage.AppleDataDirectory
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
@@ -101,15 +102,10 @@ actual suspend fun streamFileLines(path: String, onLine: (String) -> Unit): Unit
     }
 }
 
-/** Application Support/playlists/{safeId}.m3u — created lazily. */
+/** <app data>/playlists/{safeId}.m3u (Application Support on iPhone, Caches on Apple TV) — created lazily. */
 @OptIn(ExperimentalForeignApi::class)
 private fun storagePath(playlistId: String): String {
-    val dirs = NSSearchPathForDirectoriesInDomains(
-        NSApplicationSupportDirectory.convert(),
-        NSUserDomainMask.convert(),
-        true,
-    )
-    val base = (dirs.firstOrNull() as? String) ?: "."
+    val base = AppleDataDirectory.databases()
     val playlists = "$base/playlists"
     NSFileManager.defaultManager.createDirectoryAtPath(playlists, withIntermediateDirectories = true, attributes = null, error = null)
     return "$playlists/${safeName(playlistId)}.m3u"

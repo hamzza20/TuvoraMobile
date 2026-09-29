@@ -97,6 +97,12 @@ struct ProfilePickerView: View {
         .task {
             for await state in ProfileRepository.shared.state {
                 profiles = state.profiles
+                // Simulator smoke hook: `-smokePickProfile <index>` picks without a remote.
+                let args = ProcessInfo.processInfo.arguments
+                if let i = args.firstIndex(of: "-smokePickProfile"), i + 1 < args.count, let index = Int32(args[i + 1]),
+                   state.profiles.contains(where: { $0.profileIndex == index }) {
+                    TvAppLifecycle.shared.pickProfile(profileIndex: index)
+                }
                 NSLog("SMOKE profiles=%@", state.profiles.map { "\($0.profileIndex):\($0.pinEnabled ? "pin" : "open")" }.joined(separator: ","))
             }
         }

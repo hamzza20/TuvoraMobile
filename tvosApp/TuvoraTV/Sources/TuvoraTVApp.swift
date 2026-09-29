@@ -6,6 +6,8 @@ import TuvoraCore
 @main
 struct TuvoraTVApp: App {
     init() {
+        // Before anything reads storage: route the shared code's defaults to Apple TV's tiers.
+        TieredUserDefaults.install()
         AnalyticsSink.shared.register { event, properties in
             // PostHog is wired in a later Phase 2 step; until then events go to the device log.
             NSLog("[analytics] %@ %@", event, properties.description)

@@ -38,6 +38,11 @@ object TvGatePolicy {
         val authenticated = input.auth is AuthState.Authenticated
         val cachedAccess = input.profiles.isNotEmpty() && !authenticated
 
+        // Once the app is open on cached profiles, a session that is still restoring (or lapsed while
+        // offline) never sends the viewer back to the picker. The phone gets this implicitly: its
+        // AppGate effect is not re-run by a screen change, while this policy is.
+        if (cachedAccess && input.current == TvGateScreen.Main) return TvGateDecision.Stay
+
         return when (input.auth) {
             AuthState.Loading ->
                 if (cachedAccess) enterProfileGate(input, sync = false) else TvGateDecision.Show(TvGateScreen.Loading)

@@ -2,6 +2,7 @@
 
 package com.nuvio.app.core.rec
 
+import com.nuvio.app.core.storage.AppleDataDirectory
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
@@ -90,12 +91,7 @@ internal actual object RecEventStorage {
 
     /** Documents rather than Caches: unsent events should survive storage pressure. */
     private fun queuePath(): String? {
-        val documents = NSSearchPathForDirectoriesInDomains(
-            NSDocumentDirectory,
-            NSUserDomainMask,
-            true,
-        ).firstOrNull() as? String ?: return null
-        return "$documents/$QUEUE_FILE"
+        return "${AppleDataDirectory.documents()}/$QUEUE_FILE"
     }
 }
 

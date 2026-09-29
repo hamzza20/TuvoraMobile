@@ -62,6 +62,7 @@ val tvosExcludedIos = listOf(
     "com/nuvio/app/features/profiles/ProfileHoverHapticFeedback.ios.kt", // haptics
     "com/nuvio/app/features/livetv/LiveTvOrientation.ios.kt",        // device orientation
     "com/nuvio/app/features/updater/**",                              // in-app APK updater
+    "com/nuvio/app/core/storage/AppleDataDirectory.ios.kt",          // tvOS writes only to Caches
 )
 
 fun uiFiles(sourceSet: String): List<String> {

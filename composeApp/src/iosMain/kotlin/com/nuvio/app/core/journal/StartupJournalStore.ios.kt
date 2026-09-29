@@ -2,6 +2,7 @@
 
 package com.nuvio.app.core.journal
 
+import com.nuvio.app.core.storage.AppleDataDirectory
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
@@ -33,9 +34,7 @@ internal actual object StartupJournalStore {
     private const val FILE = "startup-journal.json"
 
     private fun path(): String? {
-        val documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
-            .firstOrNull() as? String ?: return null
-        return "$documents/$FILE"
+        return "${AppleDataDirectory.documents()}/$FILE"
     }
 
     actual fun read(): String? = runCatching {
