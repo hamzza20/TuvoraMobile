@@ -4,6 +4,9 @@ name: TuvoraTV
 options:
   bundleIdPrefix: com.tuvora
   deploymentTarget: { tvOS: "17.5" }
+packages:
+  # Our MPVKit fork (git submodule at NuvioMobile/MPVKit): libmpv + FFmpeg, LGPL build, tvOS slices.
+  MPVKit: { path: ../MPVKit }
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -13,6 +16,7 @@ targets:
     type: application
     platform: tvOS
     sources: [TuvoraTV/Sources]
+    dependencies: [{ package: MPVKit, product: MPVKit }]
     info:
       path: TuvoraTV/Info.plist
       properties:

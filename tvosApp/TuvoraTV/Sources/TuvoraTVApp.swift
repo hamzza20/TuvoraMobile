@@ -12,6 +12,7 @@ struct TuvoraTVApp: App {
         }
         MemoryPressureObserver.shared.start()
         TvAppGraph.shared.start()
+        PlayerEngines.register()
         NSLog("SMOKE strings lang=%@ auth_sign_up_failed=%@", Locale.preferredLanguages.first ?? "?",
               Bundle.main.localizedString(forKey: "auth_sign_up_failed", value: "MISSING", table: "Tuvora"))
     }
