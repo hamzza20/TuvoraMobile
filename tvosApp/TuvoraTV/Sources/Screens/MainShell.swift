@@ -90,10 +90,10 @@ struct MainShell: View {
     private var content: some View {
         switch destination {
         case .home: HomeScreen()
-        case .search: PlaceholderScreen(title: "Search")
-        case .library: PlaceholderScreen(title: "Library")
+        case .search: SearchScreen()
+        case .library: LibraryScreen()
         case .iptv: IptvHubScreen()
-        case .sports: PlaceholderScreen(title: "Sports")
+        case .sports: SportsScreen()
         case .settings: SettingsScreen()
         }
     }
