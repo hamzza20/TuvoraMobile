@@ -45,7 +45,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Only HTTPS/TLS from the OS — exempt, so TestFlight skips the export-compliance question.
         ITSAppUsesNonExemptEncryption: false
-        UIAppFonts: [Fonts/inter_variable.ttf]
+        UIAppFonts: [inter_variable.ttf]
         UILaunchScreen: {}
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
         CFBundleURLTypes: [{ CFBundleURLName: com.tuvora.deeplink, CFBundleURLSchemes: [tuvora] }]
