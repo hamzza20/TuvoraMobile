@@ -45,6 +45,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Only HTTPS/TLS from the OS — exempt, so TestFlight skips the export-compliance question.
         ITSAppUsesNonExemptEncryption: false
+        UIRequiredDeviceCapabilities: [arm64]
         UIAppFonts: [inter_variable.ttf]
         UILaunchScreen: {}
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
@@ -87,6 +88,7 @@ targets:
         CFBundleDisplayName: Tuvora
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIRequiredDeviceCapabilities: [arm64]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.tv-top-shelf
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentProvider
