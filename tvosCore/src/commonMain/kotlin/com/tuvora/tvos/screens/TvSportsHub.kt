@@ -59,7 +59,14 @@ data class TvMatchGroup(val label: String?, val matches: List<RadarChannelMatche
 /** The status pill at a match card's top-right (SportsHubScreen.kt:1150-1206). */
 enum class TvMatchStatusTone { None, Live, Muted, Accent }
 
-data class TvMatchStatus(val tone: TvMatchStatusTone, val text: String)
+/** A kick-off's calendar day relative to today, in the viewer's time zone — localized by the UI. */
+enum class TvMatchDay { Today, Tomorrow, Other }
+
+/**
+ * [text] is the pill's English copy for Live / Muted ("LIVE 67'", "POSTPONED", "FT"); an Accent
+ * pill carries only [day] so the UI renders "TODAY" / "TOMORROW" in the viewer's language.
+ */
+data class TvMatchStatus(val tone: TvMatchStatusTone, val text: String, val day: TvMatchDay = TvMatchDay.Other)
 
 /**
  * The Sports hub's composition, straight from NuvioTV's SportsHubScreen: which rails appear, in what
@@ -143,14 +150,27 @@ object TvSportsHubPolicy {
 
     /**
      * Live (with the feed's minute, "LIVE 67'") > postponed > full time > Today/Tomorrow > nothing.
-     * [dayLabel] is the device-local "Today"/"Tomorrow"/date label for the kick-off.
+     * [day] is the kick-off's calendar day ([matchDay]); language-neutral, so no English label is
+     * ever compared (the old version matched RadarTime's "Today"/"Tomorrow" strings).
      */
-    fun status(fixture: RadarFixture, live: Boolean, liveScore: RadarLiveScore?, dayLabel: String?): TvMatchStatus = when {
+    fun status(fixture: RadarFixture, live: Boolean, liveScore: RadarLiveScore?, day: TvMatchDay): TvMatchStatus = when {
         live -> TvMatchStatus(TvMatchStatusTone.Live, liveText(liveScore?.progress))
         fixture.postponed == "yes" -> TvMatchStatus(TvMatchStatusTone.Muted, "POSTPONED")
         fixture.scoreLabel != null -> TvMatchStatus(TvMatchStatusTone.Muted, "FT")
-        dayLabel == "Today" || dayLabel == "Tomorrow" -> TvMatchStatus(TvMatchStatusTone.Accent, dayLabel.uppercase())
+        day != TvMatchDay.Other -> TvMatchStatus(TvMatchStatusTone.Accent, "", day)
         else -> TvMatchStatus(TvMatchStatusTone.None, "")
+    }
+
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    /** Whole calendar days from now's day to the kick-off's day, with the zone's UTC offset applied. */
+    fun dayOffset(startMs: Long, nowMs: Long, utcOffsetMs: Long): Long =
+        (startMs + utcOffsetMs).floorDiv(DAY_MS) - (nowMs + utcOffsetMs).floorDiv(DAY_MS)
+
+    fun matchDay(startMs: Long?, nowMs: Long, utcOffsetMs: Long): TvMatchDay = when (startMs?.let { dayOffset(it, nowMs, utcOffsetMs) }) {
+        0L -> TvMatchDay.Today
+        1L -> TvMatchDay.Tomorrow
+        else -> TvMatchDay.Other
     }
 
     fun liveText(progress: String?): String = if (progress.isNullOrBlank()) "LIVE" else "LIVE ${progress.trim()}"

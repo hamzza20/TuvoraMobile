@@ -313,15 +313,25 @@ private struct LiveGuideView: View {
                 windowStart = timeline.onClockTick(startMs: windowStart, previousNowMs: previous, nowMs: now)
             }
         }
-        .task(id: focusedChannel?.contentId) {
-            // The FOCUSED archive channel — and only it — pulls its stored history (NuvioTV / phone rule:
-            // a page of rows each fetching its table is how a guide turns 2 MB into 40 MB). Debounced so
-            // a D-pad sweep through the list fetches nothing.
-            guard let channel = focusedChannel, channel.hasArchive, catchUpSupported else { return }
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            guard !Task.isCancelled else { return }
-            try? await TvCatchUp.shared.ensureHistory(contentId: channel.contentId)
-            await loadWindow(channel, force: true)
+        .task {
+            // Rows fill from the guide EPG loader (TvGuideEpg): one ask per (row, window), two at a time.
+            TvGuideEpg.shared.resetSession()
+            for await row in TvGuideEpg.shared.results {
+                programmes[Self.windowKey(row.contentId, row.windowStartMs)] = row.programmes
+                NSLog("SMOKE guide row=%@ window=%lld programmes=%d", row.contentId, row.windowStartMs, row.programmes.count)
+            }
+        }
+        .task(id: prefetchKey) {
+            // The fan-out rule (TvGuideEpgPrefetch): once focus settles, ask for the rows around it — in a
+            // past window too, so every visible row shows its schedule, not only the focused channel's.
+            // A D-pad sweep cancels this before it asks for anything.
+            try? await Task.sleep(nanoseconds: UInt64(TvGuideEpgPrefetch.shared.SETTLE_MS) * 1_000_000)
+            guard !Task.isCancelled, !loading else { return }
+            let list = visible
+            let anchor = focusedChannel.flatMap { f in list.firstIndex { $0.contentId == f.contentId } } ?? 0
+            TvGuideEpg.shared.request(channels: list, anchor: Int32(anchor), windowStartMs: windowStart,
+                                      travelling: !atLive, catchUpSupported: catchUpSupported)
+            NSLog("SMOKE guide prefetch anchor=%d window=%lld asked=%d", anchor, windowStart, TvGuideEpg.shared.askedCount)
         }
         .task(id: focusedCell?.startMs) {
             cellDescription = nil
@@ -329,6 +339,16 @@ private struct LiveGuideView: View {
             cellDescription = try? await TvCatchUp.shared.description(contentId: channel.contentId, programme: cell)
         }
         .onDisappear { previewSession?.close(); previewSession = nil }
+    }
+
+    /// What re-asks the loader: the settled focus, the window, and the list being shown.
+    private var prefetchKey: String { "\(focusedChannel?.contentId ?? "-")|\(windowStart)|\(category)|\(visible.count)|\(loading)" }
+
+    static func windowKey(_ contentId: String, _ windowStart: Int64) -> String { "\(contentId)@\(windowStart)" }
+
+    /// A row's programmes for the window on screen (nil until its ask has answered).
+    private func rowProgrammes(_ channel: LiveGuideChannel) -> [XtreamProgram] {
+        programmes[Self.windowKey(channel.contentId, windowStart)] ?? []
     }
 
     private func reloadChannels() async {
@@ -446,7 +466,7 @@ private struct LiveGuideView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: dp(4)) {
                         ForEach(Array(visible.enumerated()), id: \.element.contentId) { index, channel in
-                            let cells = timeline.cells(programmes: programmes[channel.contentId] ?? [], channel: channel,
+                            let cells = timeline.cells(programmes: rowProgrammes(channel), channel: channel,
                                                        startMs: windowStart, nowMs: now, catchUpSupported: catchUpSupported)
                             GuideChannelRow(number: index + 1, channel: channel, cells: cells,
                                             favorite: favorites.contains(channel.contentId),
@@ -481,13 +501,14 @@ private struct LiveGuideView: View {
                                         NSLog("SMOKE guide hid channel=%@", channel.name)
                                     }
                                 }
-                                .task(id: "\(channel.contentId)@\(windowStart)") { await loadWindow(channel, force: false) }
                         }
                     }
                     .padding(.vertical, dp(4))
                 }
                 .focused($channelsFocused)
-                .scrollClipDisabled()
+                // Clipped: with the clip disabled, a list scrolled to a lower row drew its top rows up
+                // over the time header ("Yesterday" sat on row 1). The 4pt inset keeps the focus ring whole.
+                .clipped()
                 .focusSection()
             }
         }
@@ -495,19 +516,23 @@ private struct LiveGuideView: View {
 
     // MARK: Catch-up
 
-    /// One row's programmes for the current window, per the shared GuideWindowSource rule (history wins;
-    /// now-and-next only paints the live window; a late now-and-next never replaces landed history).
+    /// The FOCUSED row's window, loaded directly (an edge press needs its cells to place the cursor):
+    /// its stored table first when there is a past to show, then the shared GuideWindowSource rule
+    /// (history wins; now-and-next only paints the live window). Every other row goes through TvGuideEpg.
     private func loadWindow(_ channel: LiveGuideChannel, force: Bool) async {
         let start = windowStart
-        let key = "\(channel.contentId)@\(start)"
-        if !force, programmes[channel.contentId] != nil, historyShown.contains(key) { return }
+        let key = Self.windowKey(channel.contentId, start)
+        let travelling = !timeline.isAtLiveEdge(startMs: start, nowMs: now)
+        if catchUpSupported, travelling || channel.hasArchive {
+            try? await TvCatchUp.shared.ensureHistory(contentId: channel.contentId)
+        }
         guard let result = try? await TvCatchUp.shared.windowProgrammes(
             contentId: channel.contentId, fromMs: start, toMs: start + TvGuideTimeline.shared.WINDOW_MS,
-            travelling: !timeline.isAtLiveEdge(startMs: start, nowMs: now), historyShown: historyShown.contains(key)),
+            travelling: travelling, historyShown: historyShown.contains(key)),
               start == windowStart else { return }
         if result.fromHistory { historyShown.insert(key) }
         if result.fromHistory || !result.programmes.isEmpty || !historyShown.contains(key) {
-            programmes[channel.contentId] = result.programmes
+            programmes[key] = result.programmes
         }
     }
 
@@ -534,7 +559,7 @@ private struct LiveGuideView: View {
         NSLog("SMOKE guide travel start=%lld live=%d", next, atLive)
         Task {
             await loadWindow(channel, force: true)
-            let cells = timeline.cells(programmes: programmes[channel.contentId] ?? [], channel: channel,
+            let cells = timeline.cells(programmes: rowProgrammes(channel), channel: channel,
                                        startMs: windowStart, nowMs: now, catchUpSupported: catchUpSupported)
             let actionable = cells.filter { $0.intent != .none }
             if let target = (direction < 0 ? actionable.last : actionable.first)?.programme {
@@ -587,7 +612,8 @@ private struct LiveGuideView: View {
     }
 
     private func currentProgramme(_ channel: LiveGuideChannel) -> XtreamProgram? {
-        programmes[channel.contentId]?.first { $0.startMs <= now && $0.endMs > now }
+        programmes[Self.windowKey(channel.contentId, timeline.liveWindowStartMs(nowMs: now))]?.first { $0.startMs <= now && $0.endMs > now }
+            ?? rowProgrammes(channel).first { $0.startMs <= now && $0.endMs > now }
     }
 
     /// OK previews a channel in the strip; OK on the previewing channel goes full screen.
@@ -652,13 +678,12 @@ private struct LiveGuideView: View {
         category = channel.categoryId ?? "all"
         focusedChannel = channel
         Task {
-            try? await TvCatchUp.shared.ensureHistory(contentId: channel.contentId)
             if let i = args.firstIndex(of: "-smokeGuideTravel"), i + 1 < args.count, let n = Int(args[i + 1]) {
                 windowStart = timeline.shift(startMs: windowStart, slots: Int32(-n * Int(TvGuideTimeline.shared.EDGE_TRAVEL_SLOTS)),
                                              nowMs: now, catchUpDays: channel.catchUpDays)
             }
             await loadWindow(channel, force: true)
-            let cells = timeline.cells(programmes: programmes[channel.contentId] ?? [], channel: channel,
+            let cells = timeline.cells(programmes: rowProgrammes(channel), channel: channel,
                                        startMs: windowStart, nowMs: now, catchUpSupported: catchUpSupported)
             NSLog("SMOKE guide cells=%@", cells.map { "\($0.programme?.title ?? "·"):\($0.intent)" }.joined(separator: " | "))
             if args.contains("-smokeGuideSheet"), let airing = cells.first(where: { $0.intent == .openSheet })?.programme {

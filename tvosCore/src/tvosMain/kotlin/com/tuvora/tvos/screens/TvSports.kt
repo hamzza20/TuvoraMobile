@@ -7,7 +7,6 @@ import com.nuvio.app.features.radar.RadarLeague
 import com.nuvio.app.features.radar.RadarRepository
 import com.nuvio.app.features.radar.RadarTime
 import com.nuvio.app.features.radar.RadarUiState
-import com.nuvio.app.features.radar.radarWhenLabel
 import com.tuvora.tvos.player.TvPlayerSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -33,8 +32,16 @@ object TvSports {
     fun status(state: RadarUiState, fixture: RadarFixture, nowMs: Long): TvMatchStatus {
         val live = state.isLive(fixture, nowMs)
         val liveScore = fixture.id?.let { state.liveScores[it] }
-        return TvSportsHubPolicy.status(fixture, live, liveScore, fixture.startEpochMs?.let(RadarTime::dayLabel))
+        return TvSportsHubPolicy.status(fixture, live, liveScore, day(fixture, nowMs))
     }
+
+    /** The kick-off's calendar day in the device's time zone (for the pill and the when-line). */
+    fun day(fixture: RadarFixture, nowMs: Long): TvMatchDay =
+        TvSportsHubPolicy.matchDay(fixture.startEpochMs, nowMs, utcOffsetMs(nowMs))
+
+    private fun utcOffsetMs(atMs: Long): Long =
+        platform.Foundation.NSCalendar.currentCalendar.timeZone
+            .secondsFromGMTForDate(platform.Foundation.NSDate(timeIntervalSinceReferenceDate = atMs / 1000.0 - 978_307_200.0)) * 1000L
 
     fun homeScore(state: RadarUiState, fixture: RadarFixture): String? =
         TvSportsHubPolicy.score(fixture.id?.let { state.liveScores[it] }?.homeScore, fixture.homeScore)
@@ -42,18 +49,12 @@ object TvSports {
     fun awayScore(state: RadarUiState, fixture: RadarFixture): String? =
         TvSportsHubPolicy.score(fixture.id?.let { state.liveScores[it] }?.awayScore, fixture.awayScore)
 
-    /** "Today 2:00 PM" (device-local), or "Time TBC" without a kick-off; null while live. */
-    fun whenLabel(state: RadarUiState, fixture: RadarFixture, nowMs: Long): String? {
-        if (state.isLive(fixture, nowMs)) return null
-        return fixture.startEpochMs?.let(::radarWhenLabel) ?: "Time TBC"
-    }
+    /** Whether the card shows a when-line (not while live); the UI formats it from [day] + kick-off. */
+    fun showsWhen(state: RadarUiState, fixture: RadarFixture, nowMs: Long): Boolean = !state.isLive(fixture, nowMs)
 
     /** Kick-off today or tomorrow: the when-label is drawn in the accent colour. */
-    fun isSoon(state: RadarUiState, fixture: RadarFixture, nowMs: Long): Boolean {
-        if (state.isLive(fixture, nowMs)) return false
-        val day = fixture.startEpochMs?.let(RadarTime::dayLabel) ?: return false
-        return day == "Today" || day == "Tomorrow"
-    }
+    fun isSoon(state: RadarUiState, fixture: RadarFixture, nowMs: Long): Boolean =
+        !state.isLive(fixture, nowMs) && day(fixture, nowMs) != TvMatchDay.Other
 
     fun isFollowed(state: RadarUiState, league: RadarLeague): Boolean = league.id in state.followedLeagueIds
 
@@ -105,10 +106,10 @@ object TvSports {
     fun groupMatches(fixture: RadarFixture, matches: List<RadarChannelMatcher.ChannelMatch>): List<TvMatchGroup> =
         TvSportsHubPolicy.groupMatches(matches, fixture.league)
 
-    /** The match sheet's subtitle: round or league · kick-off · venue. */
-    fun sheetSubtitle(fixture: RadarFixture): String = listOfNotNull(
+    /** The match sheet's subtitle: round or league · kick-off (formatted by the UI, localized) · venue. */
+    fun sheetSubtitle(fixture: RadarFixture, whenText: String?): String = listOfNotNull(
         fixture.roundLabel ?: fixture.league,
-        fixture.startEpochMs?.let(::radarWhenLabel),
+        whenText,
         fixture.venue?.takeIf { it.isNotBlank() },
     ).joinToString(" · ")
 
