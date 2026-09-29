@@ -39,6 +39,7 @@
 "Audience Score" = "درجة الجمهور";
 "Audio" = "الصوت";
 "Audio & Video" = "الصوت والفيديو";
+"Audio Delay" = "تأخير الصوت";
 "Audio controls and video compatibility." = "ضبط الصوت وتوافق الفيديو.";
 "Auto (Best for Content)" = "تلقائي (الأنسب للمحتوى)";
 "Auto Stream Selection" = "اختيار المصدر التلقائي";
@@ -47,10 +48,12 @@
 "Auto-play regex match" = "تشغيل تلقائي عند مطابقة Regex";
 "Available when Trakt is the Watch Progress source" = "متاح عندما يكون Trakt هو مصدر تقدم المشاهدة";
 "Back" = "رجوع";
+"Background" = "الخلفية";
 "Balanced" = "متوازن";
 "Basic Info" = "معلومات أساسية";
 "Best quality first" = "الأعلى جودة";
 "Bold" = "خط عريض";
+"Bottom Offset" = "إزاحة السفلية";
 "Browse and play files already in your connected accounts." = "تشغيل الملفات المحفوظة بحساباتك المرتبطة.";
 "Cancel" = "إلغاء";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "تقليل تكرار ملفات دقات (4K، 1080p، 720p) بعد ترتيبها.";
@@ -179,6 +182,7 @@
 "Finish connection approval" = "إتمام الموافقة على الاتصال";
 "Fit" = "ملاءمة";
 "Focus an avatar to view its name" = "قف على الصورة الرمزية لعرض الاسم";
+"Font Size" = "حجم الخط";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "نسيت رمز PIN؟ أعد تعيينه من حساب Tuvora الخاص بك على موقع nuvio.";
 "Formatting" = "التنسيق";
 "Friends" = "للأصدقاء";
@@ -324,9 +328,12 @@
 "Remove" = "إزالة";
 "Remove anyway" = "إزالة على أي حال";
 "Remove from library" = "إزالة من المكتبة";
+"Report Issue" = "الإبلاغ عن مشكلة";
+"Report Sent" = "أُرسل التقرير";
 "Required to fetch ratings from MDBList" = "مطلوب لجلب التقييمات من MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "مطلوب لجلب مواقيت التخطي من anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "يتطلب تفعيل إثراء بيانات TMDB";
+"Reset" = "تصفير";
 "Reset formatting" = "استعادة الإعدادات";
 "Reset to Default" = "استعادة الافتراضي";
 "Resolve playable links" = "جلب الروابط";
@@ -395,6 +402,7 @@
 "Start next episode automatically when prompt appears." = "بدء الحلقة التالية تلقائياً عند ظهور الإشعار.";
 "Start saving your favorites to see them here" = "ابدأ بحفظ مفضلاتك لتراها هنا";
 "Starting %@ connection…" = "جارٍ بدء الاتصال بـ %1$@…";
+"Style" = "النمط";
 "Subtitles" = "الترجمة";
 "Subtitles Delay" = "تأخير الترجمة";
 "Sync" = "مزامنة";
@@ -411,6 +419,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "مسلسلات";
 "Terms" = "الشروط";
+"Text Color" = "لون النص";
 "These integrations are experimental and may be kept, changed, or removed later." = "هذه الإضافات تجريبية وقابلة للتعديل أو الإزالة مستقبلاً.";
 "This item does not expose a playable video file." = "هذا العنصر لا يحتوي على ملف فيديو قابل للتشغيل.";
 "This removes the Simkl account and cached Simkl data from this profile." = "هذا يحذف حساب Simkl وبيانات Simkl المخزنة مؤقتًا من هذا الملف الشخصي.";

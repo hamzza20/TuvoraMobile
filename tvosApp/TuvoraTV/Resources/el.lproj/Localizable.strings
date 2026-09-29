@@ -40,6 +40,7 @@
 "Audience Score" = "Βαθμολογία κοινού";
 "Audio" = "Ήχος";
 "Audio & Video" = "Ήχος & Βίντεο";
+"Audio Delay" = "Καθυστέρηση ήχου";
 "Audio controls and video compatibility." = "Χειριστήρια ήχου και συμβατότητα βίντεο.";
 "Auto (Best for Content)" = "Αυτόματο (Καλύτερο για το περιεχόμενο)";
 "Auto Stream Selection" = "Αυτόματη επιλογή ροής";
@@ -48,10 +49,12 @@
 "Auto-play regex match" = "Αυτόματη αναπαραγωγή με αντιστοίχιση κανονικής έκφρασης";
 "Available when Trakt is the Watch Progress source" = "Διαθέσιμο όταν το Trakt είναι η πηγή Προόδου παρακολούθησης";
 "Back" = "Πίσω";
+"Background" = "Φόντο";
 "Balanced" = "Ισορροπημένη";
 "Basic Info" = "Βασικές πληροφορίες";
 "Best quality first" = "Καλύτερη ποιότητα πρώτα";
 "Bold" = "Έντονα";
+"Bottom Offset" = "Μετατόπιση κάτω";
 "Browse and play files already in your connected accounts." = "Περιηγηθείτε και αναπαράγετε αρχεία που υπάρχουν ήδη στους συνδεδεμένους λογαριασμούς σας.";
 "Cancel" = "Ακύρωση";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Περιορισμός επαναλαμβανόμενων αποτελεσμάτων 2160p, 1080p, 720p μετά την ταξινόμηση.";
@@ -181,6 +184,7 @@
 "Finish connection approval" = "Ολοκλήρωση έγκρισης σύνδεσης";
 "Fit" = "Προσαρμογή";
 "Focus an avatar to view its name" = "Εστιάστε σε ένα avatar για να δείτε το όνομά του";
+"Font Size" = "Μέγεθος γραμματοσειράς";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Ξεχάσατε το PIN; Επαναφέρετέ το από τον λογαριασμό Tuvora στην ιστοσελίδα nuvio.";
 "Formatting" = "Μορφοποίηση";
 "Friends" = "Φίλοι";
@@ -328,9 +332,12 @@
 "Remove" = "Αφαίρεση";
 "Remove anyway" = "Αφαίρεση ούτως ή άλλως";
 "Remove from library" = "Αφαίρεση από τη βιβλιοθήκη";
+"Report Issue" = "Αναφορά προβλήματος";
+"Report Sent" = "Η αναφορά στάλθηκε";
 "Required to fetch ratings from MDBList" = "Απαιτείται για λήψη βαθμολογιών από το MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Απαιτείται για λήψη χρονοσημάνσεων από το anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Απαιτείται ενεργοποίηση εμπλουτισμού TMDB";
+"Reset" = "Επαναφορά";
 "Reset formatting" = "Επαναφορά μορφοποίησης";
 "Reset to Default" = "Επαναφορά σε προεπιλογή";
 "Resolve playable links" = "Επίλυση αναπαραγώγιμων συνδέσμων";
@@ -400,6 +407,7 @@
 "Start next episode automatically when prompt appears." = "Αυτόματη έναρξη επόμενου επεισοδίου όταν εμφανιστεί η προτροπή.";
 "Start saving your favorites to see them here" = "Αποθηκεύστε τα αγαπημένα σας για να τα δείτε εδώ";
 "Starting %@ connection…" = "Έναρξη σύνδεσης %1$@…";
+"Style" = "Στυλ";
 "Subtitles" = "Υπότιτλοι";
 "Subtitles Delay" = "Καθυστέρηση υπότιτλων";
 "Sync" = "Συγχρονισμός";
@@ -416,6 +424,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "Τηλεόραση";
 "Terms" = "Όρους χρήσης";
+"Text Color" = "Χρώμα κειμένου";
 "The Movie Database (TMDB)" = "The Ταινία Database (TMDB)";
 "These integrations are experimental and may be kept, changed, or removed later." = "Η υποστήριξη Debrid είναι πειραματική και μπορεί να διατηρηθεί, να αλλάξει ή να αφαιρεθεί αργότερα.";
 "This item does not expose a playable video file." = "Αυτό το στοιχείο δεν εκθέτει αναπαραγώγιμο αρχείο βίντεο.";

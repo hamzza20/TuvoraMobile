@@ -23,6 +23,7 @@
 "Audience Score" = "Ocena občinstva";
 "Audio" = "Zvok";
 "Audio & Video" = "Zvok in video";
+"Audio Delay" = "Zamik zvoka";
 "Audio controls and video compatibility." = "Kontrole zvoka in združljivost videa.";
 "Auto (Best for Content)" = "Samodejno (najboljše za vsebino)";
 "Auto Stream Selection" = "Samodejna izbira prenosa";
@@ -33,6 +34,7 @@
 "Balanced" = "Uravnoteženo";
 "Basic Info" = "Osnovne informacije";
 "Bold" = "Krepko";
+"Bottom Offset" = "Odmik od spodaj";
 "Cancel" = "Prekliči";
 "Cast with photos, director, and writer from TMDB" = "Igralska zasedba s fotografijami, režiser in scenarist iz TMDB";
 "Catalog" = "Katalog";
@@ -117,6 +119,7 @@
 "Fetch skip timestamps from anime-skip.com" = "Pridobi časovne žige za preskok s spletnega mesta anime-skip.com";
 "File" = "Datoteka";
 "Focus an avatar to view its name" = "Označite avatar za prikaz imena";
+"Font Size" = "Velikost pisave";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Ste pozabili kodo PIN? Ponastavite jo v svojem računu Tuvora na spletni strani Tuvora.";
 "Friends" = "Prijatelji";
 "General" = "Splošno";
@@ -232,6 +235,7 @@
 "Required to fetch ratings from MDBList" = "Zahtevano za pridobivanje ocen iz MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Zahtevano za pridobivanje časovnih žigov za preskok s spletnega mesta anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Zahteva omogočeno obogatitev s TMDB";
+"Reset" = "Ponastavi";
 "Reset to Default" = "Ponastavi na privzeto";
 "Resume" = "Nadaljuj";
 "Retry" = "Poskusi znova";
@@ -279,6 +283,7 @@
 "Start from beginning" = "Začni od začetka";
 "Start next episode automatically when prompt appears." = "Samodejno zaženi naslednjo epizodo, ko se prikaže obvestilo.";
 "Start saving your favorites to see them here" = "Začnite shranjevati priljubljene, da jih vidite tukaj";
+"Style" = "Slog";
 "Subtitles" = "Podnapisi";
 "Subtitles Delay" = "Zakasnitev podnapisov";
 "Sync" = "Uskladi";
@@ -292,6 +297,7 @@
 "TMDB movie collections in release order" = "TMDB filmske zbirke po vrstnem redu izdaje";
 "TMDB recommendation backdrops on detail and post-play screens" = "Ozadja priporočil TMDB na strani s podrobnostmi";
 "TUVORA" = "NUVIO";
+"Text Color" = "Barva besedila";
 "This will disconnect your Trakt account from Tuvora." = "To bo prekinilo povezavo vašega Trakt računa z Tuvora.";
 "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone." = "S tem boste trajno izbrisali ta profil in vse njegove podatke, vključno s knjižnico, zgodovino ogledov in nastavitvami dodatkov. Tega dejanja ni mogoče razveljaviti.";
 "Title A-Z" = "Naslov A-Ž";

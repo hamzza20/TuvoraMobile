@@ -33,6 +33,7 @@
 "Balanced" = "Ausgewogen";
 "Basic Info" = "Grundlegende Informationen";
 "Bold" = "Fettdruck";
+"Bottom Offset" = "Unterer Versatz";
 "Cancel" = "Abbrechen";
 "Cast with photos, director, and writer from TMDB" = "Besetzung mit Fotos, Regisseur und Drehbuchautor von TMDB";
 "Catalog" = "Katalog";
@@ -117,6 +118,7 @@
 "Finish connection approval" = "Trakt-Anmeldung in deinem Browser abschließen";
 "Fit" = "Anpassen";
 "Focus an avatar to view its name" = "Avatar fokussieren, um seinen Namen anzuzeigen";
+"Font Size" = "Schriftgröße";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "PIN vergessen? Setze sie über dein Tuvora-Konto auf der Tuvora-Website zurück.";
 "Friends" = "Freunde";
 "General" = "Allgemein";
@@ -222,6 +224,7 @@
 "Remove from library" = "Aus Bibliothek entfernen";
 "Required to fetch ratings from MDBList" = "Erforderlich, um Bewertungen von MDBList abzurufen";
 "Required to fetch skip timestamps from anime-skip.com" = "Erforderlich, um Skip-Zeitstempel von anime-skip.com abzurufen";
+"Reset" = "Zurücksetzen";
 "Reset to Default" = "Auf Standard zurücksetzen";
 "Resume" = "Fortsetzen";
 "Retry" = "Wiederholen";
@@ -267,6 +270,7 @@
 "Start from beginning" = "Von Anfang an starten";
 "Start next episode automatically when prompt appears." = "Nächste Folge automatisch starten, wenn die Aufforderung erscheint.";
 "Start saving your favorites to see them here" = "Speichern Sie Ihre Favoriten, um sie hier anzuzeigen";
+"Style" = "Stil";
 "Subtitles" = "Untertitel";
 "Subtitles Delay" = "Untertitelverzögerung";
 "Sync" = "Synchronisieren";
@@ -280,6 +284,7 @@
 "TMDB movie collections in release order" = "TMDB-Filmsammlungen in Veröffentlichungsreihenfolge";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB-Empfehlungshintergründe auf der Detailseite";
 "TUVORA" = "NUVIO";
+"Text Color" = "Textfarbe";
 "This will disconnect your Trakt account from Tuvora." = "Dadurch wird Ihr Trakt-Konto von Tuvora getrennt.";
 "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone." = "Dadurch werden dieses Profil und alle zugehörigen Daten, einschließlich Bibliothek, Verlauf und Add-on-Einstellungen, dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.";
 "Title A-Z" = "Titel A-Z";

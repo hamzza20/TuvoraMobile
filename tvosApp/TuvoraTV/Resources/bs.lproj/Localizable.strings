@@ -26,6 +26,7 @@
 "Back" = "Nazad";
 "Balanced" = "Balansirano";
 "Basic Info" = "Osnovne Informacije";
+"Bottom Offset" = "Donji Pomak";
 "Cancel" = "Otkaži";
 "Cast with photos, director, and writer from TMDB" = "Glumci sa slikama, režiser i scenarista sa TMDB-a";
 "Catalog" = "Katalog";
@@ -100,6 +101,7 @@
 "Fetch skip timestamps from anime-skip.com" = "Dohvati vremenske oznake za preskakanje sa anime-skip.com";
 "File" = "Fajl";
 "Focus an avatar to view its name" = "Fokusiraj avatar da vidiš njegovo ime";
+"Font Size" = "Veličina Fonta";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Zaboravljen PIN? Resetuj ga sa svog Tuvora računa na Tuvora web stranici.";
 "General" = "Općenito";
 "Generating QR…" = "Generisanje QR koda…";
@@ -196,6 +198,7 @@
 "Required to fetch ratings from MDBList" = "Potreban za dohvaćanje ocjena sa MDBList-a";
 "Required to fetch skip timestamps from anime-skip.com" = "Potreban za dohvaćanje vremenskih oznaka sa anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Zahtijeva omogućeno TMDB obogaćivanje";
+"Reset" = "Resetuj";
 "Reset to Default" = "Vrati na Zadano";
 "Resume" = "Nastavi";
 "Retry" = "Pokušaj ponovo";
@@ -237,6 +240,7 @@
 "Start from beginning" = "Počni ispočetka";
 "Start next episode automatically when prompt appears." = "Automatski pokreni sljedeću epizodu kada se pojavi prompt.";
 "Start saving your favorites to see them here" = "Počni dodavati favorite da ih vidiš ovdje";
+"Style" = "Stil";
 "Subtitles" = "Titlovi";
 "Subtitles Delay" = "Odgoda Titlova";
 "Sync" = "Sinhronizuj";
@@ -250,6 +254,7 @@
 "TMDB movie collections in release order" = "TMDB filmske kolekcije po redoslijedu izlaska";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB preporuke backdrop slika na stranici detalja";
 "TUVORA" = "NUVIO";
+"Text Color" = "Boja Teksta";
 "This will disconnect your Trakt account from Tuvora." = "Ovo će odspojiti tvoj Trakt račun sa Nuvia.";
 "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone." = "Ovo će trajno izbrisati ovaj profil i sve njegove podatke uključujući biblioteku, historiju gledanja i postavke addona. Ovo se ne može poništiti.";
 "Title A-Z" = "Naslov A-Ž";

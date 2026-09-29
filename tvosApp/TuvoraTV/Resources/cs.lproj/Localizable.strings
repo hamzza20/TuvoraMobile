@@ -38,6 +38,7 @@
 "Audience Score" = "Hodnocení publika";
 "Audio" = "Zvuk";
 "Audio & Video" = "Audio a video";
+"Audio Delay" = "Zpoždění zvuku";
 "Audio controls and video compatibility." = "Ovládání zvuku a kompatibilita videa.";
 "Auto (Best for Content)" = "Auto (Nejlepší pro obsah)";
 "Auto Stream Selection" = "Automatický výběr streamu";
@@ -50,6 +51,7 @@
 "Basic Info" = "Základní informace";
 "Best quality first" = "Nejlepší kvalita první";
 "Bold" = "Tučné";
+"Bottom Offset" = "Spodní posun";
 "Browse and play files already in your connected accounts." = "Procházejte a přehrávejte soubory, které již máte v připojených účtech.";
 "Cancel" = "Zrušit";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Omezit opakující se výsledky 2160p, 1080p, 720p po seřazení.";
@@ -172,6 +174,7 @@
 "Finish connection approval" = "Dokončete přihlášení do Trakt ve svém prohlížeči.";
 "Fit" = "Přizpůsobit";
 "Focus an avatar to view its name" = "Zaměřte avatara pro zobrazení jeho jména";
+"Font Size" = "Velikost písma";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Zapomněli jste PIN? Resetujte jej ze svého účtu Tuvora na webu nuvio.";
 "Formatting" = "Formátování";
 "Friends" = "Přátelé";
@@ -313,6 +316,8 @@
 "Remove" = "Odebrat";
 "Remove anyway" = "Přesto odebrat";
 "Remove from library" = "Odebrat z knihovny";
+"Report Issue" = "Nahlásit problém";
+"Report Sent" = "Hlášení odesláno";
 "Required to fetch ratings from MDBList" = "Vyžadováno pro získání hodnocení z MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Vyžadováno pro získání časových značek přeskočení z anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Vyžaduje povolené obohacení TMDB";
@@ -381,6 +386,7 @@
 "Start from beginning" = "Přehrát od začátku";
 "Start next episode automatically when prompt appears." = "Spustit další epizodu automaticky, když se objeví výzva.";
 "Start saving your favorites to see them here" = "Začněte ukládat své oblíbené, abyste je zde viděli";
+"Style" = "Styl";
 "Subtitles" = "Titulky";
 "Subtitles Delay" = "Zpoždění titulků";
 "Sync" = "Synchronizovat";
@@ -396,6 +402,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Pozadí doporučení TMDB na stránce podrobností";
 "TUVORA" = "NUVIO";
 "Terms" = "Podmínkami";
+"Text Color" = "Barva textu";
 "These integrations are experimental and may be kept, changed, or removed later." = "Tyto integrace jsou experimentální a mohou být později zachovány, změněny nebo odstraněny.";
 "This item does not expose a playable video file." = "Tato položka neobsahuje žádný přehratelný video soubor.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Tímto se z profilu odebere účet Simkl a data Simkl uložená v mezipaměti.";

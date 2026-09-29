@@ -33,6 +33,7 @@
 "Ask a connected service for playable links when a result needs it. This may add the item to that service." = "Vraag een verbonden service om afspeelbare links wanneer een resultaat dat nodig heeft. Hierdoor kan het item aan die service worden toegevoegd.";
 "Audience Score" = "Publieksscore";
 "Audio & Video" = "Audio & video";
+"Audio Delay" = "Audiovertraging";
 "Audio controls and video compatibility." = "Audiobediening en videocompatibiliteit.";
 "Auto (Best for Content)" = "Automatisch (Beste voor inhoud)";
 "Auto Stream Selection" = "Automatische streamselectie";
@@ -41,10 +42,12 @@
 "Auto-play regex match" = "Automatisch afspelen bij regex-match";
 "Available when Trakt is the Watch Progress source" = "Beschikbaar wanneer Trakt de bron voor kijkvoortgang is";
 "Back" = "Terug";
+"Background" = "Achtergrond";
 "Balanced" = "Gebalanceerd";
 "Basic Info" = "Basisinformatie";
 "Best quality first" = "Beste kwaliteit eerst";
 "Bold" = "Vetgedrukt";
+"Bottom Offset" = "Offset onderaan";
 "Browse and play files already in your connected accounts." = "Blader door en speel bestanden af die al in je verbonden accounts staan.";
 "Cancel" = "Annuleren";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Beperk herhaalde 2160p-, 1080p- en 720p-resultaten na het sorteren.";
@@ -168,6 +171,7 @@
 "Finish connection approval" = "Goedkeuring van verbinding voltooien";
 "Fit" = "Passend";
 "Focus an avatar to view its name" = "Zet de focus op een avatar om de naam te zien";
+"Font Size" = "Lettergrootte";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Pincode vergeten? Stel deze opnieuw in via je Tuvora-account op de Tuvora-website.";
 "Formatting" = "Opmaak";
 "Friends" = "Vrienden";
@@ -308,9 +312,12 @@
 "Remove" = "Verwijderen";
 "Remove anyway" = "Toch verwijderen";
 "Remove from library" = "Verwijderen uit bibliotheek";
+"Report Issue" = "Probleem melden";
+"Report Sent" = "Rapport verzonden";
 "Required to fetch ratings from MDBList" = "Vereist om beoordelingen van MDBList op te halen";
 "Required to fetch skip timestamps from anime-skip.com" = "Vereist om skip-tijdstempels op te halen van anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Vereist dat TMDB-verrijking is ingeschakeld";
+"Reset" = "Herstellen";
 "Reset formatting" = "Opmaak herstellen";
 "Reset to Default" = "Herstellen naar standaard";
 "Resolve playable links" = "Afspeelbare links ophalen";
@@ -379,6 +386,7 @@
 "Start next episode automatically when prompt appears." = "Start automatisch de volgende aflevering wanneer de melding verschijnt.";
 "Start saving your favorites to see them here" = "Begin met het opslaan van je favorieten om ze hier te zien";
 "Starting %@ connection…" = "%1$@-verbinding starten…";
+"Style" = "Stijl";
 "Subtitles" = "Ondertiteling";
 "Subtitles Delay" = "Ondertitelvertraging";
 "Sync" = "Synchroniseren";
@@ -395,6 +403,7 @@
 "TUVORA" = "NUVIO";
 "TV" = "Tv";
 "Terms" = "Voorwaarden";
+"Text Color" = "Tekstkleur";
 "These integrations are experimental and may be kept, changed, or removed later." = "Deze integraties zijn experimenteel en kunnen later worden behouden, gewijzigd of verwijderd.";
 "This item does not expose a playable video file." = "Dit item bevat geen afspeelbaar videobestand.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Hiermee worden het Simkl-account en de opgeslagen Simkl-gegevens uit dit profiel verwijderd.";

@@ -35,6 +35,7 @@
 "Audience Score" = "オーディエンススコア";
 "Audio" = "音声";
 "Audio & Video" = "音声と映像";
+"Audio Delay" = "音声遅延";
 "Audio controls and video compatibility." = "音声設定と映像互換性";
 "Auto (Best for Content)" = "自動（コンテンツに最適化）";
 "Auto Stream Selection" = "ストリームの自動選択";
@@ -46,6 +47,7 @@
 "Basic Info" = "基本情報";
 "Best quality first" = "高品質優先";
 "Bold" = "太字";
+"Bottom Offset" = "下部オフセット";
 "Browse and play files already in your connected accounts." = "接続済みアカウントのファイルを参照して再生";
 "Cancel" = "キャンセル";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "並べ替え後に2160p、1080p、720pの重複を制限します。";
@@ -165,6 +167,7 @@
 "Finish connection approval" = "ブラウザでTraktのサインインを完了してください";
 "Fit" = "フィット";
 "Focus an avatar to view its name" = "アバターを選択して名前を確認";
+"Font Size" = "フォントサイズ";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "PINを忘れた場合はTuvoraウェブサイトのアカウントページからリセットできます";
 "Formatting" = "フォーマット";
 "Friends" = "友達";
@@ -304,6 +307,7 @@
 "Required to fetch ratings from MDBList" = "MDBListから評価を取得するために必要";
 "Required to fetch skip timestamps from anime-skip.com" = "anime-skip.comからスキップタイムスタンプを取得するために必要";
 "Requires TMDB enrichment to be enabled" = "TMDB補完を有効にする必要があります";
+"Reset" = "リセット";
 "Reset formatting" = "フォーマットをリセット";
 "Reset to Default" = "デフォルトにリセット";
 "Resolve playable links" = "再生可能リンクを解決";
@@ -366,6 +370,7 @@
 "Start from beginning" = "最初から再生";
 "Start next episode automatically when prompt appears." = "プロンプトが表示されたら自動的に次のエピソードを開始";
 "Start saving your favorites to see them here" = "お気に入りを保存するとここに表示されます";
+"Style" = "スタイル";
 "Subtitles" = "字幕";
 "Subtitles Delay" = "字幕の遅延";
 "Sync" = "同期";
@@ -380,6 +385,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "詳細ページの関連作品バックドロップ";
 "TUVORA" = "NUVIO";
 "Terms" = "利用規約";
+"Text Color" = "文字色";
 "These integrations are experimental and may be kept, changed, or removed later." = "これらの連携は実験的であり、今後保持・変更・削除される可能性があります。";
 "This item does not expose a playable video file." = "このアイテムは再生可能なビデオファイルを公開していません。";
 "This will disconnect your Trakt account from Tuvora." = "TuvoraからTraktアカウントが切断されます";

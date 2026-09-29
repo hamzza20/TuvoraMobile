@@ -36,6 +36,7 @@
 "Audience Score" = "Оцінка глядачів (Audience)";
 "Audio" = "Аудіо";
 "Audio & Video" = "Аудіо та відео";
+"Audio Delay" = "Затримка аудіо";
 "Audio controls and video compatibility." = "Налаштування аудіо та сумісність відео.";
 "Auto (Best for Content)" = "Авто (Найкраще для контенту)";
 "Auto Stream Selection" = "Автоматичний вибір потоку";
@@ -47,6 +48,7 @@
 "Basic Info" = "Базова інформація";
 "Best quality first" = "Найкраща якість";
 "Bold" = "Жирний";
+"Bottom Offset" = "Зміщення знизу";
 "Browse and play files already in your connected accounts." = "Переглядайте та відтворюйте файли, що вже знаходяться в підключених акаунтах.";
 "Cancel" = "Скасувати";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Обмежити повторювані результати 2160p, 1080p, 720p після сортування.";
@@ -157,6 +159,7 @@
 "Filter streams by file size." = "Фільтрувати потоки за розміром файлу.";
 "Filters & Sorting" = "Фільтри та сортування";
 "Focus an avatar to view its name" = "Сфокусуйтесь на аватарі, щоб побачити його назву";
+"Font Size" = "Розмір шрифту";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Забули PIN? Скиньте його у вашому акаунті Tuvora на веб-сайті Tuvora.";
 "Formatting" = "Форматування";
 "Friends" = "Для друзів";
@@ -289,9 +292,12 @@
 "Refresh cloud library" = "Оновити хмарну бібліотеку";
 "Remove" = "Видалити";
 "Remove from library" = "Видалити з бібліотеки";
+"Report Issue" = "Повідомити про проблему";
+"Report Sent" = "Звіт надіслано";
 "Required to fetch ratings from MDBList" = "Потрібен для отримання рейтингів з MDBList";
 "Required to fetch skip timestamps from anime-skip.com" = "Потрібен для отримання таймкодів з anime-skip.com";
 "Requires TMDB enrichment to be enabled" = "Потрібне увімкнене збагачення TMDB";
+"Reset" = "Скинути";
 "Reset formatting" = "Скинути форматування";
 "Reset to Default" = "Скинути за замовчуванням";
 "Resolve playable links" = "Отримувати відтворювані посилання";
@@ -352,6 +358,7 @@
 "Start from beginning" = "Почати спочатку";
 "Start next episode automatically when prompt appears." = "Запускати наступний епізод автоматично при появі підказки.";
 "Start saving your favorites to see them here" = "Починайте зберігати улюблене, щоб побачити це тут";
+"Style" = "Стиль";
 "Subtitles" = "Субтитри";
 "Subtitles Delay" = "Затримка субтитрів";
 "Sync" = "Синхронізація";
@@ -366,6 +373,7 @@
 "TMDB recommendation backdrops on detail and post-play screens" = "Фони рекомендацій TMDB на сторінці деталей";
 "TUVORA" = "NUVIO";
 "TV" = "ТВ";
+"Text Color" = "Колір тексту";
 "These integrations are experimental and may be kept, changed, or removed later." = "Ці інтеграції є експериментальними та можуть бути збережені, змінені або видалені пізніше.";
 "This item does not expose a playable video file." = "Цей елемент не містить відтворюваного відеофайлу.";
 "This will disconnect your Trakt account from Tuvora." = "Це відключить ваш акаунт Trakt від Tuvora.";

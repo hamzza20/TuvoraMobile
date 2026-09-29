@@ -40,6 +40,7 @@
 "Audience Score" = "İzleyici Puanı";
 "Audio" = "Ses";
 "Audio & Video" = "Ses & Video";
+"Audio Delay" = "Ses Gecikmesi";
 "Audio controls and video compatibility." = "Ses kontrolleri ve video uyumluluğu.";
 "Auto (Best for Content)" = "Otomatik (İçerik için en iyisi)";
 "Auto Stream Selection" = "Otomatik Kaynak Seçimi";
@@ -48,10 +49,12 @@
 "Auto-play regex match" = "Regex eşleşmesini otomatik oynat";
 "Available when Trakt is the Watch Progress source" = "İzleme İlerlemesi kaynağı Trakt olduğunda kullanılabilir";
 "Back" = "Geri";
+"Background" = "Arka Plan";
 "Balanced" = "Dengeli";
 "Basic Info" = "Temel Bilgiler";
 "Best quality first" = "Önce en iyi kalite";
 "Bold" = "Kalın";
+"Bottom Offset" = "Alt Konum";
 "Browse and play files already in your connected accounts." = "Bağlı hesaplarınızda zaten var olan dosyalara göz atın ve oynatın.";
 "Cancel" = "İptal";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Sıralamadan sonra tekrarlanan 2160p, 1080p, 720p sonuçlarını sınırlandırır.";
@@ -182,6 +185,7 @@
 "Finish connection approval" = "Bağlantı onayını tamamla";
 "Fit" = "Sığdır";
 "Focus an avatar to view its name" = "İsmini görmek için resmin üzerine gelin";
+"Font Size" = "Yazı Tipi Boyutu";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "PIN mi unuttunuz? Tuvora web sitesinden sıfırlayabilirsiniz.";
 "Formatting" = "Biçimlendirme";
 "Friends" = "Arkadaşlar";
@@ -326,9 +330,12 @@
 "Remove" = "Kaldır";
 "Remove anyway" = "Yine de kaldır";
 "Remove from library" = "Kütüphaneden kaldır";
+"Report Issue" = "Sorun Bildir";
+"Report Sent" = "Rapor Gönderildi";
 "Required to fetch ratings from MDBList" = "MDBList'ten veri alabilmek için gerekli";
 "Required to fetch skip timestamps from anime-skip.com" = "Anime-skip.com sisteminden veri çekebilmek için gerekli geliştirici anahtarı";
 "Requires TMDB enrichment to be enabled" = "TMDB zenginleştirmesinin etkin olması gerekir";
+"Reset" = "Sıfırla";
 "Reset formatting" = "Biçimlendirmeyi sıfırla";
 "Reset to Default" = "Varsayılana Sıfırla";
 "Resolve playable links" = "Oynatılabilir bağlantıları çöz";
@@ -398,6 +405,7 @@
 "Start next episode automatically when prompt appears." = "Ekran çıktığında sonraki bölümü otomatik olarak başlat.";
 "Start saving your favorites to see them here" = "İçerik eklemek için içerik detaylarındaki + tuşunu kullanın";
 "Starting %@ connection…" = "%1$@ bağlantısı başlatılıyor…";
+"Style" = "Stil";
 "Subtitles" = "Altyazılar";
 "Subtitles Delay" = "Altyazı Gecikmesi";
 "Sync" = "Senkronize Et";
@@ -414,6 +422,7 @@
 "TUVORA" = "NUVİO";
 "TV" = "Dizi";
 "Terms" = "Şartlar";
+"Text Color" = "Metin Rengi";
 "These integrations are experimental and may be kept, changed, or removed later." = "Bu entegrasyonlar deneyseldir; daha sonra tutulabilir, değiştirilebilir veya kaldırılabilir.";
 "This item does not expose a playable video file." = "Bu öğe oynatılabilir bir video dosyası barındırmıyor.";
 "This removes the Simkl account and cached Simkl data from this profile." = "Bu, Simkl hesabını ve önbelleğe alınmış Simkl verilerini bu profilden kaldırır.";
