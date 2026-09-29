@@ -26,10 +26,10 @@ struct RootView: View {
     private var gate: some View {
         Group {
             switch screen {
-            case .loading: ProgressView("Loading")
+            case .loading: SplashView(message: nil)
             case .signIn: SignInView()
             case .profilePicker: ProfilePickerView()
-            case .switching: ProgressView("Opening your profile")
+            case .switching: SplashView(message: nil)
             case .main: MainShell()
             }
         }
@@ -43,3 +43,25 @@ struct RootView: View {
     }
 }
 
+
+
+/// NuvioTV's startup splash (startup_splash_enabled): the Tuvora wordmark centred on the app background,
+/// used while the session restores and while a profile opens.
+struct SplashView: View {
+    let message: String?
+    @State private var pulse = false
+
+    var body: some View {
+        ZStack {
+            NuvioPalette.marigold.background.ignoresSafeArea()
+            VStack(spacing: dp(24)) {
+                Image("app_logo_wordmark").resizable().scaledToFit().frame(height: dp(60))
+                    .opacity(pulse ? 1 : 0.7)
+                    .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
+                ProgressView().tint(NuvioPalette.marigold.secondary)
+                if let message { Text(message).font(NuvioType.bodyMedium).foregroundStyle(NuvioPalette.marigold.textSecondary) }
+            }
+        }
+        .onAppear { pulse = true }
+    }
+}

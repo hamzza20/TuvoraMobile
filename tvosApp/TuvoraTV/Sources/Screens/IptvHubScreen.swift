@@ -103,12 +103,13 @@ private struct IptvShelves: View {
 private struct IptvShelf: View {
     let category: XtreamHubCategory
     let onOpen: (MetaPreview) -> Void
+    @State private var seeAll: String?
 
     var body: some View {
         let size = NuvioCardSize.hubPortrait
         VStack(alignment: .leading, spacing: 0) {
             NuvioShelfHeader(title: category.name) {
-                if category.hasMore { SeeAllButton { TvIptvBrowse.shared.loadMore(categoryId: category.id) } }
+                if category.hasMore || category.items.count > 12 { SeeAllButton { seeAll = category.id } }
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: NuvioTokens.Layout.itemGap) {
@@ -133,6 +134,45 @@ private struct IptvShelf: View {
             .focusSection()
         }
         .onAppear { if !category.loaded && !category.loading { TvIptvBrowse.shared.loadCategory(categoryId: category.id) } }
+        .fullScreenCover(item: Binding(get: { seeAll.map(CategoryBox.init) }, set: { seeAll = $0?.id })) { box in
+            IptvCategoryScreen(categoryId: box.id, onOpen: onOpen)
+        }
+    }
+}
+
+private struct CategoryBox: Identifiable { let id: String }
+
+/// "See all": NuvioTV's category page — headlineSmall title over an adaptive grid (poster width + 12).
+private struct IptvCategoryScreen: View {
+    let categoryId: String
+    let onOpen: (MetaPreview) -> Void
+    @Environment(\.nuvio) private var colors
+    @Environment(\.dismiss) private var dismiss
+    @State private var category: XtreamHubCategory?
+
+    var body: some View {
+        let size = NuvioCardSize.hubPortrait
+        ZStack {
+            colors.background.ignoresSafeArea()
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: dp(16)) {
+                    Text(category?.name ?? "").font(NuvioType.headlineSmall).foregroundStyle(colors.textPrimary)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: size.width, maximum: size.width), spacing: dp(12))], alignment: .leading, spacing: dp(24)) {
+                        ForEach(category?.items ?? [], id: \.id) { item in
+                            NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster, width: size.width, height: size.height) {
+                                dismiss(); onOpen(item)
+                            }
+                            .onAppear {
+                                if item.id == category?.items.last?.id, category?.hasMore == true { TvIptvBrowse.shared.loadMore(categoryId: categoryId) }
+                            }
+                        }
+                    }
+                    .focusSection()
+                }
+                .padding(.horizontal, dp(52)).padding(.vertical, 60)
+            }
+        }
+        .task { for await hub in TvIptvBrowse.shared.state { category = hub.categories.first { $0.id == categoryId } } }
     }
 }
 
@@ -157,12 +197,14 @@ private struct LiveGuideView: View {
     @State private var now = TvLiveGuide.shared.nowMs()
     @FocusState private var channelsFocused: Bool
     @State private var recents: [XtreamLiveRecent] = []
+    @State private var favorites: Set<String> = []
 
     private static let categoryWidth = dp(220), labelWidth = dp(230), rowHeight = dp(44), previewHeight = dp(180)
 
     private var visible: [LiveGuideChannel] {
         switch category {
         case "all": return channels
+        case "favorites": return channels.filter { favorites.contains($0.contentId) }
         case "recent":
             let ids = recents.map(\.contentId)
             return ids.compactMap { id in channels.first { $0.contentId == id } }
@@ -186,9 +228,15 @@ private struct LiveGuideView: View {
         .task(id: accountId) {
             loading = true
             channels = (try? await TvLiveGuide.shared.channels(accountId: accountId)) ?? []
+            favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
             loading = false
         }
         .task { for await next in TvLiveGuide.shared.recents { recents = next } }
+        .task {
+            for await _ in TvLiveGuide.shared.libraryChanges {
+                favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+            }
+        }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 30_000_000_000)
@@ -202,6 +250,7 @@ private struct LiveGuideView: View {
     private var categoryColumn: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: dp(2)) {
+                GuideCategoryRow(title: "Favorites", selected: category == "favorites") { category = "favorites" }
                 GuideCategoryRow(title: "Recent", selected: category == "recent") { category = "recent" }
                 GuideCategoryRow(title: "All channels", selected: category == "all") { category = "all" }
                 ForEach(categories, id: \.0) { id, name in
@@ -234,7 +283,7 @@ private struct LiveGuideView: View {
                     }
                 }
                 Spacer()
-                Text("OK preview · OK again fullscreen").font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
+                Text("OK preview · OK again fullscreen · hold OK").font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -281,9 +330,19 @@ private struct LiveGuideView: View {
                     LazyVStack(spacing: dp(4)) {
                         ForEach(Array(visible.enumerated()), id: \.element.contentId) { index, channel in
                             GuideChannelRow(number: index + 1, channel: channel, programmes: programmes[channel.contentId] ?? [],
+                                            favorite: favorites.contains(channel.contentId),
                                             now: now, labelWidth: Self.labelWidth, height: Self.rowHeight,
                                             onFocus: { focusedChannel = channel },
                                             onSelect: { select(channel) })
+                                // Hold OK (NuvioTV) = the tvOS context menu.
+                                .contextMenu {
+                                    Button(favorites.contains(channel.contentId) ? "Remove from Favorites" : "Add to Favorites") {
+                                        Task {
+                                            try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
+                                            favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+                                        }
+                                    }
+                                }
                                 .task {
                                     guard programmes[channel.contentId] == nil else { return }
                                     programmes[channel.contentId] = (try? await TvLiveGuide.shared.programmes(contentId: channel.contentId)) ?? []
@@ -370,6 +429,7 @@ private struct GuideChannelRow: View {
     let number: Int
     let channel: LiveGuideChannel
     let programmes: [XtreamProgram]
+    let favorite: Bool
     let now: Int64
     let labelWidth: CGFloat
     let height: CGFloat
@@ -387,6 +447,9 @@ private struct GuideChannelRow: View {
                         .frame(width: dp(30), height: dp(30))
                         .clipShape(RoundedRectangle(cornerRadius: dp(4)))
                     Text(channel.name).font(NuvioType.bodySmall).foregroundStyle(colors.textPrimary).lineLimit(1)
+                    if favorite {
+                        Image("md_star").renderingMode(.template).resizable().frame(width: dp(10), height: dp(10)).foregroundStyle(colors.primary)
+                    }
                     if channel.pinned {
                         Image("md_favorite").renderingMode(.template).resizable().frame(width: dp(10), height: dp(10)).foregroundStyle(colors.primary)
                     }
