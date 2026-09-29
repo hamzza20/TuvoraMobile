@@ -73,3 +73,14 @@ class PlaybackLanePolicyTest {
         assertNull(PlaybackLanePolicy.escalation(PlaybackLane.Libmpv, alreadyEscalated = false))
     }
 }
+
+class EngineSettingStoreTest {
+    @Test
+    fun `stored engine names map to settings and anything else is auto`() {
+        assertEquals(EngineSetting.Libmpv, EngineSettingStore.parse("libmpv"))
+        assertEquals(EngineSetting.AvPlayer, EngineSettingStore.parse(" AVPlayer "))
+        assertEquals(EngineSetting.Auto, EngineSettingStore.parse("auto"))
+        assertEquals(EngineSetting.Auto, EngineSettingStore.parse(null))
+        assertEquals(EngineSetting.Auto, EngineSettingStore.parse("exoplayer"))
+    }
+}

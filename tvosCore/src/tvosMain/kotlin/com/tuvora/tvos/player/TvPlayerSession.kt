@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIViewController
 import kotlin.time.TimeSource
 
@@ -100,7 +101,7 @@ class TvPlayerSession(
                 LaneInput(
                     url = launch.sourceUrl,
                     isLive = liveChannel,
-                    setting = EngineSetting.Auto,
+                    setting = EngineSettingStore.parse(NSUserDefaults.standardUserDefaults.stringForKey(EngineSettingStore.KEY)),
                     remembered = TvLaneMemory.get(progressKey),
                     hasExternalSubtitles = launch.externalSubtitles.isNotEmpty(),
                     mimeType = launch.sourceResponseHeaders.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value,

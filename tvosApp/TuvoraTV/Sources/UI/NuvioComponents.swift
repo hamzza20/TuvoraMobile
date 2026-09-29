@@ -58,7 +58,7 @@ struct NuvioPosterCard: View {
     let imageURL: String?
     let width: CGFloat
     let height: CGFloat
-    var showLabel = true
+    var showLabel = NuvioLayoutPrefs.posterLabels
     var onFocus: (() -> Void)? = nil
     let action: () -> Void
     @Environment(\.nuvio) private var colors
@@ -186,9 +186,25 @@ struct NuvioStateMessage: View {
     }
 }
 
+/// Apple TV layout preferences (Settings → Layout). Device-local like NuvioTV's LayoutPreferenceDataStore;
+/// SwiftUI screens read them with `@AppStorage(key)`, plain code through these accessors.
+enum NuvioLayoutPrefs {
+    static let posterWidthKey = "tvos.layout.posterWidthDp"
+    static let posterLabelsKey = "tvos.layout.posterLabels"
+    static let showHeroKey = "tvos.layout.showHero"
+    static let cwEnabledKey = "tvos.layout.cwEnabled"
+    static let cwStyleKey = "tvos.layout.cwStyle"
+    static let collapseSidebarKey = "tvos.layout.collapseSidebar"
+
+    static var posterLabels: Bool { UserDefaults.standard.object(forKey: posterLabelsKey) as? Bool ?? true }
+}
+
 /// Poster size preference (LayoutPreferenceDataStore `poster_card_width_dp`, default 126; height ×1.5).
 enum NuvioCardSize {
-    static var posterWidthDp: CGFloat = 126
+    static var posterWidthDp: CGFloat {
+        let stored = UserDefaults.standard.double(forKey: NuvioLayoutPrefs.posterWidthKey)
+        return stored > 0 ? CGFloat(stored) : 126
+    }
     /// Hub portrait card: pref × 0.9072 (XtreamHubScreen.kt:824-829).
     static var hubPortrait: CGSize { CGSize(width: dp(posterWidthDp * 0.9072), height: dp(posterWidthDp * 0.9072 * 1.5)) }
     /// Hub live tile: 1.6616 × pref wide at 1.77:1.
