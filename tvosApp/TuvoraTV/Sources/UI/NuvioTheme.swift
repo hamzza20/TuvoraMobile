@@ -196,8 +196,24 @@ final class PlaybackCoordinator: ObservableObject {
     @Published var session: TvPlayerSessionBox?
     @Published var message: String?
 
-    func play(_ session: TvPlayerSession) { self.session = TvPlayerSessionBox(session: session) }
+    /// A source/episode picker to open once the player has closed (Next Episode, Episodes panel).
+    @Published var pendingPicker: TvCwTargetBox?
+
+    func play(_ session: TvPlayerSession) {
+        if let current = self.session?.session, current !== session { current.close() }   // switching source
+        self.session = TvPlayerSessionBox(session: session)
+    }
     func stop() { session = nil }
+
+    /// Leave the player and open the source picker for [video] (next episode, or one chosen in the Episodes panel).
+    func openSources(meta: MetaDetails, video: MetaVideo?) {
+        session?.session.close()
+        session = nil
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)   // let the player's cover finish dismissing
+            pendingPicker = TvCwTargetBox(target: TvCwTarget(meta: meta, video: video))
+        }
+    }
 
     func notify(_ text: String) {
         message = text

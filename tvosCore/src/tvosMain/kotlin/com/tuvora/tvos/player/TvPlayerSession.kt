@@ -56,6 +56,9 @@ data class TvPlayerState(
     val bufferedMs: Long = 0L,
     /** Non-null when playback failed and nothing is left to try. */
     val errorMessage: String? = null,
+    /** Series only: the next episode, and whether its card is due (PlayerNextEpisodeRules thresholds). */
+    val nextEpisode: com.nuvio.app.features.details.MetaVideo? = null,
+    val showNextEpisode: Boolean = false,
 )
 
 /**
@@ -118,7 +121,30 @@ class TvPlayerSession(
     /** The current engine's view controller. Changes when the session escalates; see [TvPlayerState.engineGeneration]. */
     fun viewController(): UIViewController? = (bridge ?: open(_state.value.lane, launch.initialPositionMs))?.createPlayerViewController()
 
+    /** The series this episode belongs to (loaded on attach), for the Episodes panel and Next Episode. */
+    var seriesMeta: com.nuvio.app.features.details.MetaDetails? = null
+        private set
+
+    val currentSeason: Int? get() = launch.seasonNumber
+    val currentEpisode: Int? get() = launch.episodeNumber
+    val currentVideoId: String get() = launch.videoId ?: launch.parentMetaId
+
+    private fun loadSeries() {
+        if (launch.seasonNumber == null || launch.episodeNumber == null || seriesMeta != null) return
+        scope.launch {
+            val meta = runCatching {
+                com.nuvio.app.features.details.MetaDetailsRepository.fetch(launch.parentMetaType, launch.parentMetaId)
+            }.getOrNull() ?: return@launch
+            seriesMeta = meta
+            val next = com.nuvio.app.features.player.skip.PlayerNextEpisodeRules.resolveNextEpisode(
+                videos = meta.videos, currentSeason = launch.seasonNumber, currentEpisode = launch.episodeNumber,
+            )
+            _state.value = _state.value.copy(nextEpisode = next)
+        }
+    }
+
     fun attach() {
+        loadSeries()
         if (bridge == null) open(_state.value.lane, launch.initialPositionMs)
         if (pollJob?.isActive == true) return
         pollJob = scope.launch {
@@ -255,7 +281,18 @@ class TvPlayerSession(
                 .takeIf { it.isNotEmpty() }
                 ?.let(b::applyAudioLanguagePreferences)
         }
+        val settings = PlayerSettingsRepository.uiState.value
+        val showNext = _state.value.nextEpisode != null && snapshot.durationMs > 0 &&
+            com.nuvio.app.features.player.skip.PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
+                positionMs = snapshot.positionMs,
+                durationMs = snapshot.durationMs,
+                skipIntervals = emptyList(),
+                thresholdMode = settings.nextEpisodeThresholdMode,
+                thresholdPercent = settings.nextEpisodeThresholdPercent,
+                thresholdMinutesBeforeEnd = settings.nextEpisodeThresholdMinutesBeforeEnd,
+            )
         _state.value = _state.value.copy(
+            showNextEpisode = showNext,
             isLoading = snapshot.isLoading,
             isPlaying = snapshot.isPlaying,
             isEnded = snapshot.isEnded,

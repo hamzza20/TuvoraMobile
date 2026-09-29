@@ -41,6 +41,17 @@ struct MainShell: View {
     }()
     @FocusState private var railFocus: Destination?
     @State private var profile: NuvioProfile?
+    /// Simulator smoke hook: `-smokeDetails <type>:<id>` opens a title's details.
+    @State private var smokeDetails: PreviewBox? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-smokeDetails"), i + 1 < args.count else { return nil }
+        let parts = args[i + 1].split(separator: ":", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return nil }
+        return PreviewBox(preview: MetaPreview(id: parts[1], type: parts[0], name: "", poster: nil, banner: nil, logo: nil,
+                                               posterShape: .poster, description: nil, releaseInfo: nil, rawReleaseDate: nil,
+                                               popularity: nil, voteCount: nil, imdbRating: nil, genres: [], pinned: false,
+                                               rawPosterUrl: nil, landscapePoster: nil, rawLandscapePosterUrl: nil))
+    }()
 
     /// The drawer is open only when the viewer brought focus there (LEFT at the edge, or Menu). Collapsed
     /// items cannot take focus, exactly as NuvioTV's `canFocus = expanded`, so launch focus lands in content.
@@ -80,7 +91,13 @@ struct MainShell: View {
         .ignoresSafeArea()
         .overlay(alignment: .bottom) { toast(colors) }
         .fullScreenCover(item: $playback.session) { box in
-            TvPlayerScreen(session: box.session) { playback.stop() }.environment(\.nuvio, colors)
+            TvPlayerScreen(session: box.session) { playback.stop() }.environment(\.nuvio, colors).environmentObject(playback)
+        }
+        .fullScreenCover(item: $playback.pendingPicker) { box in
+            StreamPickerScreen(meta: box.target.meta, video: box.target.video).environmentObject(playback).environment(\.nuvio, colors)
+        }
+        .fullScreenCover(item: $smokeDetails) { box in
+            TitleDetailsScreen(preview: box.preview).environmentObject(playback).environment(\.nuvio, colors)
         }
         .task { await theme.observe() }
         .task { for await state in ProfileRepository.shared.state { profile = state.activeProfile } }

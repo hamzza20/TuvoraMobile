@@ -11,6 +11,8 @@ struct TitleDetailsScreen: View {
     @State private var state: MetaDetailsUiState?
     @State private var season: Int32?
     @State private var sourcesFor: SourceTarget?
+    @State private var saved = false
+    @State private var watched = false
 
     private var meta: MetaDetails? { state?.meta }
     private var isSeries: Bool { preview.type == "series" || (meta?.videos.count ?? 0) > 1 }
@@ -38,7 +40,10 @@ struct TitleDetailsScreen: View {
         .ignoresSafeArea()
         .task {
             TvTitle.shared.load(type: preview.type, id: preview.id)
-            for await next in TvTitle.shared.details { state = next }
+            for await next in TvTitle.shared.details {
+                state = next
+                if let meta = next.meta { saved = TvTitle.shared.isSaved(meta: meta); watched = TvTitle.shared.isWatched(meta: meta) }
+            }
         }
         .fullScreenCover(item: $sourcesFor) { target in
             StreamPickerScreen(meta: target.meta, video: target.video).environmentObject(playback).environment(\.nuvio, colors)
@@ -61,7 +66,12 @@ struct TitleDetailsScreen: View {
             HStack(spacing: dp(12)) {
                 PlayPill(title: playLabel(meta)) { openSources(meta: meta, video: isSeries ? resumeEpisode(meta) : nil) }
                     .prefersDefaultFocus(true, in: namespace)
-                CircleIconButton(icon: "library_add_plus") {}
+                CircleIconButton(icon: saved ? "md_check_circle" : "library_add_plus") {
+                    Task { try? await TvTitle.shared.toggleSaved(meta: meta); saved = TvTitle.shared.isSaved(meta: meta) }
+                }
+                CircleIconButton(icon: watched ? "md_check_circle" : "md_bookmark_border", filledWhite: watched) {
+                    Task { try? await TvTitle.shared.toggleWatched(meta: meta); watched = TvTitle.shared.isWatched(meta: meta) }
+                }
             }
             .scrollClipDisabled()
             .focusSection()
@@ -97,7 +107,7 @@ struct TitleDetailsScreen: View {
     }
 
     private func resumeEpisode(_ meta: MetaDetails) -> MetaVideo? {
-        meta.videos.first { resume(meta, $0) > 0 } ?? meta.videos.first { ($0.season?.int32Value ?? 0) > 0 } ?? meta.videos.first
+        TvTitle.shared.primaryEpisode(meta: meta) ?? meta.videos.first { ($0.season?.int32Value ?? 0) > 0 } ?? meta.videos.first
     }
 
     private func resume(_ meta: MetaDetails, _ video: MetaVideo?) -> Int64 {
@@ -207,6 +217,7 @@ struct PlayPill: View {
 /// 48dp circle action: BackgroundCard, Secondary when focused, 22dp icon, 2dp ring.
 struct CircleIconButton: View {
     let icon: String
+    var filledWhite = false   // NuvioTV: watched-selected circle is white
     let action: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
@@ -214,9 +225,9 @@ struct CircleIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(icon).renderingMode(.template).resizable().frame(width: dp(22), height: dp(22))
-                .foregroundStyle(focused ? colors.onSecondary : colors.textPrimary)
+                .foregroundStyle(focused ? colors.onSecondary : (filledWhite ? Color.black : colors.textPrimary))
                 .frame(width: dp(48), height: dp(48))
-                .background(Circle().fill(focused ? colors.secondary : colors.backgroundCard))
+                .background(Circle().fill(focused ? colors.secondary : (filledWhite ? Color.white : colors.backgroundCard)))
                 .overlay(Circle().stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus).padding(-dp(3)))
         }
         .buttonStyle(PlainNoChromeButtonStyle())

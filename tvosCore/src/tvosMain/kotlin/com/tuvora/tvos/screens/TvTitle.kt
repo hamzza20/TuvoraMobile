@@ -7,6 +7,12 @@ import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaDetailsUiState
 import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.details.seriesPrimaryAction
+import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.library.LibraryRepository
+import com.nuvio.app.features.library.toLibraryItem
+import com.nuvio.app.features.watched.WatchedRepository
+import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.streams.StreamItem
@@ -48,6 +54,39 @@ object TvTitle {
     }
 
     fun cancelStreams() = StreamsRepository.cancelLoading()
+
+    /**
+     * The episode the series Play button targets — the phone's own rule (seriesPrimaryAction: the
+     * in-progress episode, else the next unwatched one). Null for movies or when nothing is decided.
+     */
+    fun primaryEpisode(meta: MetaDetails): MetaVideo? {
+        val action = meta.seriesPrimaryAction(
+            entries = WatchProgressRepository.uiState.value.entries,
+            watchedItems = WatchedRepository.uiState.value.items,
+            todayIsoDate = com.nuvio.app.features.watchprogress.CurrentDateProvider.todayIsoDate(),
+        ) ?: return null
+        if (action.seasonNumber != null && action.episodeNumber != null) {
+            meta.videos.firstOrNull { it.season == action.seasonNumber && it.episode == action.episodeNumber }?.let { return it }
+        }
+        return meta.videos.firstOrNull { it.id == action.videoId }
+    }
+
+    // Library / Watched — the phone's own actions (LibraryRepository.toggleSaved, WatchingActions).
+    val libraryChanges get() = LibraryRepository.uiState
+    val watchedChanges get() = WatchedRepository.uiState
+
+    fun isSaved(meta: MetaDetails): Boolean = LibraryRepository.isSaved(meta.id, meta.type)
+
+    suspend fun toggleSaved(meta: MetaDetails) {
+        LibraryRepository.toggleSaved(meta.toLibraryItem(savedAtEpochMs = kotlin.time.Clock.System.now().toEpochMilliseconds()))
+    }
+
+    fun isWatched(meta: MetaDetails): Boolean =
+        WatchedRepository.isWatched(id = meta.id, type = meta.type) || WatchedRepository.isFullyWatchedSeries(id = meta.id, type = meta.type)
+
+    suspend fun toggleWatched(meta: MetaDetails) {
+        WatchingActions.togglePosterWatched(MetaPreview(id = meta.id, type = meta.type, name = meta.name, poster = meta.poster))
+    }
 
     /** Where to resume [videoId], in ms; 0 when unwatched or finished. */
     fun resumePositionMs(videoId: String, parentMetaId: String, season: Int, episode: Int): Long {

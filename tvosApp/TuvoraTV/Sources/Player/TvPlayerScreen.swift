@@ -24,6 +24,7 @@ struct TvPlayerScreen: View {
     let session: TvPlayerSession
     let onClose: () -> Void
 
+    @EnvironmentObject private var playback: PlaybackCoordinator
     @Environment(\.nuvio) private var colors
     @State private var state: TvPlayerState?
     @State private var controlsVisible = true
@@ -45,11 +46,22 @@ struct TvPlayerScreen: View {
                 PlayerChrome(session: session, state: state, scrubMs: scrubMs, visible: controlsVisible || scrubMs != nil,
                              skipFlash: skipFlash,
                              onShowPanel: { panel = $0 }, onActivity: bumpControls)
+                if state.showNextEpisode, let next = state.nextEpisode, panel == nil, let meta = session.seriesMeta {
+                    NextEpisodeCard(video: next) { playback.openSources(meta: meta, video: next) }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .padding(.trailing, dp(32)).padding(.bottom, controlsVisible ? dp(150) : dp(32))
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
                 if let panel {
                     // HIG › Materials: glass over bright video needs ~35% dimming beneath it to stay legible.
                     Color.black.opacity(0.35).ignoresSafeArea().transition(.opacity)
-                    TrackPanel(session: session, kind: panel) { self.panel = nil; bumpControls() }
+                    if panel == .episodes || panel == .sources {
+                        ContentPanel(session: session, kind: panel) { self.panel = nil; bumpControls() }
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    } else {
+                        TrackPanel(session: session, kind: panel) { self.panel = nil; bumpControls() }
                         .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
             }
             RemoteTouchCatcher(
@@ -147,7 +159,7 @@ struct TvPlayerScreen: View {
     }
 }
 
-enum PlayerPanel: Hashable { case subtitles, audio, aspect }
+enum PlayerPanel: Hashable { case subtitles, audio, aspect, episodes, sources }
 
 /// Hosts the current engine's view controller; swaps it when the session escalates engines.
 struct EngineHost: UIViewControllerRepresentable {
@@ -254,6 +266,8 @@ private struct PlayerChrome: View {
             HStack(spacing: dp(4)) {
                 PlayerButton(icon: state.isPlaying ? "ic_player_pause" : "ic_player_play") { session.togglePlayPause(); onActivity() }
                 Spacer()
+                if session.seriesMeta != nil { PlayerButton(icon: "ic_player_episodes") { onShowPanel(.episodes) } }
+                if !state.isLive { PlayerButton(icon: "ic_player_source") { onShowPanel(.sources) } }
                 PlayerButton(icon: "ic_player_subtitles") { onShowPanel(.subtitles) }
                 PlayerButton(icon: "ic_player_audio_filled") { onShowPanel(.audio) }
                 PlayerButton(icon: "ic_player_aspect_ratio") { onShowPanel(.aspect) }
@@ -374,6 +388,8 @@ private struct TrackPanel: View {
                             ForEach([(0, "Fit"), (1, "Fill"), (2, "Zoom")], id: \.0) { mode, title in
                                 PanelRow(title: title, checked: aspect == mode) { aspect = mode; session.setResizeMode(mode: Int32(mode)) }
                             }
+                        case .episodes, .sources:
+                            EmptyView()
                         }
                     }
                 }
@@ -431,5 +447,105 @@ private struct PanelRow: View {
         }
         .buttonStyle(PlainNoChromeButtonStyle())
         .focused($focused)
+    }
+}
+
+
+/// NuvioTV NextEpisodeOverlay: a card bottom-right near the end of an episode. Selecting it opens the
+/// next episode's sources.
+private struct NextEpisodeCard: View {
+    let video: MetaVideo
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: dp(12)) {
+                CachedPosterArtwork(urlString: video.thumbnail, width: dp(128), height: dp(72), maximumWidth: dp(256)) { colors.backgroundCard }
+                    .frame(width: dp(128), height: dp(72)).clipShape(RoundedRectangle(cornerRadius: dp(8)))
+                VStack(alignment: .leading, spacing: dp(2)) {
+                    Text("Next Episode").font(NuvioType.labelMedium).foregroundStyle(focused ? Color.black.opacity(0.7) : colors.textSecondary)
+                    Text("S\(video.season?.int32Value ?? 0) E\(video.episode?.int32Value ?? 0) · \(video.title)")
+                        .font(NuvioType.titleMedium).foregroundStyle(focused ? Color.black : colors.textPrimary).lineLimit(1)
+                }
+                Image("md_play_arrow").renderingMode(.template).resizable().frame(width: dp(22), height: dp(22))
+                    .foregroundStyle(focused ? Color.black : Color.white)
+            }
+            .padding(dp(12))
+            .frame(maxWidth: dp(460))
+            .background(RoundedRectangle(cornerRadius: dp(16)).fill(focused ? Color.white : Color.clear))
+            .navigationGlass(in: RoundedRectangle(cornerRadius: dp(16)))
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+    }
+}
+
+/// Episodes (this season) and Sources (this title's other sources) side panels, as NuvioTV's player panels.
+private struct ContentPanel: View {
+    let session: TvPlayerSession
+    let kind: PlayerPanel
+    let onClose: () -> Void
+    @EnvironmentObject private var playback: PlaybackCoordinator
+    @Environment(\.nuvio) private var colors
+    @State private var streams: StreamsUiState?
+    @State private var switching = false
+
+    var body: some View {
+        HStack {
+            Spacer()
+            VStack(alignment: .leading, spacing: dp(12)) {
+                Text(kind == .episodes ? "Episodes" : "Sources").font(NuvioType.titleLarge).foregroundStyle(colors.textPrimary)
+                ScrollView {
+                    VStack(spacing: dp(6)) {
+                        if kind == .episodes, let meta = session.seriesMeta {
+                            let season = session.currentSeason?.int32Value
+                            ForEach(meta.videos.filter { $0.season?.int32Value == season }, id: \.id) { video in
+                                PanelRow(title: "E\(video.episode?.int32Value ?? 0) · \(video.title)", detail: video.overview,
+                                         checked: video.episode?.int32Value == session.currentEpisode?.int32Value) {
+                                    playback.openSources(meta: meta, video: video)
+                                }
+                            }
+                        } else {
+                            let groups = (streams?.groups ?? []).filter { !$0.streams.isEmpty }
+                            if groups.isEmpty {
+                                Text("No other sources loaded for this title.").font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)
+                            }
+                            ForEach(groups, id: \.addonId) { group in
+                                ForEach(Array(group.streams.enumerated()), id: \.offset) { _, stream in
+                                    PanelRow(title: stream.streamLabel, detail: group.addonName, checked: false) { switchTo(stream) }
+                                }
+                            }
+                        }
+                    }
+                }
+                .focusSection()
+            }
+            .padding(dp(24))
+            .frame(width: dp(520))
+            .frame(maxHeight: .infinity)
+            .navigationGlass(in: UnevenRoundedRectangle(topLeadingRadius: dp(16), bottomLeadingRadius: dp(16)))
+        }
+        .ignoresSafeArea()
+        .onExitCommand(perform: onClose)
+        .task { for await next in TvTitle.shared.streams { streams = next } }
+    }
+
+    /// Switch source in place: the new source opens at the current position.
+    private func switchTo(_ stream: StreamItem) {
+        guard !switching, let meta = session.seriesMeta ?? TvTitle.shared.details.value.meta else { return }
+        switching = true
+        let video = meta.videos.first { $0.id == session.currentVideoId }
+        let resume = session.state.value.positionMs
+        Task {
+            defer { switching = false }
+            if let result = try? await TvTitle.shared.open(stream: stream, meta: meta, video: video, resumeMs: resume) {
+                switch onEnum(of: result) {
+                case .play(let play): playback.play(play.session)
+                case .message(let message): playback.notify(message.text)
+                }
+            }
+        }
     }
 }
