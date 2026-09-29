@@ -40,3 +40,53 @@ object TvIptvSettingsPolicy {
         if (selectedCount == 0) "Using every region — pick the ones you watch to store less guide data on this device"
         else "$selectedCount of $total selected"
 }
+
+/** How a content-type row reads (NuvioTV XtreamContentTypesDialog countText), localized by the UI. */
+enum class TvContentCountKind { Hidden, All, Fraction, Selected }
+
+data class TvContentCount(val kind: TvContentCountKind, val selected: Int = 0, val total: Int = 0)
+
+/** A provider category for the checklist. */
+data class TvCategoryItem(val id: String, val name: String)
+
+/**
+ * NuvioTV's Content & Categories and the catch-up / guide-offset pickers (XtreamSettingsScreen.kt,
+ * XtreamSettingsViewModel), pure. A selection of null means "all, including categories added later";
+ * an empty list means none.
+ */
+object TvIptvContentPolicy {
+    /** content key → NuvioTV label, in NuvioTV's order. */
+    val contentTypes: List<Pair<String, String>> = listOf("live" to "Live TV", "movies" to "Movies", "series" to "Series")
+
+    fun count(enabled: Boolean, selection: List<String>?, total: Int?): TvContentCount = when {
+        !enabled -> TvContentCount(TvContentCountKind.Hidden)
+        selection == null -> TvContentCount(TvContentCountKind.All)
+        total != null -> TvContentCount(TvContentCountKind.Fraction, selection.size, total)
+        else -> TvContentCount(TvContentCountKind.Selected, selection.size)
+    }
+
+    fun isChecked(selection: List<String>?, categoryId: String): Boolean = selection == null || categoryId in selection
+
+    /**
+     * One toggle as an OPERATION against the latest selection (NuvioTV toggleCategory): from "all"
+     * the full list is materialized first, so a toggle racing Deselect All yields exactly the
+     * toggled id, not a resurrected list.
+     */
+    fun toggle(current: List<String>?, allIds: List<String>, categoryId: String, checked: Boolean): List<String> {
+        val base = current ?: allIds
+        return if (checked) (base - categoryId) + categoryId else base - categoryId
+    }
+
+    /** "3/12 selected" style subtitle for the checklist (NuvioTV: `${selection?.size ?: total}/$total`). */
+    fun selectedOfTotal(selection: List<String>?, total: Int): Pair<Int, Int> = (selection?.size ?: total) to total
+
+    /** −12 h … +14 h in 30-minute steps (CATCHUP_CORRECTION_OPTIONS). */
+    fun correctionOptions(): List<Int> = generateSequence(-12 * 60) { it + 30 }.takeWhile { it <= 14 * 60 }.toList()
+
+    /** "+2h", "-1h 30m"; zero is the caller's word ("None (UTC)" for catch-up, "Auto" for the guide). */
+    fun offsetText(minutes: Int): String {
+        val sign = if (minutes < 0) "-" else "+"
+        val abs = kotlin.math.abs(minutes)
+        return if (abs % 60 == 0) "$sign${abs / 60}h" else "$sign${abs / 60}h ${abs % 60}m"
+    }
+}

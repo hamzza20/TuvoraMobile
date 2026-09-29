@@ -296,7 +296,8 @@ private struct MatchCard: View {
                 }
                 .frame(minHeight: SportsMetrics.teamsMinHeight, alignment: .top)
                 HStack(spacing: 0) {
-                    let whenLabel = sports.whenLabel(state: radar, fixture: fixture, nowMs: now)
+                    let whenLabel = sports.showsWhen(state: radar, fixture: fixture, nowMs: now)
+                        ? SportsWhen.label(fixture, now: now) : nil
                     if let whenLabel {
                         Text(whenLabel).font(NuvioType.labelMedium).lineLimit(1)
                             .foregroundStyle(sports.isSoon(state: radar, fixture: fixture, nowMs: now) ? colors.secondary : colors.textSecondary)
@@ -397,10 +398,19 @@ private struct MatchStatusPill: View {
         }
     }
 
+    /// Day pills are decided language-neutrally in Kotlin (TvMatchDay) and worded here, localized.
+    private var text: String {
+        switch status.day {
+        case .today: return L("Today").uppercased()
+        case .tomorrow: return L("Tomorrow").uppercased()
+        default: return L(status.text)
+        }
+    }
+
     private func pill(_ tint: Color, fill: Double, stroke: Double, dot: Bool) -> some View {
         HStack(spacing: dp(4)) {
             if dot { Circle().fill(tint).frame(width: dp(6), height: dp(6)) }
-            Text(ui: status.text).font(NuvioType.labelSmall.weight(.bold)).foregroundStyle(tint).lineLimit(1)
+            Text(verbatim: text).font(NuvioType.labelSmall.weight(.bold)).foregroundStyle(tint).lineLimit(1)
         }
         .padding(.horizontal, dp(8)).padding(.vertical, dp(2))
         .background(Capsule().fill(tint.opacity(fill)))
@@ -648,7 +658,7 @@ private struct MatchChannelsSheet: View {
     @State private var opening = false
 
     var body: some View {
-        NuvioDialog(title: fixture.displayTitle + (live ? "   🔴 LIVE" : ""), subtitle: TvSports.shared.sheetSubtitle(fixture: fixture), width: dp(620)) {
+        NuvioDialog(title: fixture.displayTitle + (live ? "   🔴 LIVE" : ""), subtitle: TvSports.shared.sheetSubtitle(fixture: fixture, whenText: fixture.startEpochMs == nil ? nil : SportsWhen.label(fixture, now: TvSports.shared.nowMs())), width: dp(620)) {
             if !hasPlaylists {
                 message("Add an IPTV playlist to find and watch this match on your channels.")
             } else if groups.isEmpty && matching {
@@ -715,5 +725,29 @@ private struct MatchChannelsSheet: View {
                 playback.notify("\(match.channel.name) isn't available right now.")
             }
         }
+    }
+}
+
+
+/// A kick-off's when-line ("Today 3:30 AM", "Sat, Oct 3 8:30 AM"), worded in the viewer's language:
+/// Kotlin decides the calendar day (TvMatchDay); the words and the date/time format are localized here.
+enum SportsWhen {
+    static func label(_ fixture: RadarFixture, now: Int64) -> String {
+        guard let start = fixture.startEpochMs?.int64Value else { return L("Time TBC") }
+        let date = Date(timeIntervalSince1970: TimeInterval(start) / 1000)
+        let day: String
+        switch TvSports.shared.day(fixture: fixture, nowMs: now) {
+        case .today: day = L("Today")
+        case .tomorrow: day = L("Tomorrow")
+        default: day = format(date, template: "EEEMMMd")
+        }
+        return "\(day) \(format(date, template: "jmm"))"
+    }
+
+    private static func format(_ date: Date, template: String) -> String {
+        let f = DateFormatter()
+        f.locale = Locale.current
+        f.dateFormat = DateFormatter.dateFormat(fromTemplate: template, options: 0, locale: .current)
+        return f.string(from: date)
     }
 }

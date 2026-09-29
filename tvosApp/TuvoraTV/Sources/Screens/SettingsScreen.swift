@@ -178,6 +178,23 @@ struct SettingsScreen: View {
             dialogs.push(.picker(PlaybackSettingsDetail.enginePicker(current: UserDefaults.standard.string(forKey: "tvos.player.engine") ?? "auto")))
         case "guideRegions": dialogs.push(.guideRegions)
         case "iptvPairing": dialogs.push(.iptvPairing)
+        case "contentTypes", "categories", "catchUpCorrection", "guideOffset", "playlistActions":
+            // `-smokeSettingsDialog <kind> [-smokeAccount <name>]`: the playlist's Content & Categories,
+            // its Live TV category checklist, or its offset pickers.
+            let kind = args[i + 1]
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                let wanted = args.firstIndex(of: "-smokeAccount").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+                let accounts = model.xtream?.accounts ?? []
+                guard let account = accounts.first(where: { $0.name == wanted }) ?? accounts.first else { return }
+                switch kind {
+                case "contentTypes": dialogs.push(.contentTypes(account.id))
+                case "categories": dialogs.push(.categoryChecklist(account.id, "live"))
+                case "catchUpCorrection": dialogs.push(.picker(IptvOffsetPickers.catchUp(account)))
+                case "guideOffset": dialogs.push(.picker(IptvOffsetPickers.guide(account)))
+                default: dialogs.push(.playlistActions(account))
+                }
+            }
         case "hiddenItems":
             Task {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
@@ -231,6 +248,8 @@ enum SettingsDialogKind {
     case hiddenItems(XtreamAccount)
     case guideRegions
     case iptvPairing
+    case contentTypes(String)                 // account id
+    case categoryChecklist(String, String)    // account id, content type
     case removePlaylist(XtreamAccount)
     case playlistForm(PlaylistFormModel)
     case addonActions(ManagedAddon)
@@ -297,6 +316,10 @@ private struct SettingsDialogView: View {
             GuideRegionsDialog(dialogs: dialogs)
         case .iptvPairing:
             IptvPairingDialog(dialogs: dialogs)
+        case .contentTypes(let accountId):
+            ContentTypesDialog(accountId: accountId, model: model, dialogs: dialogs)
+        case .categoryChecklist(let accountId, let type):
+            CategoryChecklistDialog(accountId: accountId, type: type, model: model, dialogs: dialogs)
         case .removePlaylist(let account):
             RemovePlaylistDialog(account: account, dialogs: dialogs)
         case .playlistForm(let form):
@@ -909,10 +932,34 @@ private struct PlaylistActionsDialog: View {
                     dialogs.push(.playlistForm(PlaylistFormModel(editing: account)))
                 }
             }
+            SettingsActionRow(title: "Content & Categories", subtitle: "Choose which content types and categories to show") {
+                dialogs.pop()
+                dialogs.push(.contentTypes(account.id))
+            }
             // F02: hides made on any device or the website are undone here.
             SettingsActionRow(title: "Hidden channels & groups", subtitle: "Bring back what you hid") {
                 dialogs.pop()
                 dialogs.push(.hiddenItems(account))
+            }
+            if account.sourceType == "xtream" {
+                // Catch-up is Xtream-only: a Stalker portal builds its archive URLs server-side and an
+                // M3U playlist has no panel to ask, so neither has a container or clock to correct.
+                SettingsActionRow(title: "Catch-up container", subtitle: "m3u8 enables the scrub bar; TS is more widely served",
+                                  value: L(account.catchUpPreferM3u8 ? "Prefer m3u8" : "Prefer TS"), showChevron: false) {
+                    TvIptvContentSettings.shared.setPreferM3u8(accountId: account.id, prefer: !account.catchUpPreferM3u8)
+                    dialogs.pop()
+                    dialogs.push(.playlistActions(TvPlaylists.shared.state.value.accounts.first { $0.id == account.id } ?? account))
+                }
+                SettingsActionRow(title: "Catch-up time correction", subtitle: "Shift replay start times when the provider's clock is off",
+                                  value: IptvOffsetPickers.catchUpLabel(account.catchUpTimeCorrectionMinutes)) {
+                    dialogs.pop()
+                    dialogs.push(.picker(IptvOffsetPickers.catchUp(account)))
+                }
+                SettingsActionRow(title: "Guide EPG offset", subtitle: "Shift guide times when programmes show at the wrong hour",
+                                  value: IptvOffsetPickers.guideLabel(account.guideEpgCorrectionMinutes)) {
+                    dialogs.pop()
+                    dialogs.push(.picker(IptvOffsetPickers.guide(account)))
+                }
             }
             if TvPlaylists.shared.canRematch(account: account) {
                 SettingsActionRow(title: "Re-match catalog", subtitle: "Re-check titles this playlist was thought not to have") {
@@ -1417,5 +1464,211 @@ private struct IptvPairingDialog: View {
                 }
             }
         }
+    }
+}
+
+
+/// NuvioTV's catch-up time correction and guide EPG offset pickers: −12 h … +14 h in 30-minute steps.
+/// Zero reads "None (UTC)" for catch-up and "Auto" for the guide (unset = detect, not "+0").
+enum IptvOffsetPickers {
+    static func catchUpLabel(_ minutes: Int32) -> String {
+        minutes == 0 ? L("None (UTC)") : TvIptvContentPolicy.shared.offsetText(minutes: minutes)
+    }
+
+    static func guideLabel(_ minutes: Int32) -> String {
+        minutes == 0 ? L("Auto") : TvIptvContentPolicy.shared.offsetText(minutes: minutes)
+    }
+
+    static func catchUp(_ account: XtreamAccount) -> PickerSpec {
+        PickerSpec(title: "Catch-up time correction", subtitle: "Only needed when replays start at the wrong point",
+                   options: options(catchUpLabel), selectedId: "\(account.catchUpTimeCorrectionMinutes)") { id in
+            guard let minutes = Int32(id) else { return }
+            TvIptvContentSettings.shared.setCatchUpCorrection(accountId: account.id, minutes: minutes)
+            NSLog("SMOKE settings catchUpCorrection=%d", minutes)
+        }
+    }
+
+    static func guide(_ account: XtreamAccount) -> PickerSpec {
+        PickerSpec(title: "Guide EPG offset", subtitle: "Auto detects most wrong-clock panels; set this only if guide times are still shifted",
+                   options: options(guideLabel), selectedId: "\(account.guideEpgCorrectionMinutes)") { id in
+            guard let minutes = Int32(id) else { return }
+            Task { try? await TvIptvContentSettings.shared.setGuideOffset(accountId: account.id, minutes: minutes) }
+            NSLog("SMOKE settings guideOffset=%d", minutes)
+        }
+    }
+
+    private static func options(_ label: (Int32) -> String) -> [SettingsPickerOption] {
+        TvIptvContentPolicy.shared.correctionOptions().map { value in
+            SettingsPickerOption(id: "\(value.int32Value)", title: label(value.int32Value))
+        }
+    }
+}
+
+/// XtreamContentTypesDialog: one row per content type — the body opens its category checklist (count +
+/// chevron), the trailing pill shows or hides the type. Edits go through the shared repository (synced).
+private struct ContentTypesDialog: View {
+    let accountId: String
+    @ObservedObject var model: SettingsModel
+    @ObservedObject var dialogs: SettingsDialogs
+    @State private var totals: [String: Int] = [:]
+
+    private var account: XtreamAccount? { model.xtream?.accounts.first { $0.id == accountId } }
+
+    var body: some View {
+        NuvioDialog(title: "Content & Categories", subtitle: account?.name) {
+            if let account {
+                ForEach(TvIptvContentPolicy.shared.contentTypes, id: \.first) { pair in
+                    let type = pair.first as String? ?? ""
+                    let label = pair.second as String? ?? ""
+                    let enabled = account.contentTypes.contains(type)
+                    ContentTypeRow(label: label, enabled: enabled,
+                                   countText: countText(account: account, type: type, enabled: enabled),
+                                   initialFocus: type == "live",
+                                   onOpen: { dialogs.push(.categoryChecklist(accountId, type)) },
+                                   onToggle: {
+                                       TvIptvContentSettings.shared.setTypeEnabled(accountId: accountId, type: type, enabled: !enabled)
+                                       NSLog("SMOKE settings contentType=%@ enabled=%d", type, !enabled)
+                                   })
+                }
+                SettingsHelperText(text: "The toggle shows or hides a content type. Select a type to choose its categories.")
+            }
+        }
+        .task {
+            for pair in TvIptvContentPolicy.shared.contentTypes {
+                let type = pair.first as String? ?? ""
+                totals[type] = ((try? await TvIptvContentSettings.shared.categories(accountId: accountId, type: type)) ?? []).count
+            }
+        }
+    }
+
+    private func countText(account: XtreamAccount, type: String, enabled: Bool) -> String {
+        let selection = account.categorySelections.forType(type: type)
+        let count = TvIptvContentPolicy.shared.count(enabled: enabled, selection: selection,
+                                                     total: totals[type].map { KotlinInt(int: Int32($0)) })
+        switch count.kind {
+        case .hidden: return L("Hidden")
+        case .all: return L("All categories")
+        case .fraction: return "\(count.selected)/\(count.total)"
+        default: return String(format: L("%d selected"), count.selected)
+        }
+    }
+}
+
+/// ContentTypeRow: the row body (label dims when hidden, count, chevron) + a separate toggle pill card.
+private struct ContentTypeRow: View {
+    let label: String
+    let enabled: Bool
+    let countText: String
+    let initialFocus: Bool
+    let onOpen: () -> Void
+    let onToggle: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focus: Int?
+
+    var body: some View {
+        HStack(spacing: dp(8)) {
+            Button(action: onOpen) {
+                HStack(spacing: dp(8)) {
+                    Text(ui: label).font(NuvioType.bodyLarge).foregroundStyle(colors.textPrimary.opacity(enabled ? 1 : 0.4))
+                    Spacer()
+                    Text(verbatim: countText).font(NuvioType.labelLarge).foregroundStyle(colors.textSecondary)
+                    Image("md_chevron_right").renderingMode(.template).resizable().frame(width: dp(18), height: dp(18))
+                        .foregroundStyle(colors.textTertiary)
+                }
+                .padding(.horizontal, dp(18)).padding(.vertical, dp(12))
+                .background(card(focused: focus == 0))
+            }
+            .buttonStyle(PlainNoChromeButtonStyle()).focused($focus, equals: 0).reportsFocus(focus == 0)
+            Button(action: onToggle) {
+                SettingsTogglePill(checked: enabled)
+                    .padding(.horizontal, dp(18)).padding(.vertical, dp(12))
+                    .background(card(focused: focus == 1))
+            }
+            .buttonStyle(PlainNoChromeButtonStyle()).focused($focus, equals: 1).reportsFocus(focus == 1)
+        }
+        .onAppear { if initialFocus { DispatchQueue.main.async { focus = 0 } } }
+    }
+
+    private func card(focused: Bool) -> some View {
+        RoundedRectangle(cornerRadius: dp(10), style: .continuous).fill(colors.backgroundCard)
+            .overlay(RoundedRectangle(cornerRadius: dp(10), style: .continuous)
+                .stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+    }
+}
+
+/// XtreamCategoryChecklistDialog: "Select All" / "Deselect All", then a check row per provider category.
+/// Each press sends the OPERATION (not a recomputed list), composed against the latest selection.
+private struct CategoryChecklistDialog: View {
+    let accountId: String
+    let type: String
+    @ObservedObject var model: SettingsModel
+    @ObservedObject var dialogs: SettingsDialogs
+    @State private var categories: [TvCategoryItem]?
+
+    private var account: XtreamAccount? { model.xtream?.accounts.first { $0.id == accountId } }
+    private var label: String {
+        (TvIptvContentPolicy.shared.contentTypes.first { ($0.first as String?) == type }?.second as String?) ?? type
+    }
+
+    var body: some View {
+        let selection = account?.categorySelections.forType(type: type)
+        NuvioDialog(title: String(format: L("%@ categories"), L(label)), subtitle: subtitle(selection)) {
+            if let categories {
+                HStack(spacing: dp(8)) {
+                    SettingsDialogButton(title: "Select All", primary: true, initialFocus: true) {
+                        TvIptvContentSettings.shared.setSelection(accountId: accountId, type: type, selection: nil)
+                    }
+                    SettingsDialogButton(title: "Deselect All") {
+                        TvIptvContentSettings.shared.setSelection(accountId: accountId, type: type, selection: [])
+                    }
+                    Spacer()
+                }
+                ForEach(categories, id: \.id) { category in
+                    let checked = TvIptvContentPolicy.shared.isChecked(selection: selection, categoryId: category.id)
+                    CategoryCheckRow(name: category.name, checked: checked) {
+                        TvIptvContentSettings.shared.toggleCategory(accountId: accountId, type: type,
+                                                                   allIds: categories.map(\.id), categoryId: category.id, checked: !checked)
+                        NSLog("SMOKE settings category=%@ checked=%d", category.name, !checked)
+                    }
+                }
+            } else {
+                ProgressView()
+            }
+        }
+        .task { categories = (try? await TvIptvContentSettings.shared.categories(accountId: accountId, type: type)) ?? [] }
+    }
+
+    private func subtitle(_ selection: [String]?) -> String {
+        guard let categories else { return L("Loading categories…") }
+        let pair = TvIptvContentPolicy.shared.selectedOfTotal(selection: selection, total: Int32(categories.count))
+        return String(format: L("%1$d/%2$d selected"), (pair.first as? KotlinInt)?.intValue ?? 0, (pair.second as? KotlinInt)?.intValue ?? 0)
+    }
+}
+
+/// CategoryCheckRow: radius-10 card, FocusBackground when checked or focused, Primary name + check.
+private struct CategoryCheckRow: View {
+    let name: String
+    let checked: Bool
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: dp(10), style: .continuous)
+        Button(action: action) {
+            HStack(spacing: dp(12)) {
+                Text(verbatim: name).font(NuvioType.bodyLarge).foregroundStyle(checked ? colors.primary : colors.textPrimary).lineLimit(1)
+                Spacer()
+                if checked {
+                    Image("md_check").renderingMode(.template).resizable().frame(width: dp(20), height: dp(20)).foregroundStyle(colors.primary)
+                }
+            }
+            .padding(dp(16))
+            .background(shape.fill(checked || focused ? colors.focusBackground : colors.backgroundCard))
+            .overlay(shape.stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
+        .focused($focused)
+        .reportsFocus(focused)
     }
 }

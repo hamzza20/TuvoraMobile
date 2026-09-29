@@ -62,12 +62,27 @@ class TvSportsHubPolicyTest {
     @Test
     fun `status pill carries the live minute`() {
         val fx = fixture("m1", "4328", "2026-09-28T11:30:00")
-        assertEquals(TvMatchStatus(TvMatchStatusTone.Live, "LIVE 67'"), TvSportsHubPolicy.status(fx, true, RadarLiveScore(progress = "67'"), "Today"))
-        assertEquals(TvMatchStatus(TvMatchStatusTone.Live, "LIVE"), TvSportsHubPolicy.status(fx, true, null, "Today"))
-        assertEquals(TvMatchStatus(TvMatchStatusTone.Muted, "POSTPONED"), TvSportsHubPolicy.status(fx.copy(postponed = "yes"), false, null, "Today"))
-        assertEquals(TvMatchStatus(TvMatchStatusTone.Muted, "FT"), TvSportsHubPolicy.status(fx.copy(homeScore = "2", awayScore = "1"), false, null, "Today"))
-        assertEquals(TvMatchStatus(TvMatchStatusTone.Accent, "TOMORROW"), TvSportsHubPolicy.status(fx, false, null, "Tomorrow"))
-        assertEquals(TvMatchStatusTone.None, TvSportsHubPolicy.status(fx, false, null, "Sat, Oct 3").tone)
+        assertEquals(TvMatchStatus(TvMatchStatusTone.Live, "LIVE 67'"), TvSportsHubPolicy.status(fx, true, RadarLiveScore(progress = "67'"), TvMatchDay.Today))
+        assertEquals(TvMatchStatus(TvMatchStatusTone.Live, "LIVE"), TvSportsHubPolicy.status(fx, true, null, TvMatchDay.Today))
+        assertEquals(TvMatchStatus(TvMatchStatusTone.Muted, "POSTPONED"), TvSportsHubPolicy.status(fx.copy(postponed = "yes"), false, null, TvMatchDay.Today))
+        assertEquals(TvMatchStatus(TvMatchStatusTone.Muted, "FT"), TvSportsHubPolicy.status(fx.copy(homeScore = "2", awayScore = "1"), false, null, TvMatchDay.Today))
+        assertEquals(TvMatchStatus(TvMatchStatusTone.Accent, "", TvMatchDay.Tomorrow), TvSportsHubPolicy.status(fx, false, null, TvMatchDay.Tomorrow))
+        assertEquals(TvMatchStatusTone.None, TvSportsHubPolicy.status(fx, false, null, TvMatchDay.Other).tone)
+    }
+
+    @Test
+    fun `match day is decided by calendar day in the viewer's zone and never by an English label`() {
+        val hour = 60 * 60 * 1000L
+        // now = 2026-09-28 12:00 UTC
+        assertEquals(TvMatchDay.Today, TvSportsHubPolicy.matchDay(now + 11 * hour, now, utcOffsetMs = 0))      // 23:00
+        assertEquals(TvMatchDay.Tomorrow, TvSportsHubPolicy.matchDay(now + 13 * hour, now, utcOffsetMs = 0))   // 01:00 next day
+        assertEquals(TvMatchDay.Other, TvSportsHubPolicy.matchDay(now + 40 * hour, now, utcOffsetMs = 0))
+        assertEquals(TvMatchDay.Other, TvSportsHubPolicy.matchDay(now - 13 * hour, now, utcOffsetMs = 0))      // yesterday
+        assertEquals(TvMatchDay.Other, TvSportsHubPolicy.matchDay(null, now, utcOffsetMs = 0))
+        // The same instant is "tomorrow" in UTC but still "today" in New York (UTC-4).
+        assertEquals(TvMatchDay.Today, TvSportsHubPolicy.matchDay(now + 13 * hour, now, utcOffsetMs = -4 * hour))
+        // ...and a UTC+14 viewer is already on the 29th at 12:00 UTC: 23:00 UTC is still their 29th.
+        assertEquals(TvMatchDay.Today, TvSportsHubPolicy.matchDay(now + 11 * hour, now, utcOffsetMs = 14 * hour))
     }
 
     @Test
