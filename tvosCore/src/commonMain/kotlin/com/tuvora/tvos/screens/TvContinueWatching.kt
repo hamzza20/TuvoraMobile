@@ -16,6 +16,8 @@ data class TvCwItem(
     val durationMs: Long,
     val lastUpdatedEpochMs: Long,
     val isNextUp: Boolean,
+    /** The title's portrait poster, for NuvioTV's POSTER Continue Watching style. */
+    val poster: String? = null,
 ) {
     val progress: Float get() = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
 }

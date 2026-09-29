@@ -10,15 +10,24 @@ struct LibraryScreen: View {
     @Environment(\.nuvio) private var colors
     @State private var view: TvLibraryView?
     @State private var details: PreviewBox?
+    /// NuvioTV LibraryViewMode (Saved / Cloud). Smoke hook: `-smokeLibraryCloud`.
+    @State private var cloud = ProcessInfo.processInfo.arguments.contains("-smokeLibraryCloud")
+    @State private var managingLists = ProcessInfo.processInfo.arguments.contains("-smokeManageLists")
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: dp(16)) {
                 header
-                if let view {
+                viewModeRow
+                if cloud {
+                    CloudLibraryView()
+                } else if let view {
                     selectors(view).focusSection()
                     if view.sourceMode != .local {
-                        HStack {
+                        HStack(spacing: dp(12)) {
+                            if TvLibraryLists.shared.info() != nil {
+                                NuvioTextButton(title: "Manage Lists", enabled: !view.isLoading) { managingLists = true }
+                            }
                             NuvioTextButton(title: view.isLoading ? "Syncing…" : "Sync", enabled: !view.isLoading) { TvLibrary.shared.refresh() }
                             Spacer()
                         }
@@ -38,6 +47,9 @@ struct LibraryScreen: View {
                 NSLog("SMOKE library source=%@ items=%d loaded=%d loading=%d", String(describing: next.sourceMode), next.items.count, next.isLoaded ? 1 : 0, next.isLoading ? 1 : 0)
             }
         }
+        .sheet(isPresented: $managingLists) {
+            ManageListsSheet { managingLists = false }.environment(\.nuvio, colors)
+        }
         .fullScreenCover(item: $details) { box in
             TitleDetailsScreen(preview: box.preview).environmentObject(playback).environment(\.nuvio, colors)
         }
@@ -55,12 +67,24 @@ struct LibraryScreen: View {
         }
     }
 
+    /// LibraryViewModeRow: Saved / Cloud buttons (selected FocusBackground); the cloud view adds its
+    /// refresh button on the right.
+    private var viewModeRow: some View {
+        HStack(spacing: dp(12)) {
+            NuvioTextButton(title: "Saved", selected: !cloud) { cloud = false }
+            NuvioTextButton(title: "Cloud", selected: cloud) { cloud = true }
+            Spacer()
+            if cloud { NuvioTextButton(title: "Refresh cloud library") { TvCloudLibrary.shared.refresh() } }
+        }
+        .focusSection()
+    }
+
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Library").font(NuvioType.headlineMedium).kerning(dp(0.5)).foregroundStyle(colors.textPrimary)
             Spacer()
             if let view {
-                Text(sourceLabel(view.sourceMode)).font(NuvioType.labelLarge).kerning(dp(2)).foregroundStyle(colors.textTertiary)
+                Text(cloud ? "CLOUD" : sourceLabel(view.sourceMode)).font(NuvioType.labelLarge).kerning(dp(2)).foregroundStyle(colors.textTertiary)
             }
         }
     }
@@ -133,6 +157,7 @@ struct LibraryScreen: View {
                 ForEach(view.items, id: \.self) { item in
                     NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster,
                                     width: size.width, height: size.height) { open(item.toMetaPreview()) }
+                        .titleActions(item.toMetaPreview(), libraryItem: item) { details = PreviewBox(preview: item.toMetaPreview()) }
                 }
             }
             .focusSection()

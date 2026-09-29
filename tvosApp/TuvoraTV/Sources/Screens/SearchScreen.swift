@@ -102,7 +102,7 @@ struct SearchScreen: View {
             NuvioEmptyState(icon: "md_search", title: "No Results", subtitle: "Try searching with different keywords")
         case .results:
             ForEach(results.sections.filter { !$0.items.isEmpty }, id: \.key) { section in
-                SearchResultRow(section: section) { open($0) }.id(section.key)
+                CatalogRowSection(section: section, cardSize: SearchCardSize.poster, onOpen: { open($0) }, onDetails: { details = PreviewBox(preview: $0) }).id(section.key)
             }
             if TvSearchPolicy.shared.showsLoadingMore(query: query, requested: requested, state: results) {
                 SkeletonRow()
@@ -130,40 +130,6 @@ struct SearchScreen: View {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
         return args[i + 1]
-    }
-}
-
-/// CatalogRowSection (components/CatalogRowSection.kt): headlineMedium title and "from <add-on>"
-/// labelMedium TextTertiary at the 48dp gutter, 12dp above the cards; ContentCards at the poster
-/// preference (126×189), 12dp apart. IPTV channel rows use the landscape tile with the logo fitted.
-private struct SearchResultRow: View {
-    let section: HomeCatalogSection
-    let onOpen: (MetaPreview) -> Void
-    @Environment(\.nuvio) private var colors
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: dp(12)) {
-            VStack(alignment: .leading, spacing: dp(4)) {
-                Text(section.title).font(NuvioType.headlineMedium).foregroundStyle(colors.textPrimary).lineLimit(2)
-                Text("from \(section.addonName)").font(NuvioType.labelMedium).foregroundStyle(colors.textTertiary)
-            }
-            .padding(.horizontal, dp(48))
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: NuvioTokens.Layout.itemGap) {
-                    ForEach(section.items, id: \.id) { item in
-                        let landscape = item.posterShape == .landscape
-                        let size = landscape ? NuvioCardSize.hubLandscape : SearchCardSize.poster
-                        NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster,
-                                        width: size.width, height: size.height) { onOpen(item) }
-                            .environment(\.artworkContentMode, landscape ? .fit : .fill)
-                    }
-                }
-                .padding(.horizontal, dp(48)).padding(.vertical, dp(8))
-            }
-            .scrollClipDisabled()
-            .focusSection()
-        }
-        .padding(.bottom, dp(8))
     }
 }
 
@@ -348,6 +314,7 @@ private struct DiscoverScreen: View {
                 ForEach(Array(state.items.enumerated()), id: \.element.id) { index, item in
                     NuvioPosterCard(title: item.name, subtitle: item.releaseInfo, imageURL: item.poster,
                                     width: size.width, height: size.height) { details = PreviewBox(preview: item) }
+                        .titleActions(item) { details = PreviewBox(preview: item) }
                         .onAppear {
                             // DiscoverGrid auto-loads when the last 6 cards come into view.
                             if index >= state.items.count - 6 && state.canLoadMore && !state.isLoading { TvSearch.shared.loadMoreDiscover() }
