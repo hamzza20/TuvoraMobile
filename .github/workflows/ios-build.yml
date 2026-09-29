@@ -60,7 +60,9 @@ jobs:
  
       - name: Build archive (unsigned)
         working-directory: iosApp
+        shell: bash
         run: |
+          set -eo pipefail
           xcodebuild archive \
             ${{ steps.detect.outputs.flag }} "${{ steps.detect.outputs.target }}" \
             -scheme iosApp \
@@ -73,6 +75,13 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
+ 
+      - name: Show build errors
+        if: failure()
+        run: |
+          grep -nE "error:|ARCHIVE FAILED|BUILD FAILED|FAILURE:|What went wrong" "$RUNNER_TEMP/xcodebuild.log" | head -n 40 || true
+          echo "--- last 60 lines ---"
+          tail -n 60 "$RUNNER_TEMP/xcodebuild.log" || true
  
       - name: Package IPA
         run: |
