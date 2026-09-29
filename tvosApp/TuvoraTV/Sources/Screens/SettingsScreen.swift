@@ -6,11 +6,10 @@ import TuvoraCore
 /// the detail pane (≤ 880dp). On Apple TV a rail item selects when focus rests on it (NuvioTV Horizon's
 /// 140 ms focus-select), so the detail follows the remote without an extra click.
 ///
-/// Categories follow NuvioTV's order. Left out, with no Apple TV meaning or not ported yet: Tracking
-/// (Trakt/Simkl), Advanced, Debug, and Integrations' Debrid/TMDB/MDBList/Anime-Skip.
+/// Categories follow NuvioTV's order. Left out: Advanced and Debug.
 struct SettingsScreen: View {
     enum Category: String, CaseIterable, Identifiable {
-        case account, profiles, appearance, layout, discovery, integrations, playback, about
+        case account, profiles, appearance, layout, discovery, integrations, playback, tracking, about
         var id: String { rawValue }
         var title: String {
             switch self {
@@ -21,6 +20,7 @@ struct SettingsScreen: View {
             case .discovery: return "Content & Discovery"
             case .integrations: return "Integrations"
             case .playback: return "Playback"
+            case .tracking: return "Tracking"
             case .about: return "About"
             }
         }
@@ -33,6 +33,7 @@ struct SettingsScreen: View {
             case .discovery: return "md_explore"
             case .integrations: return "md_link"
             case .playback: return "md_play_arrow"
+            case .tracking: return "md_sync"
             case .about: return "md_info"
             }
         }
@@ -41,6 +42,8 @@ struct SettingsScreen: View {
     @Environment(\.nuvio) private var colors
     @StateObject private var model = SettingsModel()
     @StateObject private var dialogs = SettingsDialogs()
+    @StateObject private var integrations = IntegrationsModel()
+    @StateObject private var integrationsNav = IntegrationsNav()
     /// Simulator smoke hook: `-smokeSettings <category>` opens a category, `-smokeSettingsDialog <addPlaylist|signOut|engine|removePlaylist>` a dialog.
     @State private var selected: Category = {
         let args = ProcessInfo.processInfo.arguments
@@ -70,6 +73,7 @@ struct SettingsScreen: View {
         }
         .environmentObject(dialogs)
         .task { await model.observe() }
+        .task { await integrations.observe() }
         .task {
             // Land on the selected category's rail item (defaultFocus alone loses to the first item
             // when the screen appears under the shell).
@@ -107,7 +111,14 @@ struct SettingsScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .focusSection()
             // Menu in the detail goes back to its rail item (the detail's parent), as NuvioTV's Back.
-            .onExitCommand { railFocus = selected }
+            .onExitCommand {
+                // Menu on an integration's page returns to the Integrations hub first (NuvioTV BackHandler).
+                if selected == .integrations && integrationsNav.section != .hub {
+                    integrationsNav.section = .hub
+                } else {
+                    railFocus = selected
+                }
+            }
         }
         .padding(dp(20))
         .background(RoundedRectangle(cornerRadius: dp(28), style: .continuous).fill(colors.backgroundElevated))
@@ -123,6 +134,7 @@ struct SettingsScreen: View {
 
     private func select(_ category: Category) {
         guard selected != category else { return }
+        if category == .integrations { integrationsNav.section = .hub }
         withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: 0.2)) { selected = category }
     }
 
@@ -134,8 +146,9 @@ struct SettingsScreen: View {
         case .appearance: AppearanceSettingsDetail(model: model)
         case .layout: LayoutSettingsDetail()
         case .discovery: AddonsSettingsDetail(model: model)
-        case .integrations: IptvSettingsDetail(model: model)
+        case .integrations: IntegrationsSettingsDetail(nav: integrationsNav, model: integrations, settings: model)
         case .playback: PlaybackSettingsDetail(model: model)
+        case .tracking: TrackingSettingsDetail(model: integrations)
         case .about: AboutSettingsDetail()
         }
     }
@@ -148,6 +161,19 @@ struct SettingsScreen: View {
         case "stalker":
             let form = PlaylistFormModel(editing: nil); form.sourceType = "stalker"; dialogs.push(.playlistForm(form))
         case "signOut": dialogs.push(.signOut)
+        case "traktConnect": dialogs.push(.custom(AnyView(TrackingAccountDialog(provider: .trakt, model: integrations, dialogs: dialogs))))
+        case "simklConnect": dialogs.push(.custom(AnyView(TrackingAccountDialog(provider: .simkl, model: integrations, dialogs: dialogs))))
+        case "mdblistConnect": dialogs.push(.custom(AnyView(TrackingAccountDialog(provider: .mdblist, model: integrations, dialogs: dialogs))))
+        case "disconnectTrakt": dialogs.push(.custom(AnyView(DisconnectTrackingDialog(provider: .trakt, dialogs: dialogs))))
+        case "watchProgress":
+            let sources = TvTrackingPolicy.shared.watchProgressSources(trakt: integrations.traktConnected, simkl: integrations.simklConnected, mdblist: integrations.mdbConnected)
+            dialogs.push(.picker(PickerSpec(title: "Watch Progress",
+                subtitle: "Choose the service Tuvora reads for resume and Continue Watching. Scrobbling remains active for every connected service.",
+                options: sources.map { SettingsPickerOption(id: $0.name, title: TrackingSettingsDetail.label($0)) },
+                selectedId: sources.first?.name ?? "", width: dp(660)) { _ in }))
+        case "debridKey":
+            dialogs.push(.custom(AnyView(KeyEntryDialog(title: "Torbox API Key", subtitle: "Enter your Torbox API key.",
+                                                        placeholder: "Enter Torbox API key", initial: "", dialogs: dialogs) { _ in })))
         case "engine":
             dialogs.push(.picker(PlaybackSettingsDetail.enginePicker(current: UserDefaults.standard.string(forKey: "tvos.player.engine") ?? "auto")))
         case "removePlaylist":
@@ -197,6 +223,8 @@ enum SettingsDialogKind {
     case removeAddon(ManagedAddon)
     case qr(url: String, instruction: String)
     case licences
+    /// A dialog that owns its own state (tracking sign-in, key entry).
+    case custom(AnyView)
 }
 
 struct PickerSpec {
@@ -279,6 +307,8 @@ private struct SettingsDialogView: View {
             QrHandOffDialog(url: url, instruction: instruction) { dialogs.pop() }
         case .licences:
             LicencesDialog { dialogs.pop() }
+        case .custom(let view):
+            view
         }
     }
 }
@@ -689,11 +719,10 @@ private struct AddonsSettingsDetail: View {
 
 // MARK: - Integrations (IPTV)
 
-/// XtreamSettingsContent (XtreamSettingsScreen.kt). NuvioTV reaches it from an Integrations hub; with
-/// IPTV the only integration ported to Apple TV, the hub would be one extra click, so it opens here.
+/// XtreamSettingsContent (XtreamSettingsScreen.kt), reached from the Integrations hub as on NuvioTV.
 /// Not ported: "Add from phone" pairing, Guide regions, Content & Categories, Hidden channels, and the
 /// catch-up / guide-offset pickers.
-private struct IptvSettingsDetail: View {
+struct IptvSettingsDetail: View {
     @ObservedObject var model: SettingsModel
     @EnvironmentObject private var dialogs: SettingsDialogs
 
@@ -968,6 +997,12 @@ private struct PlaybackSettingsDetail: View {
         let player = model.player
         VStack(alignment: .leading, spacing: dp(14)) {
             SettingsDetailHeader(title: "Playback Settings", subtitle: "Configure video playback and subtitle options")
+            SettingsGroupCard(title: "General", subtitle: "Core playback behavior.") {
+                SettingsToggleRow(title: "Skip Intro", subtitle: "Use introdb.app to detect intros and recaps.",
+                                  isOn: player?.skipIntroEnabled ?? true) {
+                    PlayerSettingsRepository.shared.setSkipIntroEnabled(enabled: !(player?.skipIntroEnabled ?? true))
+                }
+            }
             SettingsGroupCard(title: "Player & Stream Selection", subtitle: "Player preference, auto-play, and source filtering.") {
                 SettingsActionRow(title: "Internal Engine", value: Self.engineLabel(engine)) {
                     dialogs.push(.picker(Self.enginePicker(current: engine) { engine = $0 }))

@@ -40,6 +40,8 @@ struct SettingsActionRow: View {
     var trailingIcon = "md_chevron_right"
     /** Disabled rows dim to 40% and can't take focus, as NuvioTV's `enabled = false`. */
     var enabled = true
+    /** NuvioTV `valueColor` (TextSecondary by default; tracking status uses its own). */
+    var valueColor: Color? = nil
     let action: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
@@ -57,7 +59,7 @@ struct SettingsActionRow: View {
                     if let subtitle, !subtitle.isEmpty { Text(subtitle).font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).lineLimit(3) }
                 }
                 Spacer()
-                if let value { Text(value).font(NuvioType.labelLarge).foregroundStyle(colors.textSecondary) }
+                if let value { Text(value).font(NuvioType.labelLarge).foregroundStyle(valueColor ?? colors.textSecondary).lineLimit(1) }
                 if showChevron {
                     Image(trailingIcon).renderingMode(.template).resizable().frame(width: dp(18), height: dp(18)).foregroundStyle(colors.textTertiary)
                 }
