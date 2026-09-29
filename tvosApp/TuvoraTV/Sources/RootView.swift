@@ -11,7 +11,7 @@ struct RootView: View {
             switch screen {
             case .loading: ProgressView("Loading")
             case .signIn: SignInView()
-            case .profilePicker: Text("Who's watching?").font(.largeTitle)
+            case .profilePicker: ProfilePickerView()
             case .switching: ProgressView("Opening your profile")
             case .main: Text("Home").font(.largeTitle)
             }
@@ -48,6 +48,39 @@ struct SignInView: View {
                     line = "Sign-in could not start (\(failed.reason))"
                     NSLog("SMOKE device login failed=%@", "\(failed.reason)")
                 }
+            }
+        }
+    }
+}
+
+/// Minimal "Who's watching?" so the gate can be driven end to end. Phase 3 replaces it with the full
+/// picker (avatars, PIN entry, add profile); PIN-locked profiles are shown but not selectable yet.
+struct ProfilePickerView: View {
+    @State private var profiles: [NuvioProfile] = []
+
+    var body: some View {
+        VStack(spacing: 40) {
+            Text("Who's watching?").font(.largeTitle)
+            if profiles.isEmpty {
+                ProgressView("Loading profiles")
+            } else {
+                HStack(spacing: 32) {
+                    ForEach(profiles, id: \.profileIndex) { profile in
+                        Button {
+                            NSLog("SMOKE pick profile=%d", profile.profileIndex)
+                            TvAppLifecycle.shared.pickProfile(profileIndex: profile.profileIndex)
+                        } label: {
+                            Text(profile.pinEnabled ? "\(profile.name) 🔒" : profile.name).font(.title2)
+                        }
+                        .disabled(profile.pinEnabled)
+                    }
+                }
+            }
+        }
+        .task {
+            for await state in ProfileRepository.shared.state {
+                profiles = state.profiles
+                NSLog("SMOKE profiles=%@", state.profiles.map { "\($0.profileIndex):\($0.pinEnabled ? "pin" : "open")" }.joined(separator: ","))
             }
         }
     }
