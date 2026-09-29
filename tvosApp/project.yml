@@ -15,12 +15,13 @@ targets:
   TuvoraTV:
     type: application
     platform: tvOS
-    sources: [TuvoraTV/Sources]
+    sources: [TuvoraTV/Sources, TuvoraTV/Assets.xcassets, TuvoraTV/Resources]
     dependencies: [{ package: MPVKit, product: MPVKit }]
     info:
       path: TuvoraTV/Info.plist
       properties:
         CFBundleDisplayName: Tuvora
+        UIAppFonts: [Fonts/inter_variable.ttf]
         UILaunchScreen: {}
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
         CFBundleLocalizations: [en, ar, bg, cs, de, el, es, fr, he, hu, id, it, ja, nb, nl, pl, pt, pt-BR, ro, ru, sk, tr, ur, vi]

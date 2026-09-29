@@ -9,7 +9,7 @@ struct SettingsScreen: View {
     var body: some View {
         List {
             Section("Account") {
-                Text(accountLine).foregroundStyle(Theme.secondaryText)
+                Text(accountLine).foregroundStyle(.secondary)
                 Button("Switch profile") { TvAppLifecycle.shared.openProfilePicker() }
                 if let auth, case .authenticated = onEnum(of: auth) {
                     Button("Sign out", role: .destructive) { confirmSignOut = true }

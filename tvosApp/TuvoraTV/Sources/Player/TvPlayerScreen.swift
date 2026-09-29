@@ -86,7 +86,7 @@ struct TvPlayerScreen: View {
 }
 
 /// Hosts the current engine's view controller; swaps it when the session escalates engines.
-private struct EngineHost: UIViewControllerRepresentable {
+struct EngineHost: UIViewControllerRepresentable {
     let session: TvPlayerSession
     let generation: Int
 
