@@ -52,6 +52,7 @@ struct MainShell: View {
                                                popularity: nil, voteCount: nil, imdbRating: nil, genres: [], pinned: false,
                                                rawPosterUrl: nil, landscapePoster: nil, rawLandscapePosterUrl: nil))
     }()
+    @AppStorage(NuvioLayoutPrefs.collapseSidebarKey) private var collapseSidebar = false
 
     /// The drawer is open only when the viewer brought focus there (LEFT at the edge, or Menu). Collapsed
     /// items cannot take focus, exactly as NuvioTV's `canFocus = expanded`, so launch focus lands in content.
@@ -85,6 +86,9 @@ struct MainShell: View {
 
             Sidebar(destination: $destination, focus: $railFocus, expanded: expanded, engaged: railEngaged, profile: profile)
                 .onChange(of: railFocus) { _, f in if f == nil { railEngaged = false } }
+                // Settings → Layout "Collapse Sidebar": hidden until focus arrives (NuvioTV).
+                .opacity(collapseSidebar && !railEngaged ? 0 : 1)
+                .animation(NuvioTokens.Motion.fast, value: railEngaged)
         }
         .environment(\.nuvio, colors)
         .environmentObject(playback)

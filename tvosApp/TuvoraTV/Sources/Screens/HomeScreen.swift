@@ -13,13 +13,16 @@ struct HomeScreen: View {
     @State private var pendingHero: HeroContent?
     @State private var details: PreviewBox?
     @State private var streamTarget: TvCwTargetBox?
+    /// Settings → Layout (NuvioTV "Show Hero Section" / "Show Continue Watching").
+    @AppStorage(NuvioLayoutPrefs.showHeroKey) private var showHero = true
+    @AppStorage(NuvioLayoutPrefs.cwEnabledKey) private var cwEnabled = true
 
     var body: some View {
         GeometryReader { geo in
-            let viewport = geo.size.height * 0.52
+            let viewport = showHero ? geo.size.height * 0.52 : geo.size.height - dp(30)
             ZStack(alignment: .topLeading) {
                 colors.background.ignoresSafeArea()
-                if let hero {
+                if showHero, let hero {
                     HomeHero(content: hero, width: geo.size.width, height: geo.size.height - viewport + dp(24) + dp(14),
                              textBottomInset: viewport + dp(16))
                         .id(hero.id)
@@ -53,7 +56,7 @@ struct HomeScreen: View {
     private var rowsList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: NuvioTokens.Layout.rowGap) {
-                if !continueWatching.isEmpty {
+                if cwEnabled && !continueWatching.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         NuvioShelfHeader(title: "Continue Watching") { EmptyView() }
                         ScrollView(.horizontal, showsIndicators: false) {

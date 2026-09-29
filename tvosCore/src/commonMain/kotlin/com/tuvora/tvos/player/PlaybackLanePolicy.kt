@@ -14,6 +14,19 @@ enum class PlaybackLane { Libmpv, AvPlayer }
 /** Settings → Player engine. */
 enum class EngineSetting { Auto, Libmpv, AvPlayer }
 
+/**
+ * The Apple TV "Player engine" preference as stored (UserDefaults `tvos.player.engine`, written by
+ * Settings): "libmpv" / "avplayer" pick that engine, anything else — unset included — is Auto.
+ */
+object EngineSettingStore {
+    const val KEY = "tvos.player.engine"
+    fun parse(raw: String?): EngineSetting = when (raw?.trim()?.lowercase()) {
+        "libmpv" -> EngineSetting.Libmpv
+        "avplayer" -> EngineSetting.AvPlayer
+        else -> EngineSetting.Auto
+    }
+}
+
 data class LaneInput(
     val url: String,
     val isLive: Boolean,
