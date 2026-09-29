@@ -12,10 +12,15 @@ jobs:
     timeout-minutes: 60
  
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+ 
+      # libass-android is a broken submodule entry (no URL in .gitmodules) and is
+      # Android-only, so we skip it and only init what iOS needs.
+      - name: Init MPVKit submodule
+        run: git submodule update --init --recursive -- MPVKit
  
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -91,3 +96,4 @@ jobs:
         with:
           name: xcodebuild-log
           path: ${{ runner.temp }}/xcodebuild.log
+ 
