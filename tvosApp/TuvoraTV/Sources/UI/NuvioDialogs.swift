@@ -5,6 +5,8 @@ import SwiftUI
 struct NuvioDialog<Content: View>: View {
     let title: String
     var subtitle: String? = nil
+    /// NuvioDialog's `width` parameter (default 520dp).
+    var width: CGFloat = dp(520)
     @ViewBuilder var content: Content
     @Environment(\.nuvio) private var colors
 
@@ -15,7 +17,7 @@ struct NuvioDialog<Content: View>: View {
             ScrollView { VStack(spacing: dp(8)) { content } }
         }
         .padding(dp(24))
-        .frame(width: dp(520))
+        .frame(width: width)
         .background(RoundedRectangle(cornerRadius: NuvioTokens.Radius.dialog).fill(colors.backgroundElevated))
         .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.dialog).stroke(colors.border, lineWidth: NuvioTokens.Stroke.hairline))
     }

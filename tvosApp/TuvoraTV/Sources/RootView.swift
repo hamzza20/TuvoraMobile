@@ -11,6 +11,9 @@ struct RootView: View {
     var body: some View {
         if let session = smokeSession {
             TvPlayerScreen(session: session) { smokeSession = nil }
+        } else if ProcessInfo.processInfo.arguments.contains("-smokeSignIn") {
+            // Simulator smoke hook: shows the sign-in screen without signing the simulator out.
+            SignInView()
         } else {
             gate
         }
