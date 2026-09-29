@@ -214,11 +214,13 @@
 "Retry" = "Försök igen";
 "Runtime, status, country, and language from TMDB" = "Speltid, premiärdatum, land och språk från TMDB";
 "Save" = "Spara";
+"Save changes" = "Spara ändringar";
 "Saving…" = "Sparar…";
 "Scan the QR code or enter the short code in your browser." = "Skanna QR, godkänn i webbläsaren och återkom sedan hit.";
 "Search" = "Sök";
 "Search movies & series" = "Sök filmer & serier";
 "See All" = "Se Allt";
+"See all" = "Se Allt";
 "Select" = "Välj";
 "Select a catalog" = "Välj en katalog";
 "Select a profile to continue" = "Välj en profil för att fortsätta";

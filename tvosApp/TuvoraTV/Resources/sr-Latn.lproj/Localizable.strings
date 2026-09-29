@@ -53,6 +53,7 @@
 "Bold" = "Podebljano";
 "Bottom Offset" = "Pomeraj od dna";
 "Browse and play files already in your connected accounts." = "Pregledajte i puštajte datoteke koje se već nalaze na vašim povezanim nalozima.";
+"CLOUD" = "Cloud";
 "Cancel" = "Otkaži";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Ograničite ponovljene 2160p, 1080p, 720p rezultate nakon sortiranja.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ograničite ponovljene BluRay, WEB-DL, REMUX rezultate nakon sortiranja.";
@@ -132,6 +133,7 @@
 "Delete this list?" = "Obrisati ovu listu?";
 "Dense" = "Gusto";
 "Description" = "Opis";
+"Description template" = "Šablon opisa";
 "Description, genres, and rating from TMDB" = "Opis, žanrovi i ocena sa TMDB-a";
 "Details" = "Detalji";
 "Device language" = "Jezik uređaja";
@@ -220,6 +222,7 @@
 "Loading…" = "Učitavanje…";
 "Login approved. Finishing sign in…" = "Prijava odobrena. Završavanje prijave…";
 "Logo and backdrop images from TMDB" = "Slike logotipa i pozadina sa TMDB-a";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList ocene";
 "Manage Lists" = "Upravljaj listama";
 "Manage Profiles" = "Upravljaj profilima";
@@ -241,6 +244,7 @@
 "Movie" = "Film";
 "Movies" = "Filmovi";
 "Name" = "Naziv";
+"Name template" = "Šablon naziva";
 "Networks" = "Mreže";
 "Networks with logos from TMDB" = "Mreže sa logotipovima sa TMDB-a";
 "Next Episode" = "Sledeća epizoda";
@@ -335,7 +339,9 @@
 "Retry" = "Pokušaj ponovo";
 "Rose" = "Ružičasta";
 "Runtime, status, country, and language from TMDB" = "Trajanje, status, zemlja i jezik sa TMDB-a";
+"SIMKL" = "Simkl";
 "Save" = "Sačuvaj";
+"Save changes" = "Sačuvaj izmene";
 "Saved" = "Sačuvano";
 "Saving…" = "Čuvanje…";
 "Scan the QR code or enter the short code in your browser." = "Skenirajte QR kod ili unesite kratki kod u vašem pregledaču.";
@@ -344,6 +350,7 @@
 "Search failed" = "Pretraga nije uspela";
 "Search movies & series" = "Pretraži filmove i serije";
 "See All" = "Prikaži sve";
+"See all" = "Prikaži sve";
 "Select" = "Izaberi";
 "Select a catalog" = "Izaberite katalog";
 "Select a profile to continue" = "Izaberite profil da biste nastavili";

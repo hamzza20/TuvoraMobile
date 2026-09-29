@@ -34,6 +34,7 @@
 "Bold" = "Îngroșat";
 "Bottom Offset" = "Decalaj jos";
 "Browse and play files already in your connected accounts." = "Răsfoiește și redă fișierele existente deja în conturile tale conectate.";
+"CLOUD" = "Cloud";
 "Cancel" = "Anulează";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limitează rezultatele repetate de 2160p, 1080p, 720p după sortare.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limitează rezultatele repetate de BluRay, WEB-DL, REMUX după sortare.";
@@ -117,11 +118,13 @@
 "Episodes" = "Episoade";
 "External ratings providers" = "Furnizori externi de evaluări";
 "Fetch ratings from external providers in metadata detail screen" = "Obține ratinguri de la furnizori externi în ecranul de detalii ale metadatelor";
+"File" = "FIȘIER";
 "Files" = "Fișiere";
 "Fill" = "Umple";
 "Finish connection approval" = "Finalizează autentificarea Trakt în browser";
 "Fit" = "Potrivește";
 "Font Size" = "Dimensiune font";
+"Formatting" = "FORMATARE";
 "Generating QR…" = "Se generează QR…";
 "Genre" = "Gen";
 "Go to details" = "Accesează detalii";
@@ -148,6 +151,7 @@
 "Library" = "Bibliotecă";
 "Library Source" = "Sursă bibliotecă";
 "Licenses & Attribution" = "Licențe și atribuiri";
+"Link Preparation" = "PREGĂTIRE LINKURI";
 "Links to prepare" = "Număr de linkuri de pregătit";
 "List" = "Listă";
 "Load more" = "Încarcă mai mult";
@@ -155,6 +159,7 @@
 "Loading…" = "Încărcare…";
 "Login approved. Finishing sign in…" = "Autentificare aprobată. Se finalizează conectarea…";
 "Logo and backdrop images from TMDB" = "Logo și imagini de fundal de la TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Evaluări MDBList";
 "Manage Lists" = "Administrează listele";
 "Manage Profiles" = "Gestionează profilurile";
@@ -224,6 +229,7 @@
 "QR unavailable. Refresh to retry." = "QR indisponibil. Reîncarcă pentru a reîncerca.";
 "Ready to play" = "Pregătit de redare";
 "Recent" = "Recente";
+"Recent searches" = "Căutări recente";
 "Refresh QR" = "Reîmprospătează QR";
 "Refresh cloud library" = "Reîmprospătează biblioteca în cloud";
 "Remove" = "Elimină";
@@ -241,6 +247,7 @@
 "Rose" = "Roz (Rose)";
 "Runtime, status, country, and language from TMDB" = "Durată, dată de lansare, țară și limbă de la TMDB";
 "Save" = "Salvează";
+"Save changes" = "Salvează modificările";
 "Saved" = "Salvat";
 "Saving…" = "Se salvează…";
 "Scan the QR code or enter the short code in your browser." = "Scanați QR, aprobați în browser, apoi reveniți aici.";
@@ -248,6 +255,7 @@
 "Search failed" = "Căutarea a eșuat";
 "Search movies & series" = "Caută filme & seriale";
 "See All" = "Vezi tot";
+"See all" = "Vezi tot";
 "Select" = "Selectează";
 "Select a catalog" = "Selectați un catalog";
 "Select a profile to continue" = "Selectează un profil pentru a continua";
@@ -271,6 +279,7 @@
 "Show critics score" = "Afișează scorul criticilor";
 "Show titles under posters in rows, grid, and see-all." = "Afișează titlurile sub postere în rânduri, grilă și vezi tot.";
 "Sign Out" = "Deconectare";
+"Sign out?" = "Te deconectezi?";
 "Signed in" = "Autentificat";
 "Size" = "Dimensiune";
 "Size range" = "Interval dimensiune";
@@ -294,6 +303,8 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Limba metadatelor TMDB pentru titlu, logo și câmpurile activate";
 "TMDB movie collections in release order" = "Colecții de filme TMDB în ordinea lansării";
 "TMDB recommendation backdrops on detail and post-play screens" = "Fundaluri de recomandare TMDB pe pagina de detalii";
+"TRAKT" = "Trakt";
+"TUVORA" = "Tuvora";
 "Terms" = "Termenii";
 "Text Color" = "Culoarea textului";
 "These integrations are experimental and may be kept, changed, or removed later." = "Aceste integrări sunt experimentale și pot fi păstrate, modificate sau eliminate ulterior.";

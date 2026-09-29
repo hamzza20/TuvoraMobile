@@ -80,7 +80,11 @@ def main():
     for k, v in tv_en.items(): by_tv.setdefault(v, []).append(k)
     for k, v in mob_en.items(): by_mob.setdefault(v, []).append(k)
     literals = swift_literals()
-    matched = {t: ("tv", by_tv[t]) if t in by_tv else ("mob", by_mob[t]) for t in literals if t in by_tv or t in by_mob}
+    # Case-insensitive fallback ("See all" vs NuvioTV's "See All"); exact matches win.
+    for src in (by_tv, by_mob):
+        for v, ks in list(src.items()): src.setdefault(v.lower(), ks)
+    def look(src, t): return src.get(t) or src.get(t.lower())
+    matched = {t: ("tv", look(by_tv, t)) if look(by_tv, t) else ("mob", look(by_mob, t)) for t in literals if look(by_tv, t) or look(by_mob, t)}
     unmatched = sorted(t for t in literals if t not in matched and " " in t)
     for android, apple in LOCALES.items():
         tv = load(NUVIOTV_RES / f"values-{android}" / "strings.xml")
@@ -89,7 +93,7 @@ def main():
         lines = []
         for t, (src, keys) in sorted(matched.items()):
             cands = [tv.get(k) for k in keys] if src == "tv" else []
-            cands += [mob.get(k) for k in by_mob.get(t, [])]
+            cands += [mob.get(k) for k in (look(by_mob, t) or [])]
             tr = next((c for c in cands if c and c != t), None)
             if tr and "%@" in t:
                 tr = apple_format(tr)

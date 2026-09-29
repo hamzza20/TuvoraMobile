@@ -54,6 +54,7 @@
 "Bold" = "Negrita";
 "Bottom Offset" = "Desplazamiento inferior";
 "Browse and play files already in your connected accounts." = "Explora y reproduce archivos que ya están en tus cuentas conectadas.";
+"CLOUD" = "Nube";
 "Cancel" = "Cancelar";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limita resultados repetidos de 2160p, 1080p, 720p tras ordenar.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limita resultados repetidos de BluRay, WEB-DL, REMUX tras ordenar.";
@@ -229,6 +230,7 @@
 "Loading…" = "Cargando…";
 "Login approved. Finishing sign in…" = "Inicio de sesión aprobado. Finalizando acceso…";
 "Logo and backdrop images from TMDB" = "Imágenes de logotipo y telón de fondo de TMDB";
+"MDBLIST" = "MDBList";
 "MDBList" = "Lista MDBL";
 "MDBList Ratings" = "Calificaciones de MDBList";
 "MDBList connection is unavailable in this build." = "La conexión con MDBList no está disponible en esta compilación.";
@@ -349,7 +351,9 @@
 "Retry" = "Reintentar";
 "Rose" = "Rosa";
 "Runtime, status, country, and language from TMDB" = "Duración, fecha de lanzamiento, país e idioma de TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Guardar";
+"Save changes" = "Guardar cambios";
 "Saved" = "Guardado";
 "Saving…" = "Guardando…";
 "Scan the QR code or enter the short code in your browser." = "Escanea el QR, aprueba en el navegador y luego vuelve aquí.";
@@ -359,6 +363,7 @@
 "Search failed" = "Error en la búsqueda";
 "Search movies & series" = "Buscar películas y series";
 "See All" = "Ver todo";
+"See all" = "Ver todo";
 "Select" = "Seleccionar";
 "Select a catalog" = "Selecciona un catálogo";
 "Select a profile to continue" = "Selecciona un perfil para continuar";
@@ -425,6 +430,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Idioma de metadatos de TMDB para título, logotipo y campos habilitados";
 "TMDB movie collections in release order" = "Colecciones de películas de TMDB en orden de lanzamiento";
 "TMDB recommendation backdrops on detail and post-play screens" = "Telones de fondo recomendados de TMDB en página de detalles";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Terms" = "Términos";
 "Text Color" = "Color del texto";
@@ -449,6 +455,7 @@
 "Trakt history considered for continue watching" = "Historial de Trakt considerado para continuar viendo";
 "Trakt-specific history, reviews, and recommendations" = "Historial, reseñas y recomendaciones específicas de Trakt";
 "Try a different genre or catalog" = "Intenta un género o catálogo diferente";
+"Try again" = "Reintentar";
 "Try searching with different keywords" = "Prueba a buscar con otras palabras clave";
 "Tune card width and corner radius." = "Ajusta ancho de tarjeta y radio de esquina.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Activa Biblioteca en la nube en configuración de Servicios conectados para explorar archivos de cuentas conectadas.";

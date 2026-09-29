@@ -55,6 +55,7 @@
 "Bold" = "粗體";
 "Bottom Offset" = "底部偏移";
 "Browse and play files already in your connected accounts." = "瀏覽並播放已連線帳戶中的檔案。";
+"CLOUD" = "雲端";
 "Cancel" = "取消";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "排序後限制重複的 2160p、1080p、720p 結果。";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "排序後限制重複的 BluRay、WEB-DL、REMUX 結果。";
@@ -136,6 +137,7 @@
 "Delete this list?" = "刪除此清單？";
 "Dense" = "密集";
 "Description" = "描述";
+"Description template" = "描述範本";
 "Description, genres, and rating from TMDB" = "來自 TMDB 的描述、類型和評分";
 "Details" = "詳細資訊";
 "Device language" = "裝置語言";
@@ -225,6 +227,7 @@
 "Loading…" = "載入中…";
 "Login approved. Finishing sign in…" = "登入已批准。正在完成登入…";
 "Logo and backdrop images from TMDB" = "來自 TMDB 的標誌和背景圖片";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList 評分";
 "MDBList connection is unavailable in this build." = "此版本中 MDBList 連線無法使用。";
 "Manage Lists" = "管理清單";
@@ -247,6 +250,7 @@
 "Movie" = "電影";
 "Movies" = "電影";
 "Name" = "名稱";
+"Name template" = "名稱範本";
 "Networks" = "頻道";
 "Networks with logos from TMDB" = "來自 TMDB 的頻道及其標誌";
 "Next Episode" = "下一集";
@@ -344,7 +348,9 @@
 "Rose" = "玫瑰";
 "Rotten Tomatoes" = "爛番茄";
 "Runtime, status, country, and language from TMDB" = "來自 TMDB 的片長、狀態、國家和語言";
+"SIMKL" = "Simkl";
 "Save" = "儲存";
+"Save changes" = "儲存變更";
 "Saved" = "已儲存";
 "Saving…" = "儲存中…";
 "Scan the QR code or enter the short code in your browser." = "掃描 QR 碼或在瀏覽器中輸入短代碼。";
@@ -354,6 +360,7 @@
 "Search failed" = "搜尋失敗";
 "Search movies & series" = "搜尋電影與影集";
 "See All" = "查看全部";
+"See all" = "查看全部";
 "Select" = "選擇";
 "Select a catalog" = "選擇目錄";
 "Select a profile to continue" = "選擇個人資料以繼續";

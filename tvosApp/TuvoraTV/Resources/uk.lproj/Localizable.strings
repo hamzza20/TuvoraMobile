@@ -50,6 +50,7 @@
 "Bold" = "Жирний";
 "Bottom Offset" = "Зміщення знизу";
 "Browse and play files already in your connected accounts." = "Переглядайте та відтворюйте файли, що вже знаходяться в підключених акаунтах.";
+"CLOUD" = "Хмара";
 "Cancel" = "Скасувати";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Обмежити повторювані результати 2160p, 1080p, 720p після сортування.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Обмежити повторювані результати BluRay, WEB-DL, REMUX після сортування.";
@@ -119,6 +120,7 @@
 "Delete this list?" = "Видалити цей список?";
 "Dense" = "Щільний";
 "Description" = "Опис";
+"Description template" = "Шаблон опису";
 "Description, genres, and rating from TMDB" = "Опис, жанри та рейтинг з TMDB";
 "Details" = "Деталі";
 "Device language" = "Мова пристрою";
@@ -204,6 +206,7 @@
 "Loading…" = "Завантаження…";
 "Login approved. Finishing sign in…" = "Вхід підтверджено. Завершення…";
 "Logo and backdrop images from TMDB" = "Логотипи та фони з TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Рейтинги MDBList";
 "Manage Lists" = "Керування списками";
 "Manage Profiles" = "Керування профілями";
@@ -224,6 +227,7 @@
 "Movie" = "Фільм";
 "Movies" = "Фільми";
 "Name" = "Назва";
+"Name template" = "Шаблон назви";
 "Networks" = "Телемережі";
 "Networks with logos from TMDB" = "Мережі з логотипами з TMDB";
 "Next Episode" = "Наступний епізод";
@@ -310,6 +314,7 @@
 "Rose" = "Рожевий";
 "Runtime, status, country, and language from TMDB" = "Тривалість, статус, країна та мова з TMDB";
 "Save" = "Зберегти";
+"Save changes" = "Зберегти зміни";
 "Saved" = "Збережене";
 "Saving…" = "Збереження…";
 "Scan the QR code or enter the short code in your browser." = "Відскануйте QR, підтвердіть у браузері, потім поверніться сюди.";
@@ -317,6 +322,7 @@
 "Search failed" = "Пошук не вдався";
 "Search movies & series" = "Пошук фільмів та серіалів";
 "See All" = "Показати всі";
+"See all" = "Показати всі";
 "Select" = "Обрати";
 "Select a catalog" = "Оберіть каталог";
 "Select a profile to continue" = "Оберіть профіль для продовження";

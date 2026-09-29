@@ -54,6 +54,7 @@
 "Bold" = "Tučné";
 "Bottom Offset" = "Spodný posun";
 "Browse and play files already in your connected accounts." = "Prehliadajte a prehrávajte súbory, ktoré už máte vo svojich pripojených účtoch.";
+"CLOUD" = "Cloud";
 "Cancel" = "Zrušiť";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Obmedziť opakujúce sa výsledky 2160p, 1080p a 720p po zoradení.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Obmedziť opakujúce sa výsledky BluRay, WEB-DL a REMUX po zoradení.";
@@ -228,6 +229,7 @@
 "Loading…" = "Načítava sa…";
 "Login approved. Finishing sign in…" = "Prihlásenie schválené. Dokončuje sa prihlásenie…";
 "Logo and backdrop images from TMDB" = "Logo a obrázky pozadia z TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList hodnotenia";
 "MDBList connection is unavailable in this build." = "Pripojenie MDBList nie je v tejto verzii dostupné.";
 "Manage Lists" = "Spravovať zoznamy";
@@ -348,7 +350,9 @@
 "Retry" = "Skúsiť znova";
 "Rose" = "Ružová";
 "Runtime, status, country, and language from TMDB" = "Dĺžka, stav, krajina a jazyk z TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Uložiť";
+"Save changes" = "Uložiť zmeny";
 "Saved" = "Uložené";
 "Saving…" = "Ukladá sa…";
 "Scan the QR code or enter the short code in your browser." = "Naskenujte QR, schváľte v prehliadači a vráťte sa sem.";
@@ -358,6 +362,7 @@
 "Search failed" = "Vyhľadávanie zlyhalo";
 "Search movies & series" = "Hľadať filmy a seriály";
 "See All" = "Zobraziť všetko";
+"See all" = "Zobraziť všetko";
 "Select" = "Vybrať";
 "Select a catalog" = "Vyberte katalóg";
 "Select a profile to continue" = "Vyberte profil pre pokračovanie";
@@ -424,6 +429,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Jazyk TMDB metadát pre názov, logo a zapnuté polia";
 "TMDB movie collections in release order" = "TMDB filmové kolekcie v poradí vydania";
 "TMDB recommendation backdrops on detail and post-play screens" = "Pozadia odporúčaní z TMDB na detailnej stránke";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Terms" = "Podmienkami";
 "Text Color" = "Farba textu";

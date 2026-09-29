@@ -45,6 +45,7 @@
 "Bold" = "Tebal";
 "Bottom Offset" = "Batas Bawah";
 "Browse and play files already in your connected accounts." = "Telusuri dan mainkan file yang tersedia di akun Anda.";
+"CLOUD" = "Cloud";
 "Cancel" = "Batal";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Batasi hasil 2160p, 1080p, 720p yang berulang setelah diurutkan.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Batas hasil BluRay, WEB-DL, REMUX yang berulang setelah diurutkan.";
@@ -149,6 +150,7 @@
 "Failed to start QR login" = "Gagal memulai login QR";
 "Fetch ratings from external providers in metadata detail screen" = "Ambil rating dari penyedia eksternal di layar detail metadata";
 "Fetch skip timestamps from anime-skip.com" = "Ambil cap waktu lewati dari anime-skip.com";
+"File" = "FILE";
 "Fill" = "Penuh";
 "Filter sources by video codec." = "Filter hasil berdasarkan codec video.";
 "Filter streams by file size." = "Filter berdasarkan ukuran file";
@@ -201,6 +203,7 @@
 "Loading…" = "Memuat…";
 "Login approved. Finishing sign in…" = "Login disetujui. Menyelesaikan masuk…";
 "Logo and backdrop images from TMDB" = "Gambar logo dan backdrop dari TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Rating MDBList";
 "Manage Lists" = "Kelola Daftar";
 "Manage Profiles" = "Kelola Profil";
@@ -306,6 +309,7 @@
 "Rose" = "Mawar";
 "Runtime, status, country, and language from TMDB" = "Durasi, status, negara, dan bahasa dari TMDB";
 "Save" = "Simpan";
+"Save changes" = "Simpan Perubahan";
 "Saved" = "Tersimpan";
 "Saving…" = "Menyimpan…";
 "Scan the QR code or enter the short code in your browser." = "Pindai QR, setujui di browser, lalu kembali ke sini.";
@@ -313,6 +317,7 @@
 "Search failed" = "Pencarian gagal";
 "Search movies & series" = "Cari film & serial";
 "See All" = "Lihat Semua";
+"See all" = "Lihat Semua";
 "Select" = "Pilih";
 "Select a catalog" = "Pilih katalog";
 "Select a profile to continue" = "Pilih profil untuk melanjutkan";
@@ -341,6 +346,7 @@
 "Show, hide, or require Dolby Vision sources." = "Tampilkan, sembunyikan, atau wajibkan hasil dengan Dolby Vision.";
 "Show, hide, or require HDR sources." = "Tampilkan, sembunyikan, atau wajibkan hasil dengan HDR.";
 "Sign Out" = "Keluar";
+"Sign out?" = "Keluar?";
 "Signed in" = "Sudah masuk";
 "Size" = "Ukuran";
 "Size range" = "Rentang ukuran file";
@@ -370,6 +376,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Bahasa metadata TMDB untuk judul, logo, dan bidang yang diaktifkan";
 "TMDB movie collections in release order" = "Koleksi film TMDB dalam urutan rilis";
 "TMDB recommendation backdrops on detail and post-play screens" = "Backdrop rekomendasi TMDB di halaman detail";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Text Color" = "Warna Teks";
 "These integrations are experimental and may be kept, changed, or removed later." = "Integrasi ini masih bersifat eksperimental dan dapat dipertahankan, diubah, atau dihapus di sewaktu-waktu.";

@@ -46,6 +46,7 @@
 "Bold" = "Fed";
 "Bottom Offset" = "Bundforskydning";
 "Browse and play files already in your connected accounts." = "Gennemse og afspil filer, der allerede findes i dine tilknyttede konti.";
+"CLOUD" = "Cloud";
 "Cancel" = "Annuller";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Begræns gentagne 2160p-, 1080p- og 720p-resultater efter sortering.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Begræns gentagne BluRay-, WEB-DL- og REMUX-resultater efter sortering.";
@@ -111,6 +112,7 @@
 "Delete this list?" = "Slet denne liste?";
 "Dense" = "Tæt";
 "Description" = "Beskrivelse";
+"Description template" = "Beskrivelsesskabelon";
 "Description, genres, and rating from TMDB" = "Beskrivelse, genrer og bedømmelse fra TMDB";
 "Details" = "Detaljer";
 "Device language" = "Enhedssprog";
@@ -192,6 +194,7 @@
 "Loading…" = "Indlæser…";
 "Login approved. Finishing sign in…" = "Login godkendt. Afslutter login…";
 "Logo and backdrop images from TMDB" = "Logo- og baggrundsbilleder fra TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList-bedømmelser";
 "Manage Lists" = "Administrer lister";
 "Manage Profiles" = "Administrer profiler";
@@ -212,6 +215,7 @@
 "Movie" = "Film";
 "Movies" = "Film";
 "Name" = "Navn";
+"Name template" = "Navnskabelon";
 "Networks" = "Netværk";
 "Networks with logos from TMDB" = "Netværk med logoer fra TMDB";
 "Next Episode" = "Næste episode";
@@ -294,6 +298,7 @@
 "Retry" = "Prøv igen";
 "Runtime, status, country, and language from TMDB" = "Varighed, status, land og sprog fra TMDB";
 "Save" = "Gem";
+"Save changes" = "Gem ændringer";
 "Saved" = "Gemt";
 "Saving…" = "Gemmer…";
 "Scan the QR code or enter the short code in your browser." = "Scan QR, godkend i browseren, og vend tilbage hertil.";
@@ -301,6 +306,7 @@
 "Search failed" = "Søgning mislykkedes";
 "Search movies & series" = "Søg efter film & serier";
 "See All" = "Se alle";
+"See all" = "Se alle";
 "Select" = "Vælg";
 "Select a catalog" = "Vælg et katalog";
 "Select a profile to continue" = "Vælg en profil for at fortsætte";

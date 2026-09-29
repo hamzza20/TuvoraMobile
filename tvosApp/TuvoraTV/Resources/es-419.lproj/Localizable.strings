@@ -53,6 +53,7 @@
 "Bold" = "Negrita";
 "Bottom Offset" = "Desplazamiento Inferior";
 "Browse and play files already in your connected accounts." = "Explora y reproduce archivos ya disponibles en tus cuentas conectadas.";
+"CLOUD" = "Nube";
 "Cancel" = "Cancelar";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limita resultados repetidos de 2160p, 1080p y 720p después del ordenamiento.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limita resultados repetidos de BluRay, WEB-DL y REMUX después del ordenamiento.";
@@ -134,6 +135,7 @@
 "Delete this list?" = "¿Eliminar esta lista?";
 "Dense" = "Denso";
 "Description" = "Descripción";
+"Description template" = "Plantilla de la descripción";
 "Description, genres, and rating from TMDB" = "Descripción, géneros y calificación desde TMDB";
 "Details" = "Detalles";
 "Device language" = "Idioma del dispositivo";
@@ -222,6 +224,7 @@
 "Loading…" = "Cargando…";
 "Login approved. Finishing sign in…" = "Inicio de sesión aprobado. Finalizando…";
 "Logo and backdrop images from TMDB" = "Logo e imágenes de fondo desde TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Calificaciones de MDBList";
 "MDBList connection is unavailable in this build." = "La conexión con MDBList no está disponible en esta versión.";
 "Manage Lists" = "Administrar listas";
@@ -244,6 +247,7 @@
 "Movie" = "Película";
 "Movies" = "Películas";
 "Name" = "Nombre";
+"Name template" = "Plantilla del nombre";
 "Networks" = "Cadenas";
 "Networks with logos from TMDB" = "Cadenas con logos desde TMDB";
 "Next Episode" = "Siguiente Episodio";
@@ -339,7 +343,9 @@
 "Retry" = "Reintentar";
 "Rose" = "Rosa";
 "Runtime, status, country, and language from TMDB" = "Duración, fecha de lanzamiento, país e idioma desde TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Guardar";
+"Save changes" = "Guardar cambios";
 "Saved" = "Guardado";
 "Saving…" = "Guardando…";
 "Scan the QR code or enter the short code in your browser." = "Escanea el QR, aprueba en el navegador y luego vuelve aquí.";
@@ -349,6 +355,7 @@
 "Search failed" = "La búsqueda falló";
 "Search movies & series" = "Buscar películas y series";
 "See All" = "Ver todo";
+"See all" = "Ver todo";
 "Select" = "Seleccionar";
 "Select a catalog" = "Selecciona un catálogo";
 "Select a profile to continue" = "Selecciona un perfil para continuar";

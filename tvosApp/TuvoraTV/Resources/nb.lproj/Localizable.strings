@@ -45,6 +45,7 @@
 "Bold" = "Fet";
 "Bottom Offset" = "Nedre offset";
 "Browse and play files already in your connected accounts." = "Bla gjennom og spill filer som allerede finnes i tilkoblede kontoer.";
+"CLOUD" = "Sky";
 "Cancel" = "Avbryt";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Begrens gjentatte 2160p-, 1080p- og 720p-resultater etter sortering.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Begrens gjentatte BluRay-, WEB-DL- og REMUX-resultater etter sortering.";
@@ -141,6 +142,7 @@
 "External ratings providers" = "Eksterne vurderingsleverandører";
 "Fetch ratings from external providers in metadata detail screen" = "Hent vurderinger fra eksterne leverandører i detaljedskjermen for metadata";
 "Fetch skip timestamps from anime-skip.com" = "Hent hopptidsmerker fra anime-skip.com";
+"File" = "FIL";
 "Files" = "Filer";
 "Fill" = "Fyll";
 "Finish connection approval" = "Fullfør Trakt-innlogging i nettleseren din";
@@ -148,6 +150,7 @@
 "Focus an avatar to view its name" = "Fokuser en avatar for å vise dens navn";
 "Font Size" = "Skriftstørrelse";
 "Forgot PIN? Reset it from your Tuvora account on tuvora website." = "Glemt PIN? Tilbakestill det fra Tuvora-kontoen din på Tuvora-nettstedet.";
+"Formatting" = "FORMATERING";
 "General" = "Generelt";
 "Generating QR…" = "Genererer QR…";
 "Genre" = "Sjanger";
@@ -176,6 +179,7 @@
 "Library" = "Bibliotek";
 "Library Source" = "Bibliotekkilde";
 "Licenses & Attribution" = "Lisenser & attribusjon";
+"Link Preparation" = "LENKEFORBEREDELSE";
 "Links to prepare" = "Lenker å forberede";
 "List" = "Liste";
 "Load more" = "Last mer";
@@ -183,6 +187,7 @@
 "Loading…" = "Laster…";
 "Login approved. Finishing sign in…" = "Login godkjent. Avslutter pålogging…";
 "Logo and backdrop images from TMDB" = "Logo- og bakgrunnsbilder fra TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList-vurderinger";
 "Manage Lists" = "Administrer lister";
 "Manage Profiles" = "Administrer profiler";
@@ -261,6 +266,7 @@
 "QR unavailable. Refresh to retry." = "QR utilgjengelig. Oppfrisk for å prøve på nytt.";
 "Ready to play" = "Klar til avspilling";
 "Recent" = "Nylig";
+"Recent searches" = "Nylige søk";
 "Refresh QR" = "Oppfrisk QR";
 "Refresh cloud library" = "Oppdater skybibliotek";
 "Remove" = "Fjern";
@@ -278,7 +284,9 @@
 "Resume" = "Gjenoppta";
 "Retry" = "Prøv igjen";
 "Runtime, status, country, and language from TMDB" = "Kjøretid, utgivelsesdato, land og språk fra TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Lagre";
+"Save changes" = "Lagre endringer";
 "Saved" = "Lagret";
 "Saving…" = "Lagrer…";
 "Scan the QR code or enter the short code in your browser." = "Skann QR, godkjenn i nettleser, og kom deretter tilbake hit.";
@@ -287,6 +295,7 @@
 "Search failed" = "Søk mislyktes";
 "Search movies & series" = "Søk i filmer & serier";
 "See All" = "Se alt";
+"See all" = "Se alt";
 "Select" = "Velg";
 "Select a catalog" = "Velg en katalog";
 "Select a profile to continue" = "Velg en profil for å fortsette";
@@ -312,6 +321,7 @@
 "Show critics score" = "Vis kritikerscore";
 "Show titles under posters in rows, grid, and see-all." = "Vis titler under plakater i rader, rutenett og se-alle.";
 "Sign Out" = "Logg ut";
+"Sign out?" = "Logge ut?";
 "Signed in" = "Logget inn";
 "Simkl features" = "Simkl-funksjoner";
 "Size" = "Størrelse";
@@ -337,6 +347,8 @@
 "TMDB metadata language for title, logo, and enabled fields" = "TMDB-metadataspråk for tittel, logo og aktiverte felt";
 "TMDB movie collections in release order" = "TMDB filmsamlinger i utgivelsesrekkefølge";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB-anbefalings bakgrunner på detaljerside";
+"TRAKT" = "Trakt";
+"TUVORA" = "Tuvora";
 "Terms" = "Vilkår";
 "Text Color" = "Tekstfarge";
 "These integrations are experimental and may be kept, changed, or removed later." = "Disse integrasjonene er eksperimentelle og kan endres eller fjernes senere.";
@@ -355,6 +367,7 @@
 "Trakt features" = "Trakt-funksjoner";
 "Trakt history considered for continue watching" = "Trakt-historikk vurdert for fortsett å se";
 "Try a different genre or catalog" = "Prøv en annen sjanger eller katalog";
+"Try again" = "Prøv på nytt";
 "Tune card width and corner radius." = "Juster kortbredde og hjørneradius.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Slå på Skybibliotek i innstillingene for Tilkoblede tjenester for å bla gjennom filer fra tilkoblede kontoer.";
 "Tuvora Library" = "Tuvora-bibliotek";

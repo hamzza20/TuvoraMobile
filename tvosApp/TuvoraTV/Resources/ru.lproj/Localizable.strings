@@ -56,6 +56,7 @@
 "Bold" = "Жирный";
 "Bottom Offset" = "Смещение снизу";
 "Browse and play files already in your connected accounts." = "Просматривайте и воспроизводите файлы, уже находящиеся в подключённых аккаунтах.";
+"CLOUD" = "Облако";
 "Cancel" = "Отмена";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Ограничить повторяющиеся результаты 2160p, 1080p, 720p после сортировки.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ограничить повторяющиеся результаты BluRay, WEB-DL, REMUX после сортировки.";
@@ -230,6 +231,7 @@
 "Loading…" = "Загрузка…";
 "Login approved. Finishing sign in…" = "Вход подтвержден. Завершение…";
 "Logo and backdrop images from TMDB" = "Логотипы и фоны из TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Рейтинги MDBList";
 "Manage Lists" = "Управление списками";
 "Manage Profiles" = "Управление профилями";
@@ -251,7 +253,7 @@
 "Movie" = "Фильм";
 "Movies" = "Фильмы";
 "Name" = "Название";
-"Name template" = "Шаблон имени";
+"Name template" = "Шаблон названия";
 "Networks" = "Телесети";
 "Networks with logos from TMDB" = "Сети с логотипами из TMDB";
 "Next Episode" = "Следующий эпизод";
@@ -348,7 +350,9 @@
 "Retry" = "Повторить";
 "Rose" = "Розовый";
 "Runtime, status, country, and language from TMDB" = "Длительность, статус, страна и язык из TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Сохранить";
+"Save changes" = "Сохранить изменения";
 "Saved" = "Сохранённое";
 "Saving…" = "Сохранение…";
 "Scan the QR code or enter the short code in your browser." = "Отсканируйте QR, подтвердите в браузере, затем вернитесь сюда.";
@@ -357,6 +361,7 @@
 "Search failed" = "Поиск не удался";
 "Search movies & series" = "Поиск фильмов и сериалов";
 "See All" = "Показать все";
+"See all" = "Показать все";
 "Select" = "Выбрать";
 "Select a catalog" = "Выберите каталог";
 "Select a profile to continue" = "Выберите профиль для продолжения";
@@ -421,6 +426,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Язык метаданных TMDB для названия, логотипа и включенных полей";
 "TMDB movie collections in release order" = "Коллекции фильмов TMDB в порядке выхода";
 "TMDB recommendation backdrops on detail and post-play screens" = "Фоны рекомендаций TMDB на странице деталей";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "TV" = "ТВ";
 "Terms" = "Условиями использования";
@@ -445,6 +451,7 @@
 "Trakt history considered for continue watching" = "История Trakt, учитываемая для раздела \"Продолжить просмотр";
 "Trakt-specific history, reviews, and recommendations" = "История, рецензии и рекомендации, специфичные для Trakt";
 "Try a different genre or catalog" = "Попробуйте другой жанр или каталог";
+"Try again" = "Попробуйте еще раз";
 "Try searching with different keywords" = "Попробуйте поискать с другими ключевыми словами";
 "Tune card width and corner radius." = "Настройка ширины карточки и радиуса углов.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Включите облачную библиотеку в настройках «Подключённые сервисы» для просмотра файлов.";

@@ -49,6 +49,7 @@
 "Bold" = "太字";
 "Bottom Offset" = "下部オフセット";
 "Browse and play files already in your connected accounts." = "接続済みアカウントのファイルを参照して再生";
+"CLOUD" = "クラウド";
 "Cancel" = "キャンセル";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "並べ替え後に2160p、1080p、720pの重複を制限します。";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "並べ替え後にBluRay、WEB-DL、REMUXの重複を制限します。";
@@ -213,6 +214,7 @@
 "Loading…" = "読み込み中…";
 "Login approved. Finishing sign in…" = "ログイン承認済み。サインインを完了中…";
 "Logo and backdrop images from TMDB" = "TMDBのロゴとバックドロップ画像";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList評価";
 "Manage Lists" = "リストを管理";
 "Manage Profiles" = "プロフィールを管理";
@@ -320,6 +322,7 @@
 "Rose" = "ローズ";
 "Runtime, status, country, and language from TMDB" = "TMDBの上映時間、公開日、国、言語";
 "Save" = "保存";
+"Save changes" = "変更を保存";
 "Saved" = "保存済み";
 "Saving…" = "保存中…";
 "Scan the QR code or enter the short code in your browser." = "QRをスキャンし、ブラウザで承認してからここに戻ってください";
@@ -327,6 +330,7 @@
 "Search failed" = "検索に失敗しました";
 "Search movies & series" = "映画とシリーズを検索";
 "See All" = "すべて表示";
+"See all" = "すべて表示";
 "Select" = "選択";
 "Select a catalog" = "カタログを選択";
 "Select a profile to continue" = "続けるプロフィールを選択";
@@ -355,6 +359,7 @@
 "Show, hide, or require Dolby Vision sources." = "Dolby Visionソースを表示、非表示、または必須にします。";
 "Show, hide, or require HDR sources." = "HDRソースを表示、非表示、または必須にします。";
 "Sign Out" = "サインアウト";
+"Sign out?" = "サインアウトしますか？";
 "Signed in" = "サインイン済み";
 "Size" = "サイズ";
 "Size range" = "サイズ範囲";
@@ -384,6 +389,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "タイトル・ロゴなどのTMDBメタデータ言語";
 "TMDB movie collections in release order" = "TMDB映画コレクション（公開順）";
 "TMDB recommendation backdrops on detail and post-play screens" = "詳細ページの関連作品バックドロップ";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Terms" = "利用規約";
 "Text Color" = "文字色";

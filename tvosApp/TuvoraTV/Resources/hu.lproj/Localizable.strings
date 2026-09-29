@@ -31,6 +31,7 @@
 "Bold" = "Félkövér";
 "Bottom Offset" = "Alsó eltolás";
 "Browse and play files already in your connected accounts." = "A csatlakoztatott fiókjaidban már meglévő fájlok böngészése és lejátszása.";
+"CLOUD" = "Felhő";
 "Cancel" = "Mégse";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Maximalizálja az ismétlődő 2160p, 1080p, 720p találatokat a rendezés után.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Maximalizálja az ismétlődő BluRay, WEB-DL, REMUX találatokat a rendezés után.";
@@ -65,6 +66,7 @@
 "Content & Discovery" = "Tartalom és felfedezés";
 "Continue Watching" = "Nézés folytatása";
 "Continue Watching Window" = "Folyamatos megtekintési időablak";
+"Continue without account" = "Folytatás fiók nélkül";
 "Controls how result names appear. Leave blank to use the original result name." = "A források nevének megjelenítését szabályozza.";
 "Controls the metadata shown under each result. Leave blank to use the original result details." = "Az egyes források alatt megjelenő metaadatokat szabályozza.";
 "Could not start sign-in." = "Nem sikerült elindítani a bejelentkezést.";
@@ -97,11 +99,13 @@
 "Episodes" = "Epizódok";
 "External ratings providers" = "Külső értékelési szolgáltatók";
 "Fetch ratings from external providers in metadata detail screen" = "Külső szolgáltatóktól származó értékelések megjelenítése a részletek képernyőn";
+"File" = "FÁJL";
 "Files" = "Fájlok";
 "Fill" = "Kitöltés";
 "Finish connection approval" = "Fejezd be a Trakt bejelentkezést a böngésződben";
 "Fit" = "Illesztés";
 "Font Size" = "Betűméret";
+"Formatting" = "FORMÁZÁS";
 "General" = "Általános";
 "Go to details" = "Ugrás a részletekhez";
 "Hidden" = "Rejtett";
@@ -110,6 +114,7 @@
 "Home Layout" = "Kezdőlap elrendezése";
 "IMDb Non-Commercial Datasets" = "IMDb Nem Kereskedelmi Adatkészletek";
 "Install" = "Telepítés";
+"Install addon" = "Kiegészítő telepítése";
 "Installing" = "Telepítés…";
 "Integrations" = "Integrációk";
 "Language" = "Nyelv";
@@ -119,9 +124,11 @@
 "Library" = "Könyvtár";
 "Library Source" = "Könyvtár forrása";
 "Licenses & Attribution" = "Licencek és köszönetnyilvánítások";
+"Link Preparation" = "AZONNALI LEJÁTSZÁS";
 "Links to prepare" = "Előkészítendő források száma";
 "List" = "Lista";
 "Logo and backdrop images from TMDB" = "Logók és háttérképek a TMDB-ről";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList értékelések";
 "Manage Profiles" = "Profilok kezelése";
 "Manage available integrations" = "Elérhető integrációk kezelése";
@@ -174,6 +181,7 @@
 "Profile name" = "Profil neve";
 "Ready to play" = "Lejátszásra kész";
 "Recent" = "Legutóbbi";
+"Recent searches" = "Előzmények";
 "Refresh cloud library" = "Felhő könyvtár frissítése";
 "Remove" = "Eltávolítás";
 "Remove anyway" = "Eltávolítás mindenképp";
@@ -190,7 +198,9 @@
 "Retry" = "Újra";
 "Rose" = "Rózsa";
 "Runtime, status, country, and language from TMDB" = "Játékidő, állapot, ország és nyelv a TMDB-ről";
+"SIMKL" = "Simkl";
 "Save" = "Mentés";
+"Save changes" = "Módosítások mentése";
 "Saved" = "Mentve";
 "Saving…" = "Mentés…";
 "Search" = "Keresés";
@@ -207,6 +217,7 @@
 "Show Hero Section" = "Kiemelt rész megjelenítése";
 "Show Trakt reviews on metadata pages" = "Trakt értékelések és kritikák megjelenítése a részletek oldalon";
 "Sign Out" = "Kijelentkezés";
+"Sign out?" = "Kijelentkezel?";
 "Signed in" = "Bejelentkezve";
 "Simkl features" = "Simkl funkciók";
 "Size range" = "Mérettartomány";
@@ -226,6 +237,8 @@
 "TMDB Enrichment" = "TMDB adatbővítés";
 "TMDB metadata language for title, logo, and enabled fields" = "A TMDB metaadatok (cím, logó és engedélyezett mezők) nyelve";
 "TMDB movie collections in release order" = "TMDB filmgyűjtemények megjelenési sorrendben";
+"TRAKT" = "Trakt";
+"TUVORA" = "Tuvora";
 "Terms" = "Felhasználási feltételeket";
 "Text Color" = "Szöveg színe";
 "These integrations are experimental and may be kept, changed, or removed later." = "A Debrid támogatás kísérleti jellegű; a későbbiekben megtartható, módosítható vagy eltávolítható.";

@@ -50,6 +50,7 @@
 "Bold" = "Gras";
 "Bottom Offset" = "Décalage inférieur";
 "Browse and play files already in your connected accounts." = "Parcourez et lisez les fichiers déjà présents dans vos comptes connectés.";
+"CLOUD" = "Cloud";
 "Cancel" = "Annuler";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limite les résultats 2160p, 1080p, 720p répétés après tri.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limite les résultats BluRay, WEB-DL, REMUX répétés après tri.";
@@ -208,6 +209,7 @@
 "Loading…" = "Chargement…";
 "Login approved. Finishing sign in…" = "Identification approuvée. Finalisation de la connexion…";
 "Logo and backdrop images from TMDB" = "Logo et images d’arrière-plan depuis TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Notes MDBList";
 "Manage Lists" = "Gérer les listes";
 "Manage Profiles" = "Gérer les profils";
@@ -316,6 +318,7 @@
 "Retry" = "Réessayer";
 "Runtime, status, country, and language from TMDB" = "Durée, date de sortie, pays et langue depuis TMDB";
 "Save" = "Enregistrer";
+"Save changes" = "Enregistrer les modifications";
 "Saved" = "Enregistrés";
 "Saving…" = "Enregistrement…";
 "Scan the QR code or enter the short code in your browser." = "Scannez le code QR, validez dans le navigateur, puis revenez ici.";
@@ -323,6 +326,7 @@
 "Search failed" = "Échec de la recherche";
 "Search movies & series" = "Rechercher des films et séries";
 "See All" = "Voir tout";
+"See all" = "Voir tout";
 "Select" = "Sélectionner";
 "Select a catalog" = "Sélectionnez un catalogue";
 "Select a profile to continue" = "Sélectionnez un profil pour continuer";

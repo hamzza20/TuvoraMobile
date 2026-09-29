@@ -159,6 +159,7 @@
 "Loading…" = "Nalaganje…";
 "Login approved. Finishing sign in…" = "Prijava odobrena. Dokončanje prijave…";
 "Logo and backdrop images from TMDB" = "Logotip in slike ozadja iz TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Ocene MDBList";
 "Manage Lists" = "Upravljanje seznamov";
 "Manage Profiles" = "Upravljanje profilov";
@@ -243,12 +244,14 @@
 "Rose" = "Rožnata";
 "Runtime, status, country, and language from TMDB" = "Čas izvajanja, datum izdaje, država in jezik iz TMDB";
 "Save" = "Shrani";
+"Save changes" = "Shrani spremembe";
 "Saving…" = "Shranjevanje…";
 "Scan the QR code or enter the short code in your browser." = "Skenirajte QR kodo, potrdite v brskalniku in se nato vrnite sem.";
 "Search" = "Iskanje";
 "Search failed" = "Iskanje ni uspelo";
 "Search movies & series" = "Išči filme & serije";
 "See All" = "Prikaži vse";
+"See all" = "Prikaži vse";
 "Select" = "Izberi";
 "Select a catalog" = "Izberite katalog";
 "Select a profile to continue" = "Izberite profil za nadaljevanje";

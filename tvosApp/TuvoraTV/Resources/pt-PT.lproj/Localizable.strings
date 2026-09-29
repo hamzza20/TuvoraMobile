@@ -50,6 +50,7 @@
 "Bold" = "Negrito";
 "Bottom Offset" = "Deslocamento inferior";
 "Browse and play files already in your connected accounts." = "Navega e reproduz ficheiros que já se encontram nas tuas contas ligadas.";
+"CLOUD" = "Nuvem";
 "Cancel" = "Cancelar";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limitar resultados repetidos de 2160p, 1080p, 720p após a ordenação.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limitar resultados repetidos de BluRay, WEB-DL, REMUX após a ordenação.";
@@ -212,6 +213,7 @@
 "Loading…" = "A carregar…";
 "Login approved. Finishing sign in…" = "Início de sessão aprovado. A concluir a entrada…";
 "Logo and backdrop images from TMDB" = "Imagens de logótipo e de fundo do TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Classificações MDBList";
 "Manage Lists" = "Gerir Listas";
 "Manage Profiles" = "Gerir perfis";
@@ -319,6 +321,7 @@
 "Rose" = "Rosa";
 "Runtime, status, country, and language from TMDB" = "Duração, estado, país e idioma do TMDB";
 "Save" = "Guardar";
+"Save changes" = "Guardar alterações";
 "Saved" = "Guardado";
 "Saving…" = "A guardar…";
 "Scan the QR code or enter the short code in your browser." = "Lê o código QR, aprova no navegador e depois regressa aqui.";
@@ -326,6 +329,7 @@
 "Search failed" = "A pesquisa falhou";
 "Search movies & series" = "Pesquisar filmes e séries";
 "See All" = "Ver tudo";
+"See all" = "Ver tudo";
 "Select" = "Selecionar";
 "Select a catalog" = "Seleciona um catálogo";
 "Select a profile to continue" = "Seleciona um perfil para continuar";
@@ -354,6 +358,7 @@
 "Show, hide, or require Dolby Vision sources." = "Mostrar, ocultar ou exigir fontes Dolby Vision.";
 "Show, hide, or require HDR sources." = "Mostrar, ocultar ou exigir fontes HDR.";
 "Sign Out" = "Terminar Sessão";
+"Sign out?" = "Terminar sessão?";
 "Signed in" = "Sessão iniciada";
 "Size" = "Tamanho";
 "Size range" = "Intervalo de tamanho";
@@ -383,6 +388,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Idioma dos metadados do TMDB para o título, logótipo e campos ativados";
 "TMDB movie collections in release order" = "Coleções de filmes do TMDB por ordem de lançamento";
 "TMDB recommendation backdrops on detail and post-play screens" = "Fundos de recomendações do TMDB na página de detalhes";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "TV" = "Televisão";
 "Text Color" = "Cor do texto";

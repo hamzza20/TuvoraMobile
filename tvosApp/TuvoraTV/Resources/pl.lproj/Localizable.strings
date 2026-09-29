@@ -54,6 +54,7 @@
 "Bold" = "Pogrubienie";
 "Bottom Offset" = "Przesunięcie od dołu";
 "Browse and play files already in your connected accounts." = "Przeglądaj i odtwarzaj pliki z połączonych kont.";
+"CLOUD" = "Chmura";
 "Cancel" = "Anuluj";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Ogranicz powtarzające się wyniki 2160p, 1080p, 720p po sortowaniu.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ogranicz powtarzające się wyniki BluRay, WEB-DL, REMUX po sortowaniu.";
@@ -227,6 +228,7 @@
 "Loading…" = "Ładowanie…";
 "Login approved. Finishing sign in…" = "Logowanie zatwierdzone. Trwa kończenie…";
 "Logo and backdrop images from TMDB" = "Logo i obrazy tła z TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Oceny MDBList";
 "Manage Lists" = "Zarządzaj listami";
 "Manage Profiles" = "Zarządzaj profilami";
@@ -345,7 +347,9 @@
 "Retry" = "Spróbuj ponownie";
 "Rose" = "Róż";
 "Runtime, status, country, and language from TMDB" = "Czas trwania, status, kraj i język z TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Zapisz";
+"Save changes" = "Zapisz zmiany";
 "Saved" = "Zapisane";
 "Saving…" = "Zapisywanie…";
 "Scan the QR code or enter the short code in your browser." = "Zeskanuj QR, zatwierdź w przeglądarce, a następnie wróć tutaj.";
@@ -354,6 +358,7 @@
 "Search failed" = "Wyszukiwanie nie powiodło się";
 "Search movies & series" = "Szukaj filmów i seriali";
 "See All" = "Zobacz wszystkie";
+"See all" = "Zobacz wszystkie";
 "Select" = "Wybierz";
 "Select a catalog" = "Wybierz katalog";
 "Select a profile to continue" = "Wybierz profil, aby kontynuować";
@@ -418,6 +423,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Język metadanych TMDB dla tytułu, logo i włączonych pól";
 "TMDB movie collections in release order" = "Kolekcje filmów TMDB w kolejności wydania";
 "TMDB recommendation backdrops on detail and post-play screens" = "Tła rekomendacji TMDB na stronie szczegółów";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Terms" = "Regulamin";
 "Text Color" = "Kolor tekstu";
@@ -440,6 +446,7 @@
 "Trakt history considered for continue watching" = "Historia Trakt uwzględniana przy kontynuowaniu oglądania";
 "Trakt-specific history, reviews, and recommendations" = "Historia, recenzje i rekomendacje specyficzne dla Trakt";
 "Try a different genre or catalog" = "Spróbuj innego gatunku lub katalogu";
+"Try again" = "Spróbuj ponownie";
 "Try searching with different keywords" = "Spróbuj wyszukać z innymi słowami kluczowymi";
 "Tune card width and corner radius." = "Dostosuj szerokość karty i promień narożnika.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Włącz Bibliotekę w chmurze w ustawieniach Połączonych usług, aby przeglądać pliki z połączonych kont.";

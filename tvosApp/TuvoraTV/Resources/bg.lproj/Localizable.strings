@@ -50,6 +50,7 @@
 "Bold" = "Удебелен";
 "Bottom Offset" = "Отместване отдолу";
 "Browse and play files already in your connected accounts." = "Преглеждай и пускай файлове, които вече са в свързаните ти акаунти.";
+"CLOUD" = "Облачно";
 "Cancel" = "Отказ";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Ограничи повторенията на 2160p, 1080p, 720p резултати след сортиране.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Ограничи повторенията на BluRay, WEB-DL, REMUX резултати след сортиране.";
@@ -218,6 +219,7 @@
 "Loading…" = "Зареждане…";
 "Login approved. Finishing sign in…" = "Вписването е одобрено. Завършване на входа…";
 "Logo and backdrop images from TMDB" = "Лого и backdrop изображения от TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList рейтинги";
 "Manage Lists" = "Управлявай списъци";
 "Manage Profiles" = "Управлявай профили";
@@ -329,7 +331,9 @@
 "Retry" = "Опитай отново";
 "Rose" = "Роза";
 "Runtime, status, country, and language from TMDB" = "Продължителност, статус, държава и език от TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Запази";
+"Save changes" = "Запази промените";
 "Saved" = "Запазено";
 "Saving…" = "Запазване…";
 "Scan the QR code or enter the short code in your browser." = "Сканирай QR, одобри в браузъра и се върни тук.";
@@ -338,6 +342,7 @@
 "Search failed" = "Търсенето се провали";
 "Search movies & series" = "Търси филми и сериали";
 "See All" = "Виж всички";
+"See all" = "Виж всички";
 "Select" = "Избери";
 "Select a catalog" = "Избери каталог";
 "Select a profile to continue" = "Избери профил, за да продължиш";
@@ -366,6 +371,7 @@
 "Show, hide, or require Dolby Vision sources." = "Показвай, скривай или изисквай Dolby Vision източници.";
 "Show, hide, or require HDR sources." = "Показвай, скривай или изисквай HDR източници.";
 "Sign Out" = "Отпиши се";
+"Sign out?" = "Изход?";
 "Signed in" = "Вписан";
 "Simkl features" = "Simkl функции";
 "Size" = "Размер";
@@ -397,6 +403,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Език на TMDB метаданните за заглавие, лого и активирани полета";
 "TMDB movie collections in release order" = "TMDB филмови колекции в ред на издаване";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB препоръчителни backdrop-и на страницата с детайли";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "TV" = "Сериал";
 "Terms" = "Условията";
@@ -419,6 +426,7 @@
 "Trakt features" = "Trakt функции";
 "Trakt history considered for continue watching" = "Trakt история, взета предвид за Продължи гледането";
 "Try a different genre or catalog" = "Опитай с различен жанр или каталог";
+"Try again" = "Опитайте отново";
 "Try searching with different keywords" = "Опитай с различни ключови думи";
 "Tune card width and corner radius." = "Настрой ширина и радиус на ъглите на картите.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Включи Облачна библиотека в настройките на Свързани услуги, за да преглеждаш файлове от свързаните акаунти.";

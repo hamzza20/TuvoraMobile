@@ -53,6 +53,7 @@
 "Bold" = "Tučné";
 "Bottom Offset" = "Spodní posun";
 "Browse and play files already in your connected accounts." = "Procházejte a přehrávejte soubory, které již máte v připojených účtech.";
+"CLOUD" = "Cloud";
 "Cancel" = "Zrušit";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Omezit opakující se výsledky 2160p, 1080p, 720p po seřazení.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Omezit opakující se výsledky BluRay, WEB-DL, REMUX po seřazení.";
@@ -220,6 +221,7 @@
 "Loading…" = "Načítání…";
 "Login approved. Finishing sign in…" = "Přihlášení schváleno. Dokončování přihlášení…";
 "Logo and backdrop images from TMDB" = "Obrázky loga a pozadí z TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Hodnocení MDBList";
 "Manage Lists" = "Spravovat seznamy";
 "Manage Profiles" = "Spravovat profily";
@@ -332,7 +334,9 @@
 "Retry" = "Opakovat";
 "Rose" = "Růžová";
 "Runtime, status, country, and language from TMDB" = "Délka, stav, země a jazyk z TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Uložit";
+"Save changes" = "Uložit změny";
 "Saved" = "Uloženo";
 "Saving…" = "Ukládání…";
 "Scan the QR code or enter the short code in your browser." = "Naskenujte QR, schvalte v prohlížeči a poté se sem vraťte.";
@@ -341,6 +345,7 @@
 "Search failed" = "Vyhledávání selhalo";
 "Search movies & series" = "Hledat filmy a seriály";
 "See All" = "Zobrazit vše";
+"See all" = "Zobrazit vše";
 "Select" = "Vybrat";
 "Select a catalog" = "Vyberte katalog";
 "Select a profile to continue" = "Vyberte profil pro pokračování";
@@ -401,6 +406,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Jazyk metadat TMDB pro název, logo a povolená pole";
 "TMDB movie collections in release order" = "Filmové kolekce TMDB v pořadí vydání";
 "TMDB recommendation backdrops on detail and post-play screens" = "Pozadí doporučení TMDB na stránce podrobností";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Terms" = "Podmínkami";
 "Text Color" = "Barva textu";
@@ -422,6 +428,7 @@
 "Trakt features" = "Funkce Trakt";
 "Trakt history considered for continue watching" = "Historie Trakt zvažovaná pro pokračovat ve sledování";
 "Try a different genre or catalog" = "Zkuste jiný žánr nebo katalog";
+"Try again" = "Zkusit znovu";
 "Try searching with different keywords" = "Zkuste hledat s jinými klíčovými slovy";
 "Tune card width and corner radius." = "Vyladit šířku karty a poloměr rohů.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Zapněte Cloudovou knihovnu v nastavení Připojené služby pro procházení souborů z připojených účtů.";

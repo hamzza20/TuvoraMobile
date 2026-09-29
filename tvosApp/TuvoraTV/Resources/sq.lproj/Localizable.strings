@@ -53,6 +53,7 @@
 "Bold" = "Trashë";
 "Bottom Offset" = "Zhvendosja nga fundi";
 "Browse and play files already in your connected accounts." = "Shfleto dhe luaj skedarët që tashmë gjenden në llogaritë e tua të lidhura.";
+"CLOUD" = "Cloud";
 "Cancel" = "Anulo";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Kufizo rezultatet e përsëritura 2160p, 1080p, 720p pas renditjes.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Kufizo rezultatet e përsëritura BluRay, WEB-DL, REMUX pas renditjes.";
@@ -131,6 +132,7 @@
 "Delete this list?" = "Të fshihet kjo listë?";
 "Dense" = "I dendur";
 "Description" = "Përshkrimi";
+"Description template" = "Shablloni i përshkrimit";
 "Description, genres, and rating from TMDB" = "Përshkrimi, zhanret dhe vlerësimi nga TMDB";
 "Details" = "Detajet";
 "Device language" = "Gjuha e pajisjes";
@@ -218,6 +220,7 @@
 "Loading…" = "Duke ngarkuar…";
 "Login approved. Finishing sign in…" = "Hyrja u miratua. Duke përfunduar hyrjen…";
 "Logo and backdrop images from TMDB" = "Logo dhe imazhe sfondi nga TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Vlerësimet MDBList";
 "Manage Lists" = "Menaxho listat";
 "Manage Profiles" = "Menaxho profilet";
@@ -239,6 +242,7 @@
 "Movie" = "Film";
 "Movies" = "Filma";
 "Name" = "Emri";
+"Name template" = "Shablloni i emrit";
 "Networks" = "Rrjetet";
 "Networks with logos from TMDB" = "Rrjetet me logo nga TMDB";
 "Next Episode" = "Episodi tjetër";
@@ -331,7 +335,9 @@
 "Retry" = "Provo përsëri";
 "Rose" = "Rozë";
 "Runtime, status, country, and language from TMDB" = "Kohëzgjatja, statusi, shteti dhe gjuha nga TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Ruaj";
+"Save changes" = "Ruaj ndryshimet";
 "Saved" = "Ruajtur";
 "Saving…" = "Duke ruajtur…";
 "Scan the QR code or enter the short code in your browser." = "Skano QR-në, miratoje në shfletues, pastaj kthehu këtu.";
@@ -340,6 +346,7 @@
 "Search failed" = "Kërkimi dështoi";
 "Search movies & series" = "Kërko filma dhe seriale";
 "See All" = "Shfaq të gjitha";
+"See all" = "Shfaq të gjitha";
 "Select" = "Zgjidh";
 "Select a catalog" = "Zgjidh një katalog";
 "Select a profile to continue" = "Zgjidh një profil për të vazhduar";

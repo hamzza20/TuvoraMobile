@@ -51,6 +51,7 @@
 "Bold" = "Grassetto";
 "Bottom Offset" = "Offset inferiore";
 "Browse and play files already in your connected accounts." = "Sfoglia e riproduci i file già presenti nei tuoi account collegati.";
+"CLOUD" = "Cloud";
 "Cancel" = "Annulla";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limita i risultati ripetuti 2160p, 1080p e 720p dopo l'ordinamento.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limita i risultati ripetuti BluRay, WEB-DL e REMUX dopo l'ordinamento.";
@@ -132,7 +133,7 @@
 "Delete this list?" = "Eliminare questa lista?";
 "Dense" = "Denso";
 "Description" = "Descrizione";
-"Description template" = "Modello della descrizione";
+"Description template" = "Template descrizione";
 "Description, genres, and rating from TMDB" = "Descrizione, generi e valutazione da TMDB";
 "Details" = "Dettagli";
 "Device language" = "Lingua del dispositivo";
@@ -168,6 +169,7 @@
 "Failed to start QR login" = "Avvio del login tramite QR fallito";
 "Fetch ratings from external providers in metadata detail screen" = "Recupera le valutazioni da provider esterni nella schermata dei dettagli dei metadati";
 "Fetch skip timestamps from anime-skip.com" = "Ottieni i timestamps per saltare le scene da anime-skip.com";
+"File" = "FILE";
 "Files" = "File";
 "Fill" = "Riempi";
 "Filter sources by video codec." = "Filtra le sorgenti in base al codec video.";
@@ -220,6 +222,7 @@
 "Loading…" = "Caricamento…";
 "Login approved. Finishing sign in…" = "Login Eseguito. Completamento accesso…";
 "Logo and backdrop images from TMDB" = "Immagini del logo e dello sfondo da TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Valutazioni MDBList";
 "Manage Lists" = "Gestisci liste";
 "Manage Profiles" = "Gestisci Profili";
@@ -241,7 +244,7 @@
 "Movie" = "Film";
 "Movies" = "Film";
 "Name" = "Nome";
-"Name template" = "Modello del nome";
+"Name template" = "Template nome";
 "Networks" = "Network";
 "Networks with logos from TMDB" = "Network con loghi da TMDB";
 "Next Episode" = "Prossimo Episodio";
@@ -335,7 +338,9 @@
 "Retry" = "Riprova";
 "Rose" = "Rosa";
 "Runtime, status, country, and language from TMDB" = "Durata, data di rilascio, paese e lingua da TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Salva";
+"Save changes" = "Salva Modifiche";
 "Saved" = "Salvati";
 "Saving…" = "Salvataggio…";
 "Scan the QR code or enter the short code in your browser." = "Scansiona il QR Code, approva sul browser e poi ritorna qui.";
@@ -344,6 +349,7 @@
 "Search failed" = "Ricerca fallita";
 "Search movies & series" = "Cerca film & serie";
 "See All" = "Vedi tutto";
+"See all" = "Vedi tutto";
 "Select" = "Seleziona";
 "Select a catalog" = "Seleziona un catalogo";
 "Select a profile to continue" = "Seleziona un profilo per continuare";
@@ -407,6 +413,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "Lingua dei metadati TMDB per titolo, logo e campi abilitati";
 "TMDB movie collections in release order" = "Collezioni film da TMDB in ordine di rilascio";
 "TMDB recommendation backdrops on detail and post-play screens" = "Sfondi delle raccomandazioni TMDB nella pagina dei dettagli";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Terms" = "Termini";
 "Text Color" = "Colore del testo";

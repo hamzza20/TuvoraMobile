@@ -55,6 +55,7 @@
 "Bold" = "خط عريض";
 "Bottom Offset" = "إزاحة السفلية";
 "Browse and play files already in your connected accounts." = "تشغيل الملفات المحفوظة بحساباتك المرتبطة.";
+"CLOUD" = "سحابي";
 "Cancel" = "إلغاء";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "تقليل تكرار ملفات دقات (4K، 1080p، 720p) بعد ترتيبها.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "تقليل تكرار إصدارات (BluRay، WEB-DL، REMUX) بعد الترتيب.";
@@ -228,6 +229,7 @@
 "Loading…" = "جاري التحميل…";
 "Login approved. Finishing sign in…" = "تمت الموافقة على الدخول. جاري إنهاء تسجيل الدخول…";
 "Logo and backdrop images from TMDB" = "الشعارات وصور الخلفية من TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "تقييمات MDBList";
 "Manage Lists" = "إدارة القوائم";
 "Manage Profiles" = "إدارة الملفات الشخصية";
@@ -345,7 +347,9 @@
 "Retry" = "إعادة المحاولة";
 "Rose" = "الوردي";
 "Runtime, status, country, and language from TMDB" = "مدة العرض، تاريخ الإصدار، الدولة، واللغة من TMDB";
+"SIMKL" = "Simkl";
 "Save" = "حفظ";
+"Save changes" = "حفظ التغييرات";
 "Saved" = "محفوظ";
 "Saving…" = "جاري الحفظ…";
 "Scan the QR code or enter the short code in your browser." = "امسح رمز QR، وافق من المتصفح، ثم عُد إلى هنا.";
@@ -354,6 +358,7 @@
 "Search failed" = "فشلت عملية البحث";
 "Search movies & series" = "أبحث عن أفلام & مسلسلات";
 "See All" = "عرض الكل";
+"See all" = "عرض الكل";
 "Select" = "إختر";
 "Select a catalog" = "إختر قائمة";
 "Select a profile to continue" = "إختر ملفاً شخصياً للمتابعة";
@@ -417,6 +422,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "لغة بيانات TMDB للعناوين والشعارات والحقول المفعلة";
 "TMDB movie collections in release order" = "سلاسل أفلام TMDB بترتيب الإصدار";
 "TMDB recommendation backdrops on detail and post-play screens" = "خلفيات توصيات TMDB في صفحة التفاصيل";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "TV" = "مسلسلات";
 "Terms" = "الشروط";

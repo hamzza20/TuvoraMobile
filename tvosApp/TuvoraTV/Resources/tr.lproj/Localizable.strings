@@ -56,6 +56,7 @@
 "Bold" = "Kalın";
 "Bottom Offset" = "Alt Konum";
 "Browse and play files already in your connected accounts." = "Bağlı hesaplarınızda zaten var olan dosyalara göz atın ve oynatın.";
+"CLOUD" = "Bulut";
 "Cancel" = "İptal";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Sıralamadan sonra tekrarlanan 2160p, 1080p, 720p sonuçlarını sınırlandırır.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Sıralamadan sonra tekrarlanan BluRay, WEB-DL, REMUX sonuçlarını sınırlandırır.";
@@ -140,7 +141,7 @@
 "Delete this list?" = "Listeyi silmek istediğinizden emin misiniz?";
 "Dense" = "Yoğun";
 "Description" = "Açıklama";
-"Description template" = "Açıklama şablonu";
+"Description template" = "Açıklama Şablonu";
 "Description, genres, and rating from TMDB" = "TMDB'den açıklama, türler ve derecelendirme";
 "Details" = "Detaylar";
 "Device language" = "Cihaz dili";
@@ -231,6 +232,7 @@
 "Loading…" = "Yükleniyor…";
 "Login approved. Finishing sign in…" = "Giriş onaylandı. Oturum açılıyor…";
 "Logo and backdrop images from TMDB" = "TMDB'den logo ve arka plan resimleri";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList Değerlendirmeleri";
 "Manage Lists" = "Listeleri Yönet";
 "Manage Profiles" = "Profilleri Yönet";
@@ -252,7 +254,7 @@
 "Movie" = "Film";
 "Movies" = "Filmler";
 "Name" = "Ad";
-"Name template" = "Ad şablonu";
+"Name template" = "İsim Şablonu";
 "Networks" = "Kanallar";
 "Networks with logos from TMDB" = "TMDB'den ağ/kanal logoları";
 "Next Episode" = "Sıradaki Bölüm";
@@ -347,7 +349,9 @@
 "Retry" = "Tekrar Dene";
 "Rose" = "Gül";
 "Runtime, status, country, and language from TMDB" = "TMDB'den çalışma zamanı, çıkış tarihi, ülke ve dil";
+"SIMKL" = "Simkl";
 "Save" = "Kaydet";
+"Save changes" = "Değişiklikleri Kaydet";
 "Saved" = "Kaydedildi";
 "Saving…" = "Kaydediliyor…";
 "Scan the QR code or enter the short code in your browser." = "QR kodunu tarayın, tarayıcıda onaylayın ve ardından buraya dönün.";
@@ -356,6 +360,7 @@
 "Search failed" = "Arama başarısız";
 "Search movies & series" = "Film ve dizi ara";
 "See All" = "Tümünü Gör";
+"See all" = "Tümünü Gör";
 "Select" = "Seç";
 "Select a catalog" = "Katalog seçin";
 "Select a profile to continue" = "İçeriklere girmek için kullanıcı profilinizden birine tıklayın";
@@ -420,6 +425,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "TMDB için meta veri dili";
 "TMDB movie collections in release order" = "TMDB üzerinden derlenmiş film koleksiyonları (çıkış yılına göre sıralanır)";
 "TMDB recommendation backdrops on detail and post-play screens" = "Detaylarda TMDB önerileri";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVİO";
 "TV" = "Dizi";
 "Terms" = "Şartlar";

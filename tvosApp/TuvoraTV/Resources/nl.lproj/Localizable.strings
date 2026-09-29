@@ -49,6 +49,7 @@
 "Bold" = "Vetgedrukt";
 "Bottom Offset" = "Offset onderaan";
 "Browse and play files already in your connected accounts." = "Blader door en speel bestanden af die al in je verbonden accounts staan.";
+"CLOUD" = "Cloud";
 "Cancel" = "Annuleren";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Beperk herhaalde 2160p-, 1080p- en 720p-resultaten na het sorteren.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Beperk herhaalde BluRay-, WEB-DL- en REMUX-resultaten na het sorteren.";
@@ -214,6 +215,7 @@
 "Loading…" = "Laden…";
 "Login approved. Finishing sign in…" = "Aanmelding goedgekeurd. Aanmelden wordt voltooid…";
 "Logo and backdrop images from TMDB" = "Logo- en backdropafbeeldingen van TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList-beoordelingen";
 "Manage Lists" = "Lijsten beheren";
 "Manage Profiles" = "Profielen beheren";
@@ -329,7 +331,9 @@
 "Retry" = "Opnieuw proberen";
 "Rose" = "Roze";
 "Runtime, status, country, and language from TMDB" = "Speelduur, status, land en taal van TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Opslaan";
+"Save changes" = "Wijzigingen opslaan";
 "Saved" = "Opgeslagen";
 "Saving…" = "Opslaan…";
 "Scan the QR code or enter the short code in your browser." = "Scan de QR-code of voer de code in je browser in.";
@@ -338,6 +342,7 @@
 "Search failed" = "Zoeken mislukt";
 "Search movies & series" = "Zoek films & series";
 "See All" = "Alles bekijken";
+"See all" = "Alles bekijken";
 "Select" = "Selecteren";
 "Select a catalog" = "Selecteer een catalogus";
 "Select a profile to continue" = "Selecteer een profiel om verder te gaan";
@@ -401,6 +406,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "TMDB-metadatataal voor titel, logo en ingeschakelde velden";
 "TMDB movie collections in release order" = "TMDB-filmcollecties in releasevolgorde";
 "TMDB recommendation backdrops on detail and post-play screens" = "Achtergronden van TMDB-aanbevelingen op de detailpagina en na afloop van het afspelen";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "TV" = "Tv";
 "Terms" = "Voorwaarden";
@@ -421,6 +427,7 @@
 "Trakt history considered for continue watching" = "Trakt-geschiedenis die wordt meegenomen voor Verder kijken";
 "Trakt-specific history, reviews, and recommendations" = "Trakt-specifieke geschiedenis, recensies en aanbevelingen";
 "Try a different genre or catalog" = "Probeer een ander genre of catalogus";
+"Try again" = "Opnieuw proberen";
 "Try searching with different keywords" = "Probeer te zoeken met andere trefwoorden";
 "Tune card width and corner radius." = "Pas kaartbreedte en hoekradius aan.";
 "Turn on Cloud library in Connected Services settings to browse files from connected accounts." = "Schakel Cloudbibliotheek in bij de instellingen voor Verbonden services om bestanden van verbonden accounts te bekijken.";

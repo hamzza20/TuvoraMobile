@@ -114,6 +114,7 @@
 "Failed to start QR login" = "QR-Login Vorbereitung fehlgeschlagen";
 "Fetch ratings from external providers in metadata detail screen" = "Bewertungen von externen Anbietern im Metadaten-Detailbildschirm abrufen";
 "Fetch skip timestamps from anime-skip.com" = "Zeitstempel zum Überspringen von anime-skip.com abrufen";
+"File" = "DATEI";
 "Fill" = "Ausfüllen";
 "Finish connection approval" = "Trakt-Anmeldung in deinem Browser abschließen";
 "Fit" = "Anpassen";
@@ -153,6 +154,7 @@
 "Loading…" = "Wird geladen…";
 "Login approved. Finishing sign in…" = "Anmeldung genehmigt. Anmeldung wird abgeschlossen…";
 "Logo and backdrop images from TMDB" = "Logo- und Hintergrundbilder von TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "MDBList-Bewertungen";
 "Manage Lists" = "Listen verwalten";
 "Manage Profiles" = "Profile verwalten";
@@ -231,6 +233,7 @@
 "Retry" = "Wiederholen";
 "Runtime, status, country, and language from TMDB" = "Laufzeit, Erscheinungsdatum, Land und Sprache von TMDB";
 "Save" = "Speichern";
+"Save changes" = "Save Changes";
 "Saved" = "Gespeichert";
 "Saving…" = "Speichern…";
 "Scan the QR code or enter the short code in your browser." = "QR-Code scannen, im Browser bestätigen und dann hierher zurückkehren.";
@@ -238,6 +241,7 @@
 "Search failed" = "Suche fehlgeschlagen";
 "Search movies & series" = "Filme und Serien suchen";
 "See All" = "Alle anzeigen";
+"See all" = "Alle anzeigen";
 "Select" = "Auswählen";
 "Select a catalog" = "Katalog auswählen";
 "Select a profile to continue" = "Wählen Sie ein Profil aus, um fortzufahren";
@@ -262,6 +266,7 @@
 "Show critics score" = "Kritikerbewertung anzeigen";
 "Show titles under posters in rows, grid, and see-all." = "Titel unter Postern in Zeilen, Raster und „Alle anzeigen” anzeigen.";
 "Sign Out" = "Abmelden";
+"Sign out?" = "Abmelden?";
 "Signed in" = "Angemeldet";
 "Size" = "Größe";
 "Skip Intro" = "Intro überspringen";
@@ -284,6 +289,7 @@
 "TMDB metadata language for title, logo, and enabled fields" = "TMDB-Metadatensprache für Titel, Logo und aktivierte Felder";
 "TMDB movie collections in release order" = "TMDB-Filmsammlungen in Veröffentlichungsreihenfolge";
 "TMDB recommendation backdrops on detail and post-play screens" = "TMDB-Empfehlungshintergründe auf der Detailseite";
+"TRAKT" = "Trakt";
 "TUVORA" = "NUVIO";
 "Text Color" = "Textfarbe";
 "This will disconnect your Trakt account from Tuvora." = "Dadurch wird Ihr Trakt-Konto von Tuvora getrennt.";

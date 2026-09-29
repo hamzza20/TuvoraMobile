@@ -53,6 +53,7 @@
 "Bold" = "Negrito";
 "Bottom Offset" = "Altura da legenda";
 "Browse and play files already in your connected accounts." = "Explore e assista aos arquivos que já estão salvos nas suas contas Debrid conectadas.";
+"CLOUD" = "Nuvem";
 "Cancel" = "Cancelar";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "Limitar a quantidade de links repetidos na mesma resolução (ex: 2160p, 1080p, 720p) após organizar a lista.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "Limitar a quantidade de links repetidos com a mesma qualidade (ex: BluRay, WEB-DL, REMUX) após organizar a lista.";
@@ -133,6 +134,7 @@
 "Delete this list?" = "Excluir esta lista?";
 "Dense" = "Denso";
 "Description" = "Descrição";
+"Description template" = "Modelo de descrição";
 "Description, genres, and rating from TMDB" = "Sinopse, gêneros e nota do TMDB";
 "Details" = "Detalhes";
 "Device language" = "Idioma do dispositivo";
@@ -219,6 +221,7 @@
 "Loading…" = "Carregando…";
 "Login approved. Finishing sign in…" = "Login aprovado. Finalizando acesso…";
 "Logo and backdrop images from TMDB" = "Logos e planos de fundo do TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "Avaliações do MDBList";
 "Manage Lists" = "Gerenciar Listas";
 "Manage Profiles" = "Gerenciar Perfis";
@@ -240,6 +243,7 @@
 "Movie" = "Filme";
 "Movies" = "Filmes";
 "Name" = "Nome";
+"Name template" = "Modelo de nome";
 "Networks" = "Emissora";
 "Networks with logos from TMDB" = "Logos de emissoras do TMDB";
 "Next Episode" = "Próximo Episódio";
@@ -335,7 +339,9 @@
 "Retry" = "Tentar novamente";
 "Rose" = "Rosa";
 "Runtime, status, country, and language from TMDB" = "Duração, status, país e idioma via TMDB";
+"SIMKL" = "Simkl";
 "Save" = "Salvar";
+"Save changes" = "Salvar Alterações";
 "Saved" = "Salvos";
 "Saving…" = "Salvando…";
 "Scan the QR code or enter the short code in your browser." = "Escaneie o QR Code ou digite o código curto no navegador.";
@@ -344,6 +350,7 @@
 "Search failed" = "Falha na busca";
 "Search movies & series" = "Buscar filmes e séries";
 "See All" = "Ver Todos";
+"See all" = "Ver Todos";
 "Select" = "Selecionar";
 "Select a catalog" = "Escolha um catálogo";
 "Select a profile to continue" = "Selecione um perfil para continuar";

@@ -55,6 +55,7 @@
 "Bold" = "מודגש";
 "Bottom Offset" = "היסט תחתון";
 "Browse and play files already in your connected accounts." = "עיין ונגן קבצים שכבר נמצאים בחשבונות המחוברים שלך.";
+"CLOUD" = "ענן";
 "Cancel" = "ביטול";
 "Cap repeated 2160p, 1080p, 720p results after sorting." = "הגבלת תוצאות חוזרות של 2160p, 1080p, 720p אחרי המיון.";
 "Cap repeated BluRay, WEB-DL, REMUX results after sorting." = "הגבלת תוצאות חוזרות של BluRay, WEB-DL, REMUX אחרי המיון.";
@@ -135,6 +136,7 @@
 "Delete this list?" = "למחוק רשימה זו?";
 "Dense" = "צפוף";
 "Description" = "תיאור";
+"Description template" = "תבנית תיאור";
 "Description, genres, and rating from TMDB" = "תיאור, ז׳אנרים ודירוג מ-TMDB";
 "Details" = "פרטים";
 "Device language" = "שפת המכשיר";
@@ -225,6 +227,7 @@
 "Loading…" = "טוען…";
 "Login approved. Finishing sign in…" = "ההתחברות אושרה. מסיים כניסה…";
 "Logo and backdrop images from TMDB" = "לוגו ותמונות רקע מ-TMDB";
+"MDBLIST" = "MDBList";
 "MDBList Ratings" = "דירוגי MDBList";
 "MDBList connection is unavailable in this build." = "חיבור MDBList אינו זמין בגרסה זו.";
 "Manage Lists" = "נהל רשימות";
@@ -247,6 +250,7 @@
 "Movie" = "סרט";
 "Movies" = "סרטים";
 "Name" = "שם";
+"Name template" = "תבנית שם";
 "Networks" = "רשתות";
 "Networks with logos from TMDB" = "רשתות עם לוגואים מ-TMDB";
 "Next Episode" = "פרק הבא";
@@ -342,7 +346,9 @@
 "Retry" = "נסה שוב";
 "Rose" = "ורוד שושנה";
 "Runtime, status, country, and language from TMDB" = "משך, תאריך יציאה, מדינה ושפה מ-TMDB";
+"SIMKL" = "Simkl";
 "Save" = "שמור";
+"Save changes" = "שמירת השינויים";
 "Saved" = "נשמר";
 "Saving…" = "שומר…";
 "Scan the QR code or enter the short code in your browser." = "סרוק קוד QR, אשר בדפדפן, ואז חזור לכאן.";
@@ -352,6 +358,7 @@
 "Search failed" = "החיפוש נכשל";
 "Search movies & series" = "חיפוש סרט או סדרה";
 "See All" = "הצג הכול";
+"See all" = "הצג הכול";
 "Select" = "בחר";
 "Select a catalog" = "בחר קטלוג";
 "Select a profile to continue" = "בחר פרופיל להמשך";

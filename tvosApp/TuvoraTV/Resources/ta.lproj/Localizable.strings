@@ -162,6 +162,7 @@
 "Loading…" = "ஏற்றப்படுகிறது…";
 "Login approved. Finishing sign in…" = "உள்நுழைவு அனுமதிக்கப்பட்டது. உள்நுழைவு முடிக்கப்படுகிறது…";
 "Logo and backdrop images from TMDB" = "டிஎம்டிபியிலிருந்து சின்னம் மற்றும் பின்னணிப் படங்கள்";
+"MDBLIST" = "எம்டிபிலிஸ்ட்";
 "MDBList" = "எம்டிபிலிஸ்ட்";
 "MDBList Ratings" = "எம்டிபிலிஸ்ட் மதிப்பீடுகள்";
 "Manage Lists" = "பட்டியல்களை நிர்வகி";
@@ -249,12 +250,14 @@
 "Rotten Tomatoes" = "ராட்டன் டொமேட்டோஸ்";
 "Runtime, status, country, and language from TMDB" = "இயக்க நேரம், நிலை, நாடு மற்றும் மொழி டிஎம்டிபியிலிருந்து";
 "Save" = "சேமி";
+"Save changes" = "மாற்றங்களை சேமி";
 "Saving…" = "சேமிக்கப்படுகிறது…";
 "Scan the QR code or enter the short code in your browser." = "க்யூஆரை ஸ்கேன் செய்து, உலாவியில் ஒப்புதல் அளித்து, பின்னர் இங்கு திரும்பவும்.";
 "Search" = "தேடல்";
 "Search failed" = "தேடல் தோல்வியடைந்தது";
 "Search movies & series" = "திரைப்படங்கள் & தொடர்கள் தேடு";
 "See All" = "அனைத்தையும் காண்க";
+"See all" = "அனைத்தையும் காண்க";
 "Select" = "தேர்ந்தெடு";
 "Select a catalog" = "ஒரு கேட்டலாக் தேர்ந்தெடுக்கவும்";
 "Select a profile to continue" = "தொடர ஒரு சுயவிவரத்தை தேர்ந்தெடுக்கவும்";

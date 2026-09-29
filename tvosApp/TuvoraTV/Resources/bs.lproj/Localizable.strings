@@ -205,11 +205,13 @@
 "Retry" = "Pokušaj ponovo";
 "Runtime, status, country, and language from TMDB" = "Trajanje, status, država i jezik sa TMDB-a";
 "Save" = "Spremi";
+"Save changes" = "Spremi Promjene";
 "Saving…" = "Spremanje…";
 "Scan the QR code or enter the short code in your browser." = "Skeniraj QR, odobri u pretraživaču, pa se vrati ovdje.";
 "Search" = "Pretraga";
 "Search movies & series" = "Pretraži filmove i serije";
 "See All" = "Prikaži Sve";
+"See all" = "Prikaži Sve";
 "Select" = "Odaberi";
 "Select a catalog" = "Odaberi katalog";
 "Select a profile to continue" = "Odaberi profil za nastavak";
