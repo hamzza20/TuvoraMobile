@@ -58,6 +58,7 @@
 "Create Profile" = "प्रोफाइल बनाएँ";
 "Create your own Client ID at anime-skip.com/account/settings" = "anime-skip.com/account/settings पर अपना Client ID बनाएँ";
 "Creating…" = "बनाया जा रहा है…";
+"Creator and Cast" = "क्रिएटर और कास्ट";
 "Credits" = "क्रेडिट्स";
 "Custom" = "कस्टम";
 "Default" = "डिफ़ॉल्ट";
@@ -85,11 +86,13 @@
 "Enter Client ID" = "Client ID दर्ज करें";
 "Enter MDBList API key" = "MDBList API Key दर्ज करें";
 "Enter at least 2 characters" = "कम से कम 2 अक्षर दर्ज करें";
+"Episode ratings are unavailable." = "एपिसोड रेटिंग उपलब्ध नहीं हैं।";
 "Episode titles, overviews, thumbnails, and runtime from TMDB" = "TMDB से एपिसोड टाइटल, ओवरव्यू, थंबनेल और रनटाइम";
 "Episodes" = "एपिसोड";
 "External ratings providers" = "बाहरी रेटिंग प्रोवाइडर्स";
 "Fetch ratings from external providers in metadata detail screen" = "मेटाडेटा डिटेल स्क्रीन में बाहरी प्रोवाइडर से रेटिंग प्राप्त करें";
 "Fetch skip timestamps from anime-skip.com" = "anime-skip.com से स्किप टाइमस्टैम्प प्राप्त करें";
+"Filmography" = "फिल्मोग्राफी";
 "Focus an avatar to view its name" = "उसका नाम देखने के लिए अवतार पर फोकस करें";
 "Font Size" = "फ़ॉन्ट आकार";
 "General" = "सामान्य";
@@ -117,6 +120,7 @@
 "Library" = "लाइब्रेरी";
 "List" = "लिस्ट";
 "Load more" = "और लोड करें";
+"Loading episode ratings..." = "एपिसोड रेटिंग लोड हो रही हैं...";
 "Loading..." = "लोड हो रहा है...";
 "Loading…" = "लोड हो रहा है…";
 "Login approved. Finishing sign in…" = "लॉगिन स्वीकृत। साइन इन पूरा किया जा रहा है…";
@@ -133,11 +137,13 @@
 "Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties." = "local.properties में TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET नहीं मिला।";
 "Modern View" = "मॉडर्न व्यू";
 "More Like This" = "ऐसा ही और";
+"More like this" = "ऐसा ही और";
 "Move Down" = "नीचे ले जाएँ";
 "Move Up" = "ऊपर ले जाएँ";
 "Movie" = "फ़िल्म";
 "Movies" = "मूवीज़";
 "Name" = "नाम";
+"Network" = "नेटवर्क";
 "Networks" = "नेटवर्क";
 "Networks with logos from TMDB" = "TMDB से लोगो सहित नेटवर्क";
 "Next Episode" = "अगला एपिसोड";
@@ -168,6 +174,7 @@
 "Preferred Language" = "पसंदीदा भाषा";
 "Privacy" = "गोपनीयता";
 "Privacy Policy" = "प्राइवेसी पॉलिसी";
+"Production" = "प्रोडक्शन";
 "Production companies from TMDB" = "TMDB से प्रोडक्शन कंपनियाँ";
 "Productions" = "प्रोडक्शन";
 "Profile Options" = "प्रोफाइल विकल्प";
@@ -175,6 +182,7 @@
 "Profiles" = "प्रोफाइल";
 "QR login expired. Generate a new code." = "QR लॉगिन समाप्त हो गया। नया कोड जनरेट करें।";
 "QR unavailable. Refresh to retry." = "QR उपलब्ध नहीं। फिर से कोशिश करने के लिए रीफ्रेश करें।";
+"Ratings" = "रेटिंग्स";
 "Refresh QR" = "QR रीफ्रेश करें";
 "Remove" = "हटाएँ";
 "Remove from library" = "लाइब्रेरी से हटाएँ";
@@ -190,6 +198,7 @@
 "Scan the QR code or enter the short code in your browser." = "QR स्कैन करें, ब्राउज़र में अनुमति दें, फिर यहाँ लौटें।";
 "Search" = "खोज";
 "Search movies & series" = "मूवी और सीरीज़ खोजें";
+"Season %1$d - %2$d episodes" = "सीज़न %1$d - %2$d एपिसोड";
 "See All" = "सब देखें";
 "See all" = "सब देखें";
 "Select" = "चुनें";
@@ -214,6 +223,7 @@
 "Signed in" = "साइन इन";
 "Size" = "आकार";
 "Skip Intro" = "इंट्रो स्किप करें";
+"Something went wrong" = "कुछ गलत हो गया";
 "Sort" = "सॉर्ट";
 "Sources" = "सोर्स";
 "Specials" = "स्पेशल";
@@ -240,6 +250,7 @@
 "Title Z-A" = "टाइटल Z-A";
 "Today" = "आज";
 "Tomorrow" = "कल";
+"Trailer" = "ट्रेलर";
 "Trakt access token refreshes in %@" = "Trakt एक्सेस टोकन %1$@ में रिफ्रेश होगा";
 "Trakt history considered for continue watching" = "कंटिन्यू वॉचिंग के लिए Trakt इतिहास का उपयोग";
 "Try a different genre or catalog" = "कोई दूसरा जॉनर या कैटलॉग आज़माएँ";

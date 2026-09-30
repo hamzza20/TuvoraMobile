@@ -651,7 +651,7 @@ private struct TmdbSettingsDetail: View {
             SettingsDetailHeader(title: "TMDB Enrichment", subtitle: "Choose which metadata fields should come from TMDB")
             if let t = model.tmdb {
                 SettingsGroupCard {
-                    SettingsToggleRow(title: "Enable TMDB Enrichment", subtitle: "Use TMDB as a metadata source to enhance addon data", isOn: t.enabled) {
+                    SettingsToggleRow(title: "Enable TMDB Enrichment", subtitle: StoreCopy.tmdbEnrichmentSubtitle, isOn: t.enabled) {
                         repo.setEnabled(value: !t.enabled)
                     }
                     SettingsActionRow(title: "Language", subtitle: "TMDB metadata language for title, logo, and enabled fields",

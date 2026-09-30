@@ -97,7 +97,7 @@ struct ProfileDeleteDialog: View {
     var body: some View {
         OverlayScrim(opacity: 0.6, onDismiss: onDismiss) {
             NuvioDialog(title: "Delete Profile?",
-                        subtitle: "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone.",
+                        subtitle: StoreCopy.deleteProfileSubtitle,
                         width: dp(420)) {
                 SettingsDialogButton(title: "Delete Profile", destructive: true, fullWidth: true, action: onDelete)
                 // tvOS never rests focus on an irreversible action: Cancel is the default.

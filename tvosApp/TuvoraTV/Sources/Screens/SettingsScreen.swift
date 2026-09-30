@@ -11,6 +11,9 @@ struct SettingsScreen: View {
     enum Category: String, CaseIterable, Identifiable {
         case account, profiles, appearance, layout, discovery, integrations, playback, tracking, about
         var id: String { rawValue }
+        /// The rail's categories. Content & Discovery manages add-ons and plugins, which the App Store
+        /// build compiles out (the phone's store build drops the same row).
+        static var visible: [Category] { allCases.filter { $0 != .discovery || StoreCopy.showsContentDiscovery } }
         var title: String {
             switch self {
             case .account: return "Account"
@@ -47,7 +50,8 @@ struct SettingsScreen: View {
     /// Simulator smoke hook: `-smokeSettings <category>` opens a category, `-smokeSettingsDialog <addPlaylist|signOut|engine|removePlaylist>` a dialog.
     @State private var selected: Category = {
         let args = ProcessInfo.processInfo.arguments
-        if let i = args.firstIndex(of: "-smokeSettings"), i + 1 < args.count, let c = Category(rawValue: args[i + 1]) { return c }
+        if let i = args.firstIndex(of: "-smokeSettings"), i + 1 < args.count, let c = Category(rawValue: args[i + 1]),
+           Category.visible.contains(c) { return c }
         return .account
     }()
     @FocusState private var railFocus: Category?
@@ -120,7 +124,7 @@ struct SettingsScreen: View {
             // NuvioTV's rail is a LazyColumn: it scrolls when the categories outgrow the workspace.
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: dp(10)) {
-                    ForEach(Category.allCases) { category in
+                    ForEach(Category.visible) { category in
                         SettingsRailButton(title: category.title, icon: category.icon, selected: selected == category,
                                            focused: railFocus == category) { select(category) }
                             .focused($railFocus, equals: category)
@@ -181,7 +185,7 @@ struct SettingsScreen: View {
         case .profiles: ProfilesSettingsDetail()
         case .appearance: AppearanceSettingsDetail(model: model)
         case .layout: LayoutSettingsDetail()
-        case .discovery: AddonsSettingsDetail(model: model)
+        case .discovery: if StoreCopy.showsContentDiscovery { AddonsSettingsDetail(model: model) }
         case .integrations: IntegrationsSettingsDetail(nav: integrationsNav, model: integrations, settings: model)
         case .playback: PlaybackSettingsDetail(model: model)
         case .tracking: TrackingSettingsDetail(model: integrations)
@@ -332,7 +336,7 @@ private struct SettingsDialogView: View {
         case .signOut:
             // AccountSignOutConfirmationDialog
             NuvioDialog(title: "Sign out?",
-                        subtitle: "You will need to sign in again to sync library, watch progress, addons, and plugins on this device.") {
+                        subtitle: StoreCopy.signOutSubtitle) {
                 HStack(spacing: dp(8)) {
                     Spacer()
                     SettingsDialogButton(title: "Cancel") { dialogs.pop() }
@@ -419,7 +423,7 @@ private struct AccountSettingsDetail: View {
                         }
                         signOutButton.padding(.top, dp(8))
                     case .authenticated, .unauthenticated:
-                        Text("Sync your library, watch progress, addons, and plugins across devices.")
+                        Text(ui: StoreCopy.accountSyncDescription)
                             .font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
                     case .loading, .none:
                         Text("Loading…").font(NuvioType.bodyMedium).foregroundStyle(colors.textSecondary)

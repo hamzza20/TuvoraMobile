@@ -63,6 +63,7 @@
 "Create Profile" = "Sukurti profilį";
 "Create your own Client ID at anime-skip.com/account/settings" = "Susikurkite savo kliento ID adresu anime-skip.com/account/settings";
 "Creating…" = "Kuriama…";
+"Creator and Cast" = "Kūrėjai ir aktoriai";
 "Credits" = "Nuopelnai";
 "Custom" = "Pasirinktinis";
 "Default" = "Visi žanrai";
@@ -90,11 +91,13 @@
 "Enter Client ID" = "Įveskite kliento ID";
 "Enter MDBList API key" = "Įveskite MDBList API raktą";
 "Enter at least 2 characters" = "Įveskite bent 2 simbolius";
+"Episode ratings are unavailable." = "Įvertinimai neprieinami";
 "Episode titles, overviews, thumbnails, and runtime from TMDB" = "Serijų pavadinimai, apžvalgos, miniatiūros ir trukmė iš TMDB";
 "Episodes" = "Serijos";
 "External ratings providers" = "Išoriniai įvertinimų teikėjai";
 "Fetch ratings from external providers in metadata detail screen" = "Gauti įvertinimus iš išorinių teikėjų išsamios informacijos ekrane";
 "Fetch skip timestamps from anime-skip.com" = "Gauti praleidimo laiko žymas iš anime-skip.com";
+"Filmography" = "Filmografija";
 "Focus an avatar to view its name" = "Fokusuokite avatarą, kad pamatytumėte jo pavadinimą";
 "Font Size" = "Šrifto dydis";
 "General" = "Bendra";
@@ -122,6 +125,7 @@
 "Library" = "Biblioteka";
 "List" = "Sąrašas";
 "Load more" = "Įkelti daugiau";
+"Loading episode ratings..." = "Įkeliami įvertinimai…";
 "Loading..." = "Įkeliama…";
 "Loading…" = "Įkeliama…";
 "Login approved. Finishing sign in…" = "Prisijungimas patvirtintas. Užbaigiama…";
@@ -138,11 +142,13 @@
 "Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties." = "„local.properties“ failo trūksta TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET parametrų.";
 "Modern View" = "Modernus rodinys";
 "More Like This" = "Panašūs";
+"More like this" = "Panašūs";
 "Move Down" = "Nuleisti";
 "Move Up" = "Pakelti";
 "Movie" = "Filmas";
 "Movies" = "Filmai";
 "Name" = "Pavadinimas";
+"Network" = "Tinklas";
 "Networks" = "Tinklai";
 "Networks with logos from TMDB" = "Tinklai su logotipais iš TMDB";
 "Next Episode" = "Kita serija";
@@ -171,6 +177,7 @@
 "Preferred Language" = "Pageidaujama kalba";
 "Privacy" = "Privatumas";
 "Privacy Policy" = "Privatumo politika";
+"Production" = "Produkcija";
 "Production companies from TMDB" = "Gamybos kompanijos iš TMDB";
 "Productions" = "Produkcijos";
 "Profile Options" = "Profilio parinktys";
@@ -178,6 +185,7 @@
 "Profiles" = "Profiliai";
 "QR login expired. Generate a new code." = "QR prisijungimo galiojimas pasibaigė. Sugeneruokite naują kodą.";
 "QR unavailable. Refresh to retry." = "QR paslauga laikinai nepasiekiama";
+"Ratings" = "Įvertinimai";
 "Refresh QR" = "Atnaujinti kodą";
 "Remove" = "Pašalinti";
 "Remove from library" = "Pašalinti iš bibliotekos";
@@ -217,6 +225,7 @@
 "Signed in" = "Prisijungta kaip";
 "Size" = "Dydis";
 "Skip Intro" = "Praleisti Intro";
+"Something went wrong" = "Nepavyko įkelti informacijos";
 "Sort" = "Rūšiuoti";
 "Sources" = "Šaltiniai";
 "Specials" = "Specialios serijos";
@@ -241,6 +250,7 @@
 "This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone." = "Visi šio profilio duomenys bus prarasti.";
 "Title A-Z" = "Pavadinimas A-Z";
 "Title Z-A" = "Pavadinimas Z-A";
+"Trailer" = "Anonsas";
 "Trakt access token refreshes in %@" = "„Trakt“ prieigos raktas atnaujinamas po %1$@";
 "Trakt history considered for continue watching" = "„Trakt“ istorija, naudojama „Tęsti žiūrėjimą“ skilčiai";
 "Try a different genre or catalog" = "Šioje kategorijoje elementų nėra";
