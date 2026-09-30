@@ -80,10 +80,18 @@ struct MainShell: View {
                 .overlay(Color.black.opacity(expanded ? 0.55 : 0).allowsHitTesting(false).ignoresSafeArea())
                 .animation(NuvioTokens.Motion.medium, value: expanded)
                 .onExitCommand { openRail() }
+                // Native views (search keyboard, system lists) don't report focus: any press inside the
+                // content also proves the content holds focus.
+                .onMoveCommand { _ in ContentFocusActivity.touched() }
 
 
 
-            Sidebar(destination: $destination, focus: $railFocus, expanded: expanded, engaged: railEngaged, profile: profile)
+            Sidebar(destination: $destination, focus: $railFocus, expanded: expanded, engaged: railEngaged, profile: profile,
+                    onChoose: {
+                        contentFocus.expectContentFocus()
+                        railEngaged = false
+                        railFocus = nil
+                    })
                 // Focus left the drawer: close it - unless a fence is bouncing focus straight back
                 // (its bounce is queued first, so check after it has run).
                 .onChange(of: railFocus) { _, f in
@@ -173,6 +181,8 @@ private struct Sidebar: View {
     let expanded: Bool
     let engaged: Bool
     let profile: NuvioProfile?
+    /// Hand focus to the chosen tab: close the drawer at once (items stop being focus targets).
+    let onChoose: () -> Void
     @Environment(\.nuvio) private var colors
 
     /// NuvioTV's Modern floating sidebar (ModernSidebarBlurPanel.kt), drawn in Liquid Glass: a rounded
@@ -186,7 +196,7 @@ private struct Sidebar: View {
             ForEach(MainShell.Destination.allCases) { item in
                 SidebarItem(item: item, selected: destination == item, expanded: expanded, focused: focus.wrappedValue == item) {
                     destination = item
-                    focus.wrappedValue = nil
+                    onChoose()
                 }
                 .focused(focus, equals: item)
                 .disabled(!engaged)

@@ -8,12 +8,16 @@ import TuvoraCore
 @MainActor
 final class ContentFocusActivity: ObservableObject {
     static let shared = ContentFocusActivity()
-    @Published private(set) var everFocused = false
+    /// True until content takes focus - at launch, and again after a tab switch - so the focus
+    /// engine's automatic pick can't land on the edge catcher (and bounce into the sidebar).
+    @Published private(set) var awaitingContent = true
+    var everFocused: Bool { !awaitingContent }
+    func expectContentFocus() { awaitingContent = true }
     /// A focused view that pages with LEFT itself (hero carousel, guide timeline) keeps the catcher off.
     @Published var leftEdgeOwned = false
     /// Such a view asks for the drawer explicitly once it reaches its own start.
     @Published private(set) var railRequests = 0
-    static func touched() { if !shared.everFocused { shared.everFocused = true } }
+    static func touched() { if shared.awaitingContent { shared.awaitingContent = false } }
     static func requestRail() { shared.railRequests += 1 }
 }
 
