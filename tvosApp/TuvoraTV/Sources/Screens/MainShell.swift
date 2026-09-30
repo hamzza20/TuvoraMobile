@@ -41,6 +41,9 @@ struct MainShell: View {
     }()
     @FocusState private var railFocus: Destination?
     @State private var profile: NuvioProfile?
+    @State private var profileCount = 0
+    /// The drawer's profile item (NuvioTV SidebarProfileItem): shown with 2+ profiles, opens the picker.
+    @FocusState private var profileFocused: Bool
     /// Simulator smoke hook: `-smokeDetails <type>:<id>` opens a title's details.
     @State private var smokeDetails: PreviewBox? = {
         let args = ProcessInfo.processInfo.arguments
@@ -57,7 +60,9 @@ struct MainShell: View {
     /// The drawer is open only when the viewer brought focus there (LEFT at the edge, or Menu). Collapsed
     /// items cannot take focus, exactly as NuvioTV's `canFocus = expanded`, so launch focus lands in content.
     @State private var railEngaged = false
-    private var expanded: Bool { railEngaged && railFocus != nil }
+    /// Open exactly while engaged: tying it to "an item has focus" collapsed the drawer for the instant
+    /// a fence held focus, removing the profile item the fence was bouncing back to.
+    private var expanded: Bool { railEngaged }
     /// The left-edge catcher: an invisible focusable under the collapsed sidebar. The focus engine only
     /// reaches it when nothing in the content lies further left, so "LEFT at the edge opens the drawer"
     /// needs no timing guess (the old 150 ms heuristic misfired wherever focus reporting lagged).
@@ -67,6 +72,11 @@ struct MainShell: View {
     private func openRail() {
         railEngaged = true
         DispatchQueue.main.async { railFocus = destination }
+        // Enabling the drawer lets tvOS grab its nearest item (the profile item, level with content at the
+        // top of the screen) after the first assignment: the drawer always opens on the current tab.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if railEngaged && profileFocused { railFocus = destination }
+        }
     }
 
     var body: some View {
@@ -86,7 +96,14 @@ struct MainShell: View {
 
 
 
-            Sidebar(destination: $destination, focus: $railFocus, expanded: expanded, engaged: railEngaged, profile: profile,
+            Sidebar(destination: $destination, focus: $railFocus, profileFocus: $profileFocused, expanded: expanded, engaged: railEngaged,
+                    profile: profile, profileSwitchable: profileCount > 1,
+                    onSwitchProfile: {
+                        railEngaged = false
+                        railFocus = nil
+                        ProfilePickerLaunch.manageRequested = false
+                        TvAppLifecycle.shared.openProfilePicker()
+                    },
                     onChoose: {
                         contentFocus.expectContentFocus()
                         railEngaged = false
@@ -94,9 +111,13 @@ struct MainShell: View {
                     })
                 // Focus left the drawer: close it - unless a fence is bouncing focus straight back
                 // (its bounce is queued first, so check after it has run).
+                .onChange(of: profileFocused) { _, f in
+                    guard !f else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { if railFocus == nil && !profileFocused { railEngaged = false } }
+                }
                 .onChange(of: railFocus) { _, f in
                     guard f == nil else { return }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { if railFocus == nil { railEngaged = false } }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { if railFocus == nil && !profileFocused { railEngaged = false } }
                 }
                 // Settings → Layout "Collapse Sidebar": hidden until focus arrives (NuvioTV).
                 .opacity(collapseSidebar && !railEngaged ? 0 : 1)
@@ -130,7 +151,10 @@ struct MainShell: View {
             DeepLinkCenter.shared.pending = nil
             open(link)
         }
-        .task { for await state in ProfileRepository.shared.state { profile = state.activeProfile } }
+        // A new shell (launch, or back from the profile picker): nothing in content has focus yet, so
+        // the edge catcher must not be armed - it would take the launch focus and open the drawer.
+        .onAppear { contentFocus.expectContentFocus() }
+        .task { for await state in ProfileRepository.shared.state { profile = state.activeProfile; profileCount = state.profiles.count } }
     }
 
     /// A Top Shelf item: Play resumes that title's sources, Select opens its details.
@@ -178,9 +202,12 @@ struct MainShell: View {
 private struct Sidebar: View {
     @Binding var destination: MainShell.Destination
     var focus: FocusState<MainShell.Destination?>.Binding
+    var profileFocus: FocusState<Bool>.Binding
     let expanded: Bool
     let engaged: Bool
     let profile: NuvioProfile?
+    let profileSwitchable: Bool
+    let onSwitchProfile: () -> Void
     /// Hand focus to the chosen tab: close the drawer at once (items stop being focus targets).
     let onChoose: () -> Void
     @Environment(\.nuvio) private var colors
@@ -189,10 +216,23 @@ private struct Sidebar: View {
     /// (30dp) panel inset from the edge, icons only until focus arrives, then labels.
     var body: some View {
         VStack(alignment: .leading, spacing: dp(10)) {
-            if expanded {
+            // Top fence above the profile item when there is one, so UP from Home can reach it.
+            SidebarFence(active: engaged) {
+                if profileSwitchable && profile != nil { profileFocus.wrappedValue = true }
+                else { focus.wrappedValue = MainShell.Destination.allCases.first! }
+            }
+            if profileSwitchable, expanded, let profile {
+                // Only while the drawer is open, and removed instantly (no transition): a fading view
+                // stays focusable, and tvOS picked it when a tab was chosen; a collapsed-but-present one
+                // skewed the focus engine near the IPTV chips (both found by the remote UI tests).
+                SidebarProfileButton(profile: profile, focused: profileFocus.wrappedValue, action: onSwitchProfile)
+                    .focused(profileFocus)
+                    .disabled(!engaged)
+                    .accessibilityIdentifier("sidebar.profile")
+                    .padding(.bottom, dp(12))
+            } else if expanded {
                 header.padding(.bottom, dp(12)).transition(.opacity)
             }
-            fence(bouncesTo: MainShell.Destination.allCases.first!)
             ForEach(MainShell.Destination.allCases) { item in
                 SidebarItem(item: item, selected: destination == item, expanded: expanded, focused: focus.wrappedValue == item) {
                     destination = item
@@ -233,6 +273,30 @@ private struct Sidebar: View {
         } else {
             Image("app_logo_wordmark").resizable().scaledToFit().frame(height: dp(36))
         }
+    }
+}
+
+private struct SidebarProfileButton: View {
+    let profile: NuvioProfile
+    let focused: Bool
+    let action: () -> Void
+    @Environment(\.nuvio) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: dp(10)) {
+                ProfileAvatar(profile: profile, size: dp(30))
+                Text(profile.name).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, dp(9))
+            .frame(width: dp(190), height: dp(48), alignment: .leading)
+            .background(Capsule().fill(focused ? colors.focusBackground : .clear))
+            .overlay(Capsule().stroke(focused ? colors.focusRing : .clear, lineWidth: NuvioTokens.Stroke.focus))
+            .scaleEffect(focused ? 1.05 : 1)
+            .animation(NuvioTokens.Motion.fast, value: focused)
+        }
+        .buttonStyle(PlainNoChromeButtonStyle())
     }
 }
 

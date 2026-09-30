@@ -85,8 +85,10 @@ final class RemoteNavigationTests: XCTestCase {
         press(.down)
         XCTAssertEqual(focusedId(), "sidebar.settings", "a second DOWN past Settings left the nav bar")
 
-        for _ in 0..<8 { press(.up, settle: 0.5) }
-        XCTAssertEqual(focusedId(), "sidebar.home", "UP past Home left the nav bar")
+        // The top is the profile item when the account has 2+ profiles (the switcher), else Home.
+        for _ in 0..<9 { press(.up, settle: 0.5) }
+        let top = app.buttons["sidebar.profile"].exists ? "sidebar.profile" : "sidebar.home"
+        XCTAssertEqual(focusedId(), top, "UP past the top of the drawer left the nav bar")
     }
 
     // MARK: - Home
@@ -132,5 +134,41 @@ final class RemoteNavigationTests: XCTestCase {
         press(.menu, settle: 3)
         XCTAssertTrue(app.buttons["sidebar.home"].waitForExistence(timeout: 10), "Menu on Manage Profiles did not return to the app")
         XCTAssertFalse(app.buttons["profiles.done"].exists, "still on Manage Profiles after Menu")
+    }
+
+    /// "Add the in-app profile switch": the drawer's profile item opens "Who's watching?"; Menu backs
+    /// out with no switch; picking the other profile switches and Home fills in (catalogs reload).
+    func testSidebarProfileSwitch() {
+        launch(["-smokeTab", "home"])
+        XCTAssertTrue(waitForFocus(where: { $0 != "<none>" && !$0.hasPrefix("sidebar.") }), "nothing focused on Home")
+        press(.menu)
+        XCTAssertTrue(waitForFocus(where: { $0.hasPrefix("sidebar.") }, timeout: 5), "Menu did not open the sidebar")
+        for _ in 0..<8 where focusedId() != "sidebar.profile" { press(.up, settle: 0.5) }
+        XCTAssertEqual(focusedId(), "sidebar.profile", "UP from Home did not reach the profile item")
+        try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/walk-profile-item.png"))
+        press(.up)
+        XCTAssertEqual(focusedId(), "sidebar.profile", "UP past the profile item left the drawer")
+
+        // Open the switcher, back out with Menu: same profile, no switch.
+        press(.select, settle: 3)
+        XCTAssertTrue(app.staticTexts["Who's watching?"].waitForExistence(timeout: 10), "profile item did not open the picker")
+        press(.menu, settle: 3)
+        XCTAssertTrue(app.buttons["sidebar.home"].waitForExistence(timeout: 10), "Menu on the switcher did not return to the app")
+        XCTAssertTrue(waitForFocus(where: { $0 != "<none>" && !$0.hasPrefix("sidebar.") }, timeout: 15),
+                      "back from the switcher, focus is \(focusedId()) - the drawer must stay closed")
+
+        // Switch to the other profile, then back, and Home must have its rows.
+        for round in 0..<2 {
+            press(.menu)
+            XCTAssertTrue(waitForFocus(where: { $0.hasPrefix("sidebar.") }, timeout: 5))
+            for _ in 0..<8 where focusedId() != "sidebar.profile" { press(.up, settle: 0.5) }
+            press(.select, settle: 3)
+            XCTAssertTrue(app.staticTexts["Who's watching?"].waitForExistence(timeout: 10))
+            press(round == 0 ? .right : .left, settle: 1)
+            press(.select, settle: 8)
+            XCTAssertTrue(app.buttons["sidebar.home"].waitForExistence(timeout: 30), "round \(round): the switch never reached the app")
+            Thread.sleep(forTimeInterval: 10)
+            XCTAssertFalse(app.staticTexts["Nothing to show yet"].exists, "round \(round): Home is empty after the switch")
+        }
     }
 }

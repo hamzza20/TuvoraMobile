@@ -132,4 +132,22 @@ class TvGatePolicyTest {
         assertEquals(null, TvGatePolicy.leavePicker(userOpenedPicker = false, profileLive = true))
         assertEquals(null, TvGatePolicy.leavePicker(userOpenedPicker = true, profileLive = false))
     }
+
+    // In-app profile switch (sidebar profile item): re-picking the profile already open just closes
+    // the picker - no switch, no re-sync (that re-switch once left Home empty).
+    @Test
+    fun `picking the profile already open closes the switcher`() {
+        assertEquals(TvPickAction.Close, TvGatePolicy.onPick(pickedIndex = 1, activeIndex = 1, profileLive = true, userOpenedPicker = true))
+    }
+
+    @Test
+    fun `picking another profile switches`() {
+        assertEquals(TvPickAction.Switch, TvGatePolicy.onPick(pickedIndex = 2, activeIndex = 1, profileLive = true, userOpenedPicker = true))
+    }
+
+    @Test
+    fun `the startup pick always switches`() {
+        assertEquals(TvPickAction.Switch, TvGatePolicy.onPick(pickedIndex = 1, activeIndex = 1, profileLive = false, userOpenedPicker = false))
+        assertEquals(TvPickAction.Switch, TvGatePolicy.onPick(pickedIndex = 1, activeIndex = null, profileLive = true, userOpenedPicker = true))
+    }
 }

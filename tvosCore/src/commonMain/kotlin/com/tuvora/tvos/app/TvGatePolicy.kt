@@ -30,7 +30,17 @@ sealed interface TvGateDecision {
     data class SwitchTo(val profile: NuvioProfile, val sync: Boolean) : TvGateDecision
 }
 
+/** What choosing a profile on the picker does. */
+enum class TvPickAction { Switch, Close }
+
 object TvGatePolicy {
+
+    /**
+     * A pick on a picker opened over a live profile that names that same profile only closes the
+     * picker; anything else (another profile, or the startup pick) switches.
+     */
+    fun onPick(pickedIndex: Int, activeIndex: Int?, profileLive: Boolean, userOpenedPicker: Boolean): TvPickAction =
+        if (userOpenedPicker && profileLive && activeIndex == pickedIndex) TvPickAction.Close else TvPickAction.Switch
 
     /**
      * Back/Menu (or Done) on the profile picker. A picker the viewer opened from Settings over a

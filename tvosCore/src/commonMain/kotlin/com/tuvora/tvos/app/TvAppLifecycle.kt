@@ -118,6 +118,11 @@ object TvAppLifecycle {
     /** The picker's choice, after any PIN check the picker performs. */
     fun pickProfile(profileIndex: Int) {
         val profile = ProfileRepository.state.value.profiles.find { it.profileIndex == profileIndex } ?: return
+        val active = ProfileRepository.state.value.activeProfile?.profileIndex
+        if (TvGatePolicy.onPick(profileIndex, active, profileLive, userOpenedPicker) == TvPickAction.Close) {
+            closeProfilePicker()
+            return
+        }
         switchTo(profile, sync = AuthRepository.state.value is AuthState.Authenticated)
     }
 
