@@ -207,11 +207,11 @@ struct SettingsScreen: View {
                 subtitle: "Choose the service Tuvora reads for resume and Continue Watching. Scrobbling remains active for every connected service.",
                 options: sources.map { SettingsPickerOption(id: $0.name, title: TrackingSettingsDetail.label($0)) },
                 selectedId: sources.first?.name ?? "", width: dp(660)) { _ in }))
-        case "debridTemplate":
+        case "debridTemplate" where IntegrationSection.debrid.isAvailable:
             dialogs.push(.custom(AnyView(KeyEntryDialog(title: "Name template",
                 subtitle: "Controls how result names appear. Leave blank to use the original result name.",
                 placeholder: "Name template", initial: TvDebrid.shared.defaultNameTemplate, dialogs: dialogs) { _ in })))
-        case "debridKey":
+        case "debridKey" where IntegrationSection.debrid.isAvailable:
             dialogs.push(.custom(AnyView(KeyEntryDialog(title: "Torbox API Key", subtitle: "Enter your Torbox API key.",
                                                         placeholder: "Enter Torbox API key", initial: "", dialogs: dialogs) { _ in })))
         case "engine":

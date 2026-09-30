@@ -374,14 +374,21 @@ struct DisconnectTrackingDialog: View {
 
 // MARK: - Integrations hub
 
-enum IntegrationSection: String { case hub, debrid, tmdb, mdblist, animeskip, iptv }
+enum IntegrationSection: String {
+    case hub, debrid, tmdb, mdblist, animeskip, iptv
+
+    /// Store builds compile debrid out (AppFeaturePolicy.debridEnabled; Apple TV compiles the App Store
+    /// policy, guideline 5.2.3): Connected Services is not listed and cannot be opened, even by a hook.
+    var isAvailable: Bool { self != .debrid || AppFeaturePolicy.shared.debridEnabled }
+}
 
 /// Which Integrations page is open. Menu on a page returns to the hub (NuvioTV's BackHandler).
 @MainActor
 final class IntegrationsNav: ObservableObject {
     @Published var section: IntegrationSection = {
         let args = ProcessInfo.processInfo.arguments
-        if let i = args.firstIndex(of: "-smokeIntegration"), i + 1 < args.count, let s = IntegrationSection(rawValue: args[i + 1]) { return s }
+        if let i = args.firstIndex(of: "-smokeIntegration"), i + 1 < args.count,
+           let s = IntegrationSection(rawValue: args[i + 1]), s.isAvailable { return s }
         return .hub
     }()
 }
@@ -393,12 +400,15 @@ struct IntegrationsSettingsDetail: View {
     @ObservedObject var settings: SettingsModel
 
     var body: some View {
-        switch nav.section {
+        // An unavailable page (debrid in a store build) falls back to the hub rather than rendering.
+        switch nav.section.isAvailable ? nav.section : .hub {
         case .hub:
             VStack(alignment: .leading, spacing: dp(14)) {
                 SettingsDetailHeader(title: "Integrations", subtitle: "Manage available integrations")
                 SettingsGroupCard {
-                    SettingsActionRow(title: "Connected Services", subtitle: "Experimental cloud account sources") { nav.section = .debrid }
+                    if IntegrationSection.debrid.isAvailable {
+                        SettingsActionRow(title: "Connected Services", subtitle: "Experimental cloud account sources") { nav.section = .debrid }
+                    }
                     SettingsActionRow(title: "TMDB", subtitle: "Metadata enrichment controls") { nav.section = .tmdb }
                     SettingsActionRow(title: "MDBList Ratings", subtitle: "External ratings providers") { nav.section = .mdblist }
                     SettingsActionRow(title: "Anime-Skip", subtitle: "Anime intro/outro skip timestamps") { nav.section = .animeskip }
