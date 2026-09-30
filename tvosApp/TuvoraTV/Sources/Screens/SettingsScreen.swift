@@ -51,14 +51,30 @@ struct SettingsScreen: View {
         return .account
     }()
     @FocusState private var railFocus: Category?
+    /// Dialogs are a focus scope: every push/pop re-picks focus inside the top dialog. Disabling the
+    /// workspace alone left focus on the (now disabled) row behind the dialog, so the dialog could
+    /// not be used and Menu fell through to the shell (walkthrough finding).
+    @Namespace private var dialogScope
+    @StateObject private var rowMemory = RowFocusMemory()
+    /// Entry point that pulls focus into a freshly pushed dialog, then steps aside so tvOS re-picks
+    /// focus - and with the workspace disabled, the dialog is the only place it can go.
+    @FocusState private var dialogEntryFocused: Bool
+    @State private var dialogEntryActive = false
 
     var body: some View {
         ZStack {
             workspace
                 .disabled(!dialogs.stack.isEmpty)
+                .environment(\.rowFocusMemory, rowMemory)
             if !dialogs.stack.isEmpty {
                 Color.black.opacity(0.6).ignoresSafeArea()
                 ZStack {
+                    if dialogEntryActive {
+                        Color.white.opacity(0.001).frame(width: 2, height: 2)
+                            .focusable()
+                            .focused($dialogEntryFocused)
+                            .onChange(of: dialogEntryFocused) { _, now in if now { dialogEntryActive = false } }
+                    }
                     ForEach(dialogs.stack) { entry in
                         let top = entry.id == dialogs.stack.last?.id
                         SettingsDialogView(entry: entry, model: model, dialogs: dialogs)
@@ -68,7 +84,24 @@ struct SettingsScreen: View {
                 }
                 .padding(.vertical, 60)
                 .focusSection()
+                .focusScope(dialogScope)
                 .onExitCommand { dialogs.pop() }
+            }
+        }
+        .onChange(of: dialogs.stack.isEmpty) { _, empty in if !empty { ContentFocusActivity.shared.leftEdgeOwned = true } }
+        .onChange(of: dialogs.stack.last?.id) { _, top in
+            // After the last dialog closes, focus returns to the row that opened it (re-enabled rows
+            // don't get it back on their own); the rail item if no row is known.
+            if top == nil {
+                // Put focus back before the edge catcher re-arms, or tvOS can pick the catcher first.
+                DispatchQueue.main.async {
+                    if rowMemory.last != nil { rowMemory.restore() } else { railFocus = selected }
+                    DispatchQueue.main.async { ContentFocusActivity.shared.leftEdgeOwned = false }
+                }
+            }
+            else {
+                dialogEntryActive = true
+                DispatchQueue.main.async { dialogEntryFocused = true }
             }
         }
         .environmentObject(dialogs)

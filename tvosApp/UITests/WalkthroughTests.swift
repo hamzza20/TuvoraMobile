@@ -23,6 +23,11 @@ final class WalkthroughTests: XCTestCase {
         while Date() < end { if match(focusedId()) { return true }; Thread.sleep(forTimeInterval: 0.4) }
         return false
     }
+    /// Debug: screenshot to the host (simulator only) so a failure can be looked at.
+    private func shot(_ name: String) {
+        try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/walk-\(name).png"))
+        print("WALK \(name) focus=\(focusedId())")
+    }
     private func inContent(_ id: String) -> Bool { id != "<none>" && !id.hasPrefix("sidebar.") }
 
     private func openTab(_ tab: String) {
@@ -87,5 +92,77 @@ final class WalkthroughTests: XCTestCase {
         XCTAssertTrue(waitFocus(10) { inContent($0) }, "search: nothing focused")
         press(.menu, settle: 1.5)
         XCTAssertTrue(waitFocus(5) { $0 != "<none>" }, "search: Menu left nothing focused")
+    }
+
+    // MARK: - Round 2
+
+    /// Guide: RIGHT into channels hides the categories; LEFT from a channel brings them back (never
+    /// the sidebar); RIGHT from a channel enters the timeline, where LEFT travels, not the sidebar.
+    func testGuideLeftAndTimeline() {
+        XCTAssertTrue(waitFocus { inContent($0) })
+        openTab("iptv")
+        XCTAssertTrue(waitFocus(20) { inContent($0) }, "iptv: nothing focused")
+        Thread.sleep(forTimeInterval: 4)   // channels load
+        let categories = app.buttons["All channels"]
+        shot("guide-0")
+        // Launch focus is on the hub chips: DOWN into the category column, then RIGHT into channels.
+        for _ in 0..<3 where focusedId().hasPrefix("hubchip.") || focusedId().hasPrefix("#onn") { press(.down, settle: 1) }
+        for _ in 0..<4 where focusedId() != "#All channels" { press(.down, settle: 0.7) }
+        XCTAssertEqual(focusedId(), "#All channels", "guide: could not reach the All channels category")
+        press(.select, settle: 3)
+        press(.right, settle: 1.5)
+        let onChannel = focusedId()
+        shot("guide-1-channel")
+        XCTAssertFalse(onChannel.hasPrefix("sidebar.") || onChannel == "<none>", "guide: RIGHT from categories went to \(onChannel)")
+        press(.left, settle: 1.2)
+        shot("guide-2-left")
+        XCTAssertFalse(focusedId().hasPrefix("sidebar."), "guide: LEFT from channel \(onChannel) opened the sidebar instead of the categories")
+        XCTAssertTrue(categories.exists, "guide: LEFT from a channel did not bring the category column back (focus \(focusedId()))")
+        XCTAssertEqual(focusedId(), "#All channels", "guide: LEFT from a channel should focus its category, got \(focusedId())")
+        // Back to a channel, then into its timeline.
+        press(.right, settle: 1)
+        press(.right, settle: 1.5)
+        let cell = focusedId()
+        press(.left, settle: 2)
+        XCTAssertFalse(focusedId().hasPrefix("sidebar."), "guide: LEFT in the timeline (from \(cell)) opened the sidebar")
+        XCTAssertNotEqual(focusedId(), "<none>", "guide: LEFT in the timeline lost focus")
+    }
+
+    /// Details -> Play -> sources: Menu closes the picker back to details, then details back to Home.
+    func testSourcePickerMenuStepsBack() {
+        XCTAssertTrue(waitFocus { inContent($0) })
+        press(.down, settle: 1.5)
+        press(.select, settle: 4)
+        let play = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Play' OR label BEGINSWITH 'Resume' OR label BEGINSWITH 'Watch'")).firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 15), "details did not open")
+        XCTAssertTrue(waitFocus(8) { $0 != "<none>" })
+        for _ in 0..<3 where !(focused.label.hasPrefix("Play") || focused.label.hasPrefix("Resume") || focused.label.hasPrefix("Watch")) { press(.up, settle: 0.6) }
+        press(.select, settle: 6)   // sources (or straight to the player with auto-play)
+        let stillDetails = play.exists && play.isHittable
+        press(.menu, settle: 3)
+        XCTAssertTrue(waitFocus(8) { $0 != "<none>" }, "after Menu from sources/player nothing is focused")
+        if !stillDetails {
+            XCTAssertTrue(play.exists, "Menu from the source picker/player did not return to details")
+        }
+        press(.menu, settle: 2)
+        XCTAssertTrue(waitFocus(5) { inContent($0) }, "Menu from details did not return to Home content (focus \(focusedId()))")
+    }
+
+    /// Settings dialogs (option pickers): Menu closes the dialog and focus returns to its row.
+    func testSettingsDialogMenuReturnsToRow() {
+        XCTAssertTrue(waitFocus { inContent($0) })
+        openTab("settings")
+        XCTAssertTrue(waitFocus(10) { $0.hasPrefix("settings.rail.") })
+        for _ in 0..<8 where focusedId() != "settings.rail.playback" { press(.down, settle: 0.5) }
+        XCTAssertEqual(focusedId(), "settings.rail.playback")
+        press(.right, settle: 1)
+        for _ in 0..<4 where !focused.label.contains("Engine") { press(.down, settle: 0.6) }
+        let row = focusedId()
+        press(.select, settle: 2)
+        shot("settings-dialog")
+        let dialogFocus = focusedId()
+        XCTAssertNotEqual(dialogFocus, row, "selecting \(row) opened nothing")
+        press(.menu, settle: 1.5)
+        XCTAssertEqual(focusedId(), row, "Menu from the \(row) dialog left focus on \(focusedId())")
     }
 }

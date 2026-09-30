@@ -262,6 +262,9 @@ private struct LiveGuideView: View {
                     timeHeader
                     channelList
                 }
+                // One section for the whole right pane: RIGHT from an upper category (level with the
+                // non-focusable preview) finds nothing in its beam otherwise, and focus goes nowhere.
+                .focusSection()
             }
             .padding(.leading, NuvioTokens.Layout.gutter).padding(.trailing, dp(24))
             .disabled(sheet != nil || hideAsk != nil)
@@ -562,9 +565,10 @@ private struct LiveGuideView: View {
 
     private func showCategories() {
         revealCategories = true
-        DispatchQueue.main.async {
+        // After the column is laid out (an immediate assignment finds no such view yet).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             categoryFocus = category
-            DispatchQueue.main.async { revealCategories = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { revealCategories = false }
         }
     }
 

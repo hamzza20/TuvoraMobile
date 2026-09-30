@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// NuvioDialog (components/NuvioDialog.kt): 520dp wide, BackgroundElevated, radius 16, 1dp Border,
 /// padding 24, 16dp spacing, titleLarge title.
@@ -74,5 +75,48 @@ struct SettingsActionRow: View {
         .disabled(!enabled)
         .focused($focused)
         .reportsFocus(focused)
+        .remembersFocus(title, focused: $focused)
+    }
+}
+
+
+/// Remembers which settings row opened a dialog, so closing the dialog puts focus back on it: tvOS
+/// does not restore focus to a view that was disabled while the dialog was up (walkthrough finding).
+@MainActor
+final class RowFocusMemory: ObservableObject {
+    var last: String?
+    @Published private(set) var restoreTick = 0
+    func restore() { restoreTick += 1 }
+}
+
+private struct RowFocusMemoryKey: EnvironmentKey {
+    static let defaultValue: RowFocusMemory? = nil
+}
+
+extension EnvironmentValues {
+    var rowFocusMemory: RowFocusMemory? {
+        get { self[RowFocusMemoryKey.self] }
+        set { self[RowFocusMemoryKey.self] = newValue }
+    }
+}
+
+private struct RemembersFocus: ViewModifier {
+    let key: String
+    var focused: FocusState<Bool>.Binding
+    @Environment(\.rowFocusMemory) private var memory
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: focused.wrappedValue) { _, now in if now { memory?.last = key } }
+            .onReceive(memory?.$restoreTick.dropFirst().eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()) { _ in
+                if memory?.last == key { focused.wrappedValue = true }
+            }
+    }
+}
+
+extension View {
+    /// Inside a RowFocusMemory (Settings), this row takes focus back after a dialog it opened closes.
+    func remembersFocus(_ key: String, focused: FocusState<Bool>.Binding) -> some View {
+        modifier(RemembersFocus(key: key, focused: focused))
     }
 }
