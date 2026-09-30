@@ -119,4 +119,17 @@ class TvGatePolicyTest {
         assertEquals(TvGateDecision.Stay, TvGatePolicy.decide(input(auth = AuthState.Loading, profiles = twoProfiles, current = TvGateScreen.Main)))
         assertEquals(TvGateDecision.Stay, TvGatePolicy.decide(input(auth = AuthState.Unauthenticated, profiles = twoProfiles, current = TvGateScreen.Main)))
     }
+
+    // Bug 2026-09-29: Settings -> Manage Profiles had no way back. Leaving a picker the viewer opened
+    // over a running profile returns straight to the app - no profile switch and no re-sync.
+    @Test
+    fun `leaving a picker opened over a live profile returns to the app`() {
+        assertEquals(TvGateScreen.Main, TvGatePolicy.leavePicker(userOpenedPicker = true, profileLive = true))
+    }
+
+    @Test
+    fun `the startup picker has nothing to go back to`() {
+        assertEquals(null, TvGatePolicy.leavePicker(userOpenedPicker = false, profileLive = true))
+        assertEquals(null, TvGatePolicy.leavePicker(userOpenedPicker = true, profileLive = false))
+    }
 }

@@ -231,14 +231,13 @@ private struct HeroCarousel: View {
         .reportsFocus(focused)
         .onMoveCommand { direction in
             switch direction {
-            case .left where index > 0:
-                index -= 1; ContentFocusActivity.touched()
-            case .right where index < items.count - 1:
-                index += 1; ContentFocusActivity.touched()
+            case .left where index > 0: index -= 1
+            case .left: ContentFocusActivity.requestRail()   // first slide: LEFT opens the drawer
+            case .right where index < items.count - 1: index += 1
             default: break
             }
         }
-        .onChange(of: focused) { _, f in onFocusChange(f) }
+        .onChange(of: focused) { _, f in ContentFocusActivity.shared.leftEdgeOwned = f; onFocusChange(f) }
         .onChange(of: index) { _, i in onActive(items[min(i, items.count - 1)]) }
         // The hero list refreshes after first load (often reordered): the slide redraws items[index],
         // so the backdrop must follow it too, or the text and backdrop show different titles.

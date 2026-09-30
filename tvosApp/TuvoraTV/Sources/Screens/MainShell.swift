@@ -58,6 +58,11 @@ struct MainShell: View {
     /// items cannot take focus, exactly as NuvioTV's `canFocus = expanded`, so launch focus lands in content.
     @State private var railEngaged = false
     private var expanded: Bool { railEngaged && railFocus != nil }
+    /// The left-edge catcher: an invisible focusable under the collapsed sidebar. The focus engine only
+    /// reaches it when nothing in the content lies further left, so "LEFT at the edge opens the drawer"
+    /// needs no timing guess (the old 150 ms heuristic misfired wherever focus reporting lagged).
+    @FocusState private var edgeFocused: Bool
+    @ObservedObject private var contentFocus = ContentFocusActivity.shared
 
     private func openRail() {
         railEngaged = true
@@ -75,24 +80,36 @@ struct MainShell: View {
                 .overlay(Color.black.opacity(expanded ? 0.55 : 0).allowsHitTesting(false).ignoresSafeArea())
                 .animation(NuvioTokens.Motion.medium, value: expanded)
                 .onExitCommand { openRail() }
-                .onMoveCommand { direction in
-                    guard direction == .left, !railEngaged else { return }
-                    let pressed = Date()
-                    // Focus didn't move within a beat: this LEFT hit the content's left edge.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        if ContentFocusActivity.lastChange < pressed { openRail() }
-                    }
-                }
+
+
 
             Sidebar(destination: $destination, focus: $railFocus, expanded: expanded, engaged: railEngaged, profile: profile)
-                .onChange(of: railFocus) { _, f in if f == nil { railEngaged = false } }
+                // Focus left the drawer: close it - unless a fence is bouncing focus straight back
+                // (its bounce is queued first, so check after it has run).
+                .onChange(of: railFocus) { _, f in
+                    guard f == nil else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { if railFocus == nil { railEngaged = false } }
+                }
                 // Settings → Layout "Collapse Sidebar": hidden until focus arrives (NuvioTV).
                 .opacity(collapseSidebar && !railEngaged ? 0 : 1)
                 .animation(NuvioTokens.Motion.fast, value: railEngaged)
+
+            // Above the panel so the focus engine sees it (it skips covered views), and gone while the
+            // drawer is open so it can't cover the drawer's own fences.
+            if !railEngaged {
+            Rectangle().fill(Color.white.opacity(0.001))   // Color.clear is not a focus target
+                .frame(width: dp(70))
+                .frame(maxHeight: .infinity)
+                .focusable(contentFocus.everFocused && !contentFocus.leftEdgeOwned)
+                .focused($edgeFocused)
+                .onChange(of: edgeFocused) { _, now in if now { openRail() } }
+                .accessibilityIdentifier("sidebar.edge")
+            }
         }
         .environment(\.nuvio, colors)
         .environmentObject(playback)
         .ignoresSafeArea()
+        .onChange(of: contentFocus.railRequests) { _, _ in openRail() }
         .overlay(alignment: .bottom) { toast(colors) }
         .onChange(of: theme.colors.secondary, initial: true) { _, _ in playback.palette = theme.colors }
         .fullScreenCover(item: $smokeDetails) { box in
@@ -165,6 +182,7 @@ private struct Sidebar: View {
             if expanded {
                 header.padding(.bottom, dp(12)).transition(.opacity)
             }
+            fence(bouncesTo: MainShell.Destination.allCases.first!)
             ForEach(MainShell.Destination.allCases) { item in
                 SidebarItem(item: item, selected: destination == item, expanded: expanded, focused: focus.wrappedValue == item) {
                     destination = item
@@ -173,6 +191,7 @@ private struct Sidebar: View {
                 .focused(focus, equals: item)
                 .disabled(!engaged)
             }
+            fence(bouncesTo: MainShell.Destination.allCases.last!)
         }
         .padding(dp(10))
         .navigationGlass(in: RoundedRectangle(cornerRadius: dp(30), style: .continuous))
@@ -186,6 +205,13 @@ private struct Sidebar: View {
         }
     }
 
+    /// UP from the first item / DOWN from the last must stay in the drawer (tvOS would otherwise hand
+    /// focus to the nearest content view). An invisible focusable just past the end takes the move
+    /// and gives focus straight back.
+    private func fence(bouncesTo item: MainShell.Destination) -> some View {
+        SidebarFence(active: engaged) { focus.wrappedValue = item }
+    }
+
     @ViewBuilder
     private var header: some View {
         if let profile {
@@ -197,6 +223,20 @@ private struct Sidebar: View {
         } else {
             Image("app_logo_wordmark").resizable().scaledToFit().frame(height: dp(36))
         }
+    }
+}
+
+private struct SidebarFence: View {
+    let active: Bool
+    let bounce: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Color.clear
+            .frame(width: dp(48), height: 2)   // an item's width: never stretches the glass panel
+            .focusable(active)
+            .focused($focused)
+            .onChange(of: focused) { _, now in if now { DispatchQueue.main.async(execute: bounce) } }
     }
 }
 
@@ -226,6 +266,7 @@ private struct SidebarItem: View {
             .animation(NuvioTokens.Motion.fast, value: focused)
         }
         .buttonStyle(PlainNoChromeButtonStyle())
+        .accessibilityIdentifier("sidebar.\(item.rawValue)")
     }
 
     /// Modern sidebar item fills: focused+selected accent 28%, focused white 12%, selected accent 15%.

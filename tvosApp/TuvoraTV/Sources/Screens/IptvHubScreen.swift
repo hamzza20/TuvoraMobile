@@ -60,6 +60,7 @@ struct IptvHubScreen: View {
         HStack(spacing: dp(8)) {
             ForEach([(XtreamHubSection.live, "Live TV"), (.movies, "Movies"), (.series, "Series")], id: \.1) { section, title in
                 HubChip(title: title, selected: hub.section == section) { TvIptvBrowse.shared.open(section: section) }
+                    .accessibilityIdentifier("hubchip.\(title)")
             }
             Spacer()
             if let account = hub.accounts.first(where: { $0.id == hub.selectedAccountId }) ?? hub.accounts.first {
@@ -215,6 +216,10 @@ private struct LiveGuideView: View {
     @State private var programmes: [String: [XtreamProgram]] = [:]
     @State private var now = TvLiveGuide.shared.nowMs()
     @FocusState private var channelsFocused: Bool
+    /// LEFT from a channel brings the category column back (it hides while channels have focus) and
+    /// focuses the current category, rather than letting LEFT fall through to the sidebar.
+    @FocusState private var categoryFocus: String?
+    @State private var revealCategories = false
     @State private var recents: [XtreamLiveRecent] = []
     @State private var favorites: Set<String> = []
 
@@ -249,7 +254,7 @@ private struct LiveGuideView: View {
     var body: some View {
         ZStack {
             HStack(alignment: .top, spacing: dp(12)) {
-                if !channelsFocused {
+                if !channelsFocused || revealCategories {
                     categoryColumn.frame(width: Self.categoryWidth).transition(.move(edge: .leading).combined(with: .opacity))
                 }
                 VStack(alignment: .leading, spacing: dp(8)) {
@@ -338,7 +343,8 @@ private struct LiveGuideView: View {
             guard let cell = focusedCell, let channel = focusedChannel else { return }
             cellDescription = try? await TvCatchUp.shared.description(contentId: channel.contentId, programme: cell)
         }
-        .onDisappear { previewSession?.close(); previewSession = nil }
+        .onChange(of: timelineChannel) { _, _ in syncEdgeOwnership() }
+        .onDisappear { previewSession?.close(); previewSession = nil; ContentFocusActivity.shared.leftEdgeOwned = false }
     }
 
     /// What re-asks the loader: the settled focus, the window, and the list being shown.
@@ -361,10 +367,14 @@ private struct LiveGuideView: View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: dp(2)) {
                 GuideCategoryRow(title: "Favorites", selected: category == "favorites") { category = "favorites" }
+                    .focused($categoryFocus, equals: "favorites")
                 GuideCategoryRow(title: "Recent", selected: category == "recent") { category = "recent" }
+                    .focused($categoryFocus, equals: "recent")
                 GuideCategoryRow(title: "All channels", selected: category == "all") { category = "all" }
+                    .focused($categoryFocus, equals: "all")
                 ForEach(categories, id: \.0) { id, name in
                     GuideCategoryRow(title: name, selected: category == id) { category = id }
+                        .focused($categoryFocus, equals: id)
                         // NuvioTV MENU on a provider category = the tvOS hold-OK menu.
                         .contextMenu { Button("Hide group") { hideAsk = (id, name) } }
                 }
@@ -486,7 +496,8 @@ private struct LiveGuideView: View {
                                             onCellFocus: { focusedCell = $0 },
                                             onCell: { cell in act(cell, channel: channel) },
                                             onEdge: { direction in travel(direction, channel: channel) },
-                                            onLeaveTimeline: { leaveTimeline(refocus: channel) })
+                                            onLeaveTimeline: { leaveTimeline(refocus: channel) },
+                                            onLeft: showCategories)
                                 // Hold OK (NuvioTV) = the tvOS context menu.
                                 .contextMenu {
                                     Button(favorites.contains(channel.contentId) ? "Remove from Favorites" : "Add to Favorites") {
@@ -506,6 +517,7 @@ private struct LiveGuideView: View {
                     .padding(.vertical, dp(4))
                 }
                 .focused($channelsFocused)
+                .onChange(of: channelsFocused) { _, _ in syncEdgeOwnership() }
                 // Clipped: with the clip disabled, a list scrolled to a lower row drew its top rows up
                 // over the time header ("Yesterday" sat on row 1). The 4pt inset keeps the focus ring whole.
                 .clipped()
@@ -542,6 +554,20 @@ private struct LiveGuideView: View {
         DispatchQueue.main.async { cellFocus = first.startMs }
     }
 
+    /// The guide owns LEFT while channels or the timeline have focus: a channel's LEFT opens the
+    /// categories, a first cell's LEFT travels back in time. Elsewhere LEFT may reach the sidebar.
+    private func syncEdgeOwnership() {
+        ContentFocusActivity.shared.leftEdgeOwned = channelsFocused || timelineChannel != nil
+    }
+
+    private func showCategories() {
+        revealCategories = true
+        DispatchQueue.main.async {
+            categoryFocus = category
+            DispatchQueue.main.async { revealCategories = false }
+        }
+    }
+
     private func leaveTimeline(refocus channel: LiveGuideChannel? = nil) {
         timelineChannel = nil
         focusedCell = nil
@@ -551,7 +577,6 @@ private struct LiveGuideView: View {
 
     /// Edge press: page the window (NuvioTV onTravel), then put the cursor on the cell nearest the push.
     private func travel(_ direction: Int, channel: LiveGuideChannel) {
-        ContentFocusActivity.touched()   // an edge press is not the content's left edge: keep the sidebar shut
         let next = timeline.shift(startMs: windowStart, slots: Int32(direction * Int(TvGuideTimeline.shared.EDGE_TRAVEL_SLOTS)),
                                   nowMs: now, catchUpDays: channel.catchUpDays)
         guard next != windowStart else { return }
@@ -564,8 +589,6 @@ private struct LiveGuideView: View {
             let actionable = cells.filter { $0.intent != .none }
             if let target = (direction < 0 ? actionable.last : actionable.first)?.programme {
                 cellFocus = target.startMs
-            } else {
-                ContentFocusActivity.touched()
             }
         }
     }
@@ -775,6 +798,7 @@ private struct GuideChannelRow: View {
     let onCell: (TvGuideCell) -> Void
     let onEdge: (Int) -> Void
     let onLeaveTimeline: () -> Void
+    let onLeft: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
 
@@ -785,7 +809,10 @@ private struct GuideChannelRow: View {
                 .focused($focused)
                 .reportsFocus(focused)
                 .disabled(interactive)
-                .onMoveCommand { if $0 == .right { onEnterTimeline() } }
+                .onMoveCommand { direction in
+                    if direction == .right { onEnterTimeline() }
+                    if direction == .left { onLeft() }
+                }
                 .onChange(of: focused) { _, isFocused in if isFocused { onFocus() } }
             strip
         }

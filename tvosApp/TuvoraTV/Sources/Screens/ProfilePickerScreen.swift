@@ -126,6 +126,12 @@ struct ProfilePickerView: View {
             Spacer(minLength: 0)
             grid
             Spacer(minLength: 0)
+            if TvAppLifecycle.shared.canCloseProfilePicker {
+                // A visible way out as well as Menu (the only exit used to be an invisible Menu press).
+                HubChip(title: "Done", selected: false) { _ = TvAppLifecycle.shared.closeProfilePicker() }
+                    .accessibilityIdentifier("profiles.done")
+                    .padding(.bottom, dp(12))
+            }
             if !profiles.isEmpty {
                 Text(manage ? "Select a profile to manage" : "Hold to manage profile")
                     .font(NuvioType.inter(14, .medium))
@@ -135,12 +141,11 @@ struct ProfilePickerView: View {
         .padding(.horizontal, PickerMetrics.screenPaddingH)
         .padding(.vertical, PickerMetrics.screenPaddingV)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onExitCommand {
-            // Manage mode came from Settings: Menu goes back to the profile in use.
-            if manage, overlay == nil, let active = ProfileRepository.shared.state.value.activeProfile {
-                TvAppLifecycle.shared.pickProfile(profileIndex: active.profileIndex)
-            }
-        }
+        // Opened from Settings (Manage Profiles / Switch profile): Menu returns to the running app, no
+        // profile switch. The startup picker has nothing behind it, so Menu is left to tvOS, which
+        // exits to the Apple TV Home screen (HIG: Menu at the root always leaves the app).
+        .onExitCommand(perform: overlay == nil && TvAppLifecycle.shared.canCloseProfilePicker
+                       ? { _ = TvAppLifecycle.shared.closeProfilePicker() } : nil)
     }
 
     @ViewBuilder
@@ -266,8 +271,10 @@ struct ProfilePickerView: View {
     /// `-smokeSetPin <i>` the set-PIN overlay; `-smokeProfileOptions <i>`, `-smokeEditProfile <i|new>`
     /// and `-smokeDeleteProfile <i>` the management overlays; `-smokeManage` opens manage mode.
     @State private var smokeHandled = false
+    /// Once per launch: a picker reopened later (Settings -> Manage Profiles) must not re-run them.
+    private static var smokeRanThisLaunch = false
     private func runSmokeHooks(_ profiles: [NuvioProfile]) {
-        guard !smokeHandled, !profiles.isEmpty else { return }
+        guard !smokeHandled, !Self.smokeRanThisLaunch, !profiles.isEmpty else { return }
         let args = ProcessInfo.processInfo.arguments
         func value(after flag: String) -> String? {
             guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
@@ -278,6 +285,7 @@ struct ProfilePickerView: View {
             return i
         }
         smokeHandled = true
+        Self.smokeRanThisLaunch = true
         if let i = index(after: "-smokePickProfile") {
             TvAppLifecycle.shared.pickProfile(profileIndex: i)
         } else if let i = index(after: "-smokePin") {
@@ -292,6 +300,7 @@ struct ProfilePickerView: View {
             overlay = .editor(v == "new" ? nil : Int32(v))
         } else {
             smokeHandled = false
+            Self.smokeRanThisLaunch = false
         }
     }
 }

@@ -3,18 +3,24 @@ import TuvoraCore
 
 // NuvioTV building blocks translated to SwiftUI. Every size is NuvioTV's dp ×2 (see NuvioTheme.swift).
 
-/// Last time focus moved inside content. The shell uses it to tell "LEFT moved focus to a card on the
-/// left" from "LEFT at the content's left edge", which opens the sidebar (NuvioTV's drawer behaviour).
+/// Whether content has held focus yet. The shell arms its left-edge catcher only after that, so the
+/// focus engine's launch pick can't land in the sidebar (NuvioTV's `canFocus = expanded`).
 @MainActor
-enum ContentFocusActivity {
-    private(set) static var lastChange = Date.distantPast
-    static func touched() { lastChange = Date() }
+final class ContentFocusActivity: ObservableObject {
+    static let shared = ContentFocusActivity()
+    @Published private(set) var everFocused = false
+    /// A focused view that pages with LEFT itself (hero carousel, guide timeline) keeps the catcher off.
+    @Published var leftEdgeOwned = false
+    /// Such a view asks for the drawer explicitly once it reaches its own start.
+    @Published private(set) var railRequests = 0
+    static func touched() { if !shared.everFocused { shared.everFocused = true } }
+    static func requestRail() { shared.railRequests += 1 }
 }
 
 extension View {
-    /// Every Nuvio focusable reports focus changes, so the shell can detect the left edge.
+    /// Nuvio focusables report their first focus so the shell knows content is live.
     func reportsFocus(_ focused: Bool) -> some View {
-        onChange(of: focused) { _, _ in ContentFocusActivity.touched() }
+        onChange(of: focused) { _, now in if now { ContentFocusActivity.touched() } }
     }
 }
 

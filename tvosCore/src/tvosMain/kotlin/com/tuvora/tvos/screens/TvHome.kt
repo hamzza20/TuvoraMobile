@@ -2,6 +2,10 @@ package com.tuvora.tvos.screens
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.AddonRepository
+import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.addons.isWaitingForFirstEnabledManifest
+import com.nuvio.app.features.home.HomeCatalogSettingsRepository
+import com.tuvora.tvos.app.TvAppLifecycle
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
@@ -22,7 +26,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -52,10 +58,18 @@ object TvHome {
         AddonRepository.initialize()
         WatchProgressRepository.ensureLoaded()
         WatchedRepository.ensureLoaded()
+        // A profile switch clears HomeRepository, so reload per session as well as per add-on change
+        // (TvHomeRefreshPolicy); enabled add-ons only, catalog settings synced first - as the phone.
         scope.launch {
-            AddonRepository.uiState.map { it.addons }.distinctUntilChanged().collect { addons ->
-                HomeRepository.refresh(addons)
-            }
+            combine(TvAppLifecycle.sessionGeneration, AddonRepository.uiState.map { it.addons }) { generation, addons ->
+                generation to addons
+            }.distinctUntilChangedBy { (generation, addons) -> TvHomeRefreshPolicy.key(generation, addons) }
+                .collect { (_, addons) ->
+                    val enabled = addons.enabledAddons()
+                    if (enabled.isWaitingForFirstEnabledManifest()) return@collect
+                    HomeCatalogSettingsRepository.syncCatalogs(enabled)
+                    HomeRepository.refresh(enabled)
+                }
         }
         scope.launch {
             WatchProgressRepository.uiState.collect { state ->
@@ -67,7 +81,7 @@ object TvHome {
         }
     }
 
-    fun refresh() = HomeRepository.refresh(AddonRepository.uiState.value.addons, force = true)
+    fun refresh() = HomeRepository.refresh(AddonRepository.uiState.value.addons.enabledAddons(), force = true)
 
     private fun publish() {
         _continueWatching.value = TvContinueWatching.merge(inProgress, nextUp)

@@ -62,6 +62,8 @@ targets:
       configs:
         Debug: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.app }
         Release: { PRODUCT_BUNDLE_IDENTIFIER: com.tuvora.media }
+    scheme:
+      testTargets: [TuvoraTVUITests]
     preBuildScripts:
       - name: Build TuvoraCore (Kotlin)
         script: exec "$SRCROOT/Scripts/build-tuvoracore.sh"
@@ -80,6 +82,18 @@ targets:
         script: exec "$SRCROOT/../iosApp/Scripts/upload-posthog-symbols.sh"
         basedOnDependencyAnalysis: false
         inputFiles: ["${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}"]
+
+  # Siri Remote UI tests (XCUIRemote): focus/navigation regressions on the simulator.
+  TuvoraTVUITests:
+    type: bundle.ui-testing
+    platform: tvOS
+    sources: [UITests]
+    dependencies:
+      - target: TuvoraTV
+    settings:
+      base:
+        TEST_TARGET_NAME: TuvoraTV
+        GENERATE_INFOPLIST_FILE: YES
 
   # Top Shelf: Continue Watching on the Apple TV Home Screen. Reads the feed the app writes into the App Group.
   TuvoraTopShelf:

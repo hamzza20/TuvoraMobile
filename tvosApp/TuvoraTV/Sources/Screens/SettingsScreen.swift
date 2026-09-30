@@ -91,6 +91,7 @@ struct SettingsScreen: View {
                         SettingsRailButton(title: category.title, icon: category.icon, selected: selected == category,
                                            focused: railFocus == category) { select(category) }
                             .focused($railFocus, equals: category)
+                            .accessibilityIdentifier("settings.rail.\(category.rawValue)")
                     }
                 }
                 .padding(.vertical, dp(4)).padding(.horizontal, dp(3))

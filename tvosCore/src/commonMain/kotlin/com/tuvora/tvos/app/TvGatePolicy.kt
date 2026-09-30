@@ -32,6 +32,14 @@ sealed interface TvGateDecision {
 
 object TvGatePolicy {
 
+    /**
+     * Back/Menu (or Done) on the profile picker. A picker the viewer opened from Settings over a
+     * running profile closes straight back to the app - no switch, no re-sync. The startup picker
+     * (or one reached with no live profile) has nothing behind it: null.
+     */
+    fun leavePicker(userOpenedPicker: Boolean, profileLive: Boolean): TvGateScreen? =
+        if (userOpenedPicker && profileLive) TvGateScreen.Main else null
+
     fun decide(input: TvGateInput): TvGateDecision {
         if (input.current == TvGateScreen.Switching) return TvGateDecision.Stay
 

@@ -54,9 +54,15 @@ object TvAppLifecycle {
     private val _screen = MutableStateFlow(TvGateScreen.Loading)
     val screen: StateFlow<TvGateScreen> = _screen.asStateFlow()
 
+    /** Bumps on every completed profile switch (the phone's appContentGeneration): per-profile screens reload. */
+    private val _sessionGeneration = MutableStateFlow(0)
+    val sessionGeneration: StateFlow<Int> = _sessionGeneration.asStateFlow()
+
     private var started = false
     private var runtimeStarted = false
     private var userOpenedPicker = false
+    /** A profile switch completed and nothing has signed the viewer out since. */
+    private var profileLive = false
     private var sessionJob: Job? = null
 
     /** Called once by TvAppGraph.start(), after the feature ports are registered. */
@@ -115,6 +121,20 @@ object TvAppLifecycle {
         switchTo(profile, sync = AuthRepository.state.value is AuthState.Authenticated)
     }
 
+    /**
+     * Leave a picker opened from Settings (Manage Profiles / Switch profile) back to the running
+     * app. Returns false when there is nothing to go back to (the startup picker).
+     */
+    /** Whether Menu / Done on the picker has somewhere to go back to. */
+    val canCloseProfilePicker: Boolean get() = TvGatePolicy.leavePicker(userOpenedPicker, profileLive) != null
+
+    fun closeProfilePicker(): Boolean {
+        val next = TvGatePolicy.leavePicker(userOpenedPicker, profileLive) ?: return false
+        userOpenedPicker = false
+        _screen.value = next
+        return true
+    }
+
     /** "Switch profile" from settings: show the picker and keep it up even with one profile. */
     fun openProfilePicker() {
         userOpenedPicker = true
@@ -125,7 +145,10 @@ object TvAppLifecycle {
         when (decision) {
             TvGateDecision.Stay -> Unit
             is TvGateDecision.Show -> {
-                if (decision.screen == TvGateScreen.SignIn) ProfileRepository.clearInMemory()
+                if (decision.screen == TvGateScreen.SignIn) {
+                    ProfileRepository.clearInMemory()
+                    profileLive = false
+                }
                 _screen.value = decision.screen
             }
             is TvGateDecision.SwitchTo -> switchTo(decision.profile, decision.sync)
@@ -142,6 +165,8 @@ object TvAppLifecycle {
                 .getOrDefault(false)
             if (switched) {
                 userOpenedPicker = false
+                profileLive = true
+                _sessionGeneration.value += 1
                 _screen.value = TvGateScreen.Main
                 startRuntimeOnce()
                 restartSession()
