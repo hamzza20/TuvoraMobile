@@ -4,6 +4,9 @@ actual object AppFeaturePolicy {
     actual val pluginsEnabled: Boolean = false
     // App Store builds hide the addon system entirely (guideline 5.2.3).
     actual val addonsEnabled: Boolean = false
+    // Debrid (Real-Debrid/Premiumize/TorBox) is a torrent-cache service; with addons gone it has no
+    // legitimate job here and reads as a piracy tool to App Review (guideline 5.2.3).
+    actual val debridEnabled: Boolean = false
     actual val supportersContributorsPageEnabled: Boolean = false
     actual val donationActionsEnabled: Boolean = false
     actual val donationProgressEnabled: Boolean = true
