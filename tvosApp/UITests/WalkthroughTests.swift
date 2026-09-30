@@ -181,4 +181,29 @@ final class WalkthroughTests: XCTestCase {
         for _ in 0..<10 { press(.up, settle: 0.5) }
         XCTAssertTrue(play.isHittable, "UP did not bring the page back to the top")
     }
+
+    /// Player (live, full screen from the guide): Menu steps out one level at a time and focus lands
+    /// back in the guide - never on the sidebar or nowhere. The remote's arrows never reach the shell.
+    func testPlayerMenuReturnsToGuide() {
+        app.terminate()
+        app.launchArguments = ["-smokePickProfile", "1", "-smokeTab", "iptv", "-smokeGuidePlay"]
+        app.launch()
+        Thread.sleep(forTimeInterval: 22)   // preview, then full screen
+        shot("player-0")
+        press(.select, settle: 1.5)         // controls
+        shot("player-1-controls")
+        press(.left, settle: 1)
+        press(.right, settle: 1)
+        XCTAssertFalse(focusedId().hasPrefix("sidebar."), "player: an arrow press reached the sidebar")
+        var steps: [String] = []
+        for _ in 0..<3 {
+            press(.menu, settle: 2)
+            steps.append(focusedId())
+            if app.buttons["hubchip.Live TV"].isHittable && inContent(focusedId()) { break }
+        }
+        shot("player-2-closed")
+        XCTAssertTrue(app.buttons["hubchip.Live TV"].isHittable, "Menu did not close the player; steps \(steps)")
+        XCTAssertTrue(inContent(focusedId()), "after closing the player focus is \(focusedId()); steps \(steps)")
+        XCTAssertEqual(app.state, .runningForeground, "Menu from the player left the app")
+    }
 }
