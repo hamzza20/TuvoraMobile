@@ -14,6 +14,13 @@ struct TitleDetailsScreen: View {
     @State private var saved = false
     @State private var smokePressed = false
     @State private var watched = false
+    /// A title or person opened from the lower sections. MetaDetailsRepository holds one title at a time,
+    /// so while a child is up this screen ignores its updates and reloads its own (a cache hit) on return.
+    @State private var childDetails: PreviewBox?
+    @State private var personTarget: PersonTarget?
+    @State private var smokeScrolled = false
+    /// NuvioTV fades the backdrop to 15% once the page scrolls 200dp past the hero, so the rows stay legible.
+    @State private var scrolledPastHero = false
 
     private var meta: MetaDetails? { state?.meta }
     private var isSeries: Bool { preview.type == "series" || (meta?.videos.count ?? 0) > 1 }
@@ -22,16 +29,30 @@ struct TitleDetailsScreen: View {
         ZStack {
             colors.background.ignoresSafeArea()
             DetailBackdrop(url: meta?.background ?? preview.banner ?? preview.poster)
+                .opacity(scrolledPastHero ? 0.15 : 1)
+                .animation(.easeInOut(duration: scrolledPastHero ? 0.3 : 0.8), value: scrolledPastHero)
 
             if let meta {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: dp(24)) {
-                        hero(meta).frame(minHeight: dp(540), alignment: .bottomLeading)
-                        if isSeries { episodes(meta) }
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: dp(24)) {
+                            hero(meta).frame(minHeight: dp(540), alignment: .bottomLeading)
+                                .onGeometryChange(for: Bool.self) { $0.frame(in: .global).minY < -dp(200) } action: { past in
+                                    scrolledPastHero = past
+                                }
+                            if isSeries { episodes(meta) }
+                            DetailLowerSections(meta: meta,
+                                                onOpenTitle: { childDetails = PreviewBox(preview: $0) },
+                                                onOpenPerson: { person, lead in
+                                                    // NuvioTV opens a person page only for TMDB people.
+                                                    if TvTitleSections.shared.canOpenPerson(person: person) { personTarget = PersonTarget(person: person, preferCrew: lead) }
+                                                })
+                        }
+                        .padding(.horizontal, dp(48))
+                        .padding(.bottom, dp(48))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.horizontal, dp(48))
-                    .padding(.bottom, dp(48))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .task(id: meta.id) { await smokeScroll(proxy) }
                 }
             } else if let error = state?.errorMessage {
                 NuvioStateMessage(title: "Couldn't load this title", message: error) { TvTitle.shared.load(type: preview.type, id: preview.id) }
@@ -40,10 +61,27 @@ struct TitleDetailsScreen: View {
             }
         }
         .ignoresSafeArea()
+        // The shell's toast sits under this full-screen cover; repeat it here (same look as MainShell.toast).
+        .overlay(alignment: .bottom) {
+            if let message = playback.message {
+                Text(ui: message).font(NuvioType.bodyMedium).foregroundStyle(colors.textPrimary)
+                    .padding(.horizontal, dp(20)).padding(.vertical, dp(10))
+                    .background(colors.backgroundElevated, in: RoundedRectangle(cornerRadius: NuvioTokens.Radius.dialog))
+                    .overlay(RoundedRectangle(cornerRadius: NuvioTokens.Radius.dialog).stroke(colors.border, lineWidth: NuvioTokens.Stroke.hairline))
+                    .padding(.bottom, dp(32))
+                    .transition(.opacity)
+            }
+        }
         .task {
             TvTitle.shared.load(type: preview.type, id: preview.id)
             for await next in TvTitle.shared.details {
+                if childDetails != nil || personTarget != nil { continue }
                 state = next
+                // Simulator smoke hook: `-smokeTmdbEnrich` shows the title as a TMDB-enabled profile sees it.
+                if let meta = next.meta, !next.isLoading, ProcessInfo.processInfo.arguments.contains("-smokeTmdbEnrich"),
+                   let enriched = try? await TvTitleSections.shared.smokeTmdbEnriched(meta: meta) {
+                    state = MetaDetailsUiState(isLoading: false, meta: enriched, errorMessage: nil)
+                }
                 if let meta = next.meta { saved = TvTitle.shared.isSaved(meta: meta); watched = TvTitle.shared.isWatched(meta: meta) }
                 // Simulator smoke hook: `-smokePressPlay` presses Play once the title loads.
                 if let meta = next.meta, sourcesFor == nil, !smokePressed, ProcessInfo.processInfo.arguments.contains("-smokePressPlay") {
@@ -53,9 +91,28 @@ struct TitleDetailsScreen: View {
                 }
             }
         }
+        .fullScreenCover(item: $childDetails, onDismiss: reloadSelf) { box in
+            TitleDetailsScreen(preview: box.preview).environmentObject(playback).environment(\.nuvio, colors)
+        }
+        .fullScreenCover(item: $personTarget, onDismiss: reloadSelf) { target in
+            PersonDetailScreen(person: target.person, preferCrew: target.preferCrew).environmentObject(playback).environment(\.nuvio, colors)
+        }
         .fullScreenCover(item: $sourcesFor) { target in
             StreamPickerScreen(meta: target.meta, video: target.video).environmentObject(playback).environment(\.nuvio, colors)
         }
+    }
+
+    private func reloadSelf() { TvTitle.shared.load(type: preview.type, id: preview.id) }
+
+    /// Simulator smoke hook: `-smokeDetailsScroll <cast|more|bottom>` scrolls the loaded page to that section.
+    private func smokeScroll(_ proxy: ScrollViewProxy) async {
+        let args = ProcessInfo.processInfo.arguments
+        guard !smokeScrolled, let i = args.firstIndex(of: "-smokeDetailsScroll"), i + 1 < args.count else { return }
+        smokeScrolled = true
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        let anchor: DetailAnchor = ["cast": .cast, "more": .more, "bottom": .companies][args[i + 1]] ?? .tabs
+        NSLog("SMOKE details scroll to %@", args[i + 1])
+        withAnimation { proxy.scrollTo(anchor, anchor: .center) }
     }
 
     // Hero column: logo 100dp / 40% width (fallback displayMedium), Play pill + circle buttons, meta, synopsis at 60%.
@@ -160,6 +217,12 @@ struct TitleDetailsScreen: View {
     private func episodeProgress(_ meta: MetaDetails, _ video: MetaVideo) -> Double {
         resume(meta, video) > 0 ? 0.5 : 0
     }
+}
+
+private struct PersonTarget: Identifiable {
+    let person: MetaPerson
+    let preferCrew: Bool
+    var id: String { "\(person.tmdbId?.int32Value ?? 0)|\(person.name)" }
 }
 
 private struct SourceTarget: Identifiable {
