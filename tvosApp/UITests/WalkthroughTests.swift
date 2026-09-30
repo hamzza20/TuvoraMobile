@@ -165,4 +165,20 @@ final class WalkthroughTests: XCTestCase {
         press(.menu, settle: 1.5)
         XCTAssertEqual(focusedId(), row, "Menu from the \(row) dialog left focus on \(focusedId())")
     }
+
+    /// "On the info page, can not scroll down to see all the options like movie actors etc."
+    func testDetailsScrollsPastTheButtons() {
+        XCTAssertTrue(waitFocus { inContent($0) })
+        press(.down, settle: 1.5)
+        press(.select, settle: 5)
+        let play = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Play' OR label BEGINSWITH 'Resume' OR label BEGINSWITH 'Watch'")).firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 15), "details did not open")
+        XCTAssertTrue(waitFocus(8) { $0 != "<none>" })
+        var seen: [String] = [focusedId()]
+        for _ in 0..<6 { press(.down, settle: 0.8); if seen.last != focusedId() { seen.append(focusedId()) } }
+        shot("details-bottom")
+        XCTAssertGreaterThanOrEqual(seen.count, 3, "DOWN on details never got past the action buttons; trail \(seen)")
+        for _ in 0..<10 { press(.up, settle: 0.5) }
+        XCTAssertTrue(play.isHittable, "UP did not bring the page back to the top")
+    }
 }
