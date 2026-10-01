@@ -4,6 +4,8 @@ import com.nuvio.app.features.addons.HttpAttemptSignal
 import com.nuvio.app.features.addons.HttpStatusException
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.trakt.TraktPlatformClock
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -450,15 +452,19 @@ object PlaylistServerFailover {
         _version.update { it + 1 }
     }
 
+    /** Walks of one playlist finish concurrently (a hub fans out many catalog calls): read-modify-write must not interleave. */
+    private val recordLock = SynchronizedObject()
+
     private fun record(pid: Int, key: String, serverCount: Int, next: (ServerFailoverState) -> ServerFailoverState) {
-        val current = store.read(pid, key)
-        val updated = next(ServerFailoverPolicy.clamp(current, serverCount))
-        if (updated == current) return
-        store.write(pid, key, updated)
-        // Stats-only changes are invisible to the UI: no state holder needs to re-read the active index.
-        if (updated.activeIndex != current.activeIndex || updated.mainRetryAfterMs != current.mainRetryAfterMs) {
-            _version.update { it + 1 }
+        val visibleChange = synchronized(recordLock) {
+            val current = store.read(pid, key)
+            val updated = next(ServerFailoverPolicy.clamp(current, serverCount))
+            if (updated == current) return
+            store.write(pid, key, updated)
+            // Stats-only changes are invisible to the UI: no state holder needs to re-read the active index.
+            updated.activeIndex != current.activeIndex || updated.mainRetryAfterMs != current.mainRetryAfterMs
         }
+        if (visibleChange) _version.update { it + 1 }
     }
 
     /** Test seam: a fresh in-memory store + clock + profile. Never called from production code. */
