@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import TuvoraCore
 
 // NuvioTV building blocks translated to SwiftUI. Every size is NuvioTV's dp ×2 (see NuvioTheme.swift).
@@ -18,6 +19,21 @@ final class ContentFocusActivity: ObservableObject {
     /// Such a view asks for the drawer explicitly once it reaches its own start.
     @Published private(set) var railRequests = 0
     static func touched() { if shared.awaitingContent { shared.awaitingContent = false } }
+
+    /// Screens ping this when their data changes (rows reloaded, a profile session started). The shell
+    /// then checks, once things settle, that SOMETHING still has focus: a refresh can drop the focused
+    /// view, and tvOS never re-picks on its own - the remote goes dead (checklist item 8; found after
+    /// an in-app profile switch, 2026-10-01).
+    @Published private(set) var recoveryTick = 0
+    static func contentChanged() { shared.recoveryTick &+= 1 }
+
+    /// Whether the window holds any focus at all (UIKit's focus system; SwiftUI can't ask this).
+    static var windowHasFocus: Bool {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first,
+              let system = scene.focusSystem else { return true }
+        return system.focusedItem != nil
+    }
     static func requestRail() { shared.railRequests += 1 }
 }
 

@@ -179,9 +179,11 @@ final class RemoteNavigationTests: XCTestCase {
             press(round == 0 ? .right : .left, settle: 1)
             press(.select, settle: 8)
             XCTAssertTrue(app.buttons["sidebar.home"].waitForExistence(timeout: 30), "round \(round): the switch never reached the app")
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/walk-switch-\(round).png"))
             // The switch re-syncs: wait (as a viewer would) until Home's content holds focus.
             XCTAssertTrue(waitForFocus(where: { $0 != "<none>" && !$0.hasPrefix("sidebar.") }, timeout: 40),
-                          "round \(round): nothing in Home took focus after the switch")
+                          "round \(round): nothing in Home took focus after the switch (focus \(focusedId()))")
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/walk-switch-\(round)-after.png"))
             XCTAssertFalse(app.staticTexts["Nothing to show yet"].exists, "round \(round): Home is empty after the switch")
         }
     }

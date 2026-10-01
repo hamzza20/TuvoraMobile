@@ -33,7 +33,11 @@ final class CollectionsTests: XCTestCase {
         XCTAssertTrue(waitFocus { $0 != "<none>" && !$0.hasPrefix("sidebar.") }, "\(layout): nothing focused on Home")
         // The pinned sample collection sits above the catalog rows: walk DOWN until a folder card has focus.
         var trail: [String] = []
-        for _ in 0..<8 where !focusedId().hasPrefix("collection.folder.") { press(.down, settle: 1); trail.append(focusedId()) }
+        // Grid lays catalogs out as long poster grids (lazy), so the folder can sit many rows down.
+        // Grid's launch focus lands on the first catalog, BELOW a collection pinned at the top: look up
+        // first, then down.
+        for _ in 0..<4 where !focusedId().hasPrefix("collection.folder.") { press(.up, settle: 1); trail.append(focusedId()) }
+        for _ in 0..<45 where !focusedId().hasPrefix("collection.folder.") { press(.down, settle: 1); trail.append(focusedId()) }
         let opener = focusedId()
         shot("\(layout)-home")
         XCTAssertTrue(opener.hasPrefix("collection.folder."), "\(layout): no collection folder reachable with DOWN; trail \(trail)")

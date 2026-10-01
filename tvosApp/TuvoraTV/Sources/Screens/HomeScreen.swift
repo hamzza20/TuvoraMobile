@@ -48,12 +48,12 @@ struct HomeScreen: View {
         layoutBody
         .task {
             TvHome.shared.start()
-            for await next in TvHome.shared.rows { rows = next; if hero == nil, let first = next.heroItems.first ?? next.sections.first?.items.first { hero = HeroContent(preview: first) } }
+            for await next in TvHome.shared.rows { rows = next; ContentFocusActivity.contentChanged(); if hero == nil, let first = next.heroItems.first ?? next.sections.first?.items.first { hero = HeroContent(preview: first) } }
         }
-        .task { for await next in TvHome.shared.continueWatching { continueWatching = next } }
+        .task { for await next in TvHome.shared.continueWatching { continueWatching = next; ContentFocusActivity.contentChanged() } }
         .task {
             TvCollections.shared.start()
-            for await next in TvCollections.shared.entries { entries = next; smokeOpenFolder() }
+            for await next in TvCollections.shared.entries { entries = next; ContentFocusActivity.contentChanged(); smokeOpenFolder() }
         }
         .task(id: pendingHero) {
             // Hero changes are debounced 450 ms (ModernHomeHero), so fast scrolling doesn't strobe.
