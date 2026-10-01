@@ -38,6 +38,7 @@ actual object AddonStorage {
     private const val preferencesName = "nuvio_addons"
     private const val addonUrlsKey = "installed_manifest_urls"
     private const val addonEnabledStatesKey = "installed_manifest_enabled_states"
+    private const val syncedAddonUrlsKey = "synced_manifest_urls"
 
     private var preferences: SharedPreferences? = null
 
@@ -76,6 +77,21 @@ actual object AddonStorage {
         preferences
             ?.edit()
             ?.putString("${addonEnabledStatesKey}_$profileId", payload)
+            ?.apply()
+    }
+
+    actual fun loadSyncedAddonUrls(profileId: Int): List<String>? =
+        preferences
+            ?.getString("${syncedAddonUrlsKey}_$profileId", null)
+            ?.lineSequence()
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.toList()
+
+    actual fun saveSyncedAddonUrls(profileId: Int, urls: List<String>) {
+        preferences
+            ?.edit()
+            ?.putString("${syncedAddonUrlsKey}_$profileId", urls.joinToString(separator = "\n"))
             ?.apply()
     }
 }
@@ -232,6 +248,29 @@ private fun responseTooLarge(declaredLength: Long): ResponseTooLargeException {
 private fun clientForDns(dnsProvider: String?): OkHttpClient =
     runCatching { PlaylistDns.clientFor(dnsProvider, AddonHttpClientProvider.get()) }.getOrNull() ?: AddonHttpClientProvider.get()
 
+/**
+ * [clientForDns] with the failover attempt's CONNECT timeout (Step 0.3b) when this request runs inside
+ * a backup-server race: only the connect phase is shortened (read/overall timeouts keep their values),
+ * and `newBuilder()` shares the pool/dispatcher/DNS/cache, so it costs one small allocation.
+ */
+private suspend fun clientForAttempt(dnsProvider: String?): OkHttpClient {
+    val base = clientForDns(dnsProvider)
+    val connectMs = failoverConnectTimeoutMs() ?: return base
+    return base.newBuilder().connectTimeout(connectMs, TimeUnit.MILLISECONDS).build()
+}
+
+/**
+ * Wires coroutine cancellation to [call]: `Call.cancel()` closes the socket, which is what actually
+ * unblocks a synchronous `execute()`/read (a blocking okio call never observes coroutine
+ * cancellation). `onCancelling = true` fires as soon as the job is cancelled — BEFORE the blocking call
+ * returns; a default `invokeOnCompletion` would only fire after it, i.e. never.
+ */
+@OptIn(InternalCoroutinesApi::class)
+private suspend fun cancelCallWithJob(call: okhttp3.Call) =
+    coroutineContext.job.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { cause ->
+        if (cause != null) call.cancel()
+    }
+
 private suspend fun executeTextRequest(
     method: String,
     url: String,
@@ -256,15 +295,29 @@ private suspend fun executeTextRequest(
         builder.method(normalizedMethod, null)
     }.build()
 
-    clientForDns(dnsProvider).newCall(request).execute().use { response ->
-        val payload = readResponseBody(response.body)
-        if (!response.isSuccessful) {
-            throw HttpStatusException(response.code, runBlocking { getString(Res.string.network_request_failed_http, response.code) })
+    val call = clientForAttempt(dnsProvider).newCall(request)
+    // Step 0.3b: a racing failover attempt that lost must stop NOW — cancel the socket, not just the coroutine.
+    val cancelHook = cancelCallWithJob(call)
+    try {
+        call.execute().use { response ->
+            if (!response.isSuccessful) {
+                // The status is known from the headers alone: no body is read for a failure.
+                throw HttpStatusException(response.code, runBlocking { getString(Res.string.network_request_failed_http, response.code) })
+            }
+            // 2xx headers are in: a racing attempt reports "answered" here (a loser is parked until it
+            // is cancelled), before any body byte is read.
+            signalHttpHeaders()
+            val payload = readResponseBody(response.body)
+            if (payload.isBlank()) {
+                throw EmptyResponseBodyException(runBlocking { getString(Res.string.network_empty_response_body) })
+            }
+            payload
         }
-        if (payload.isBlank()) {
-            throw EmptyResponseBodyException(runBlocking { getString(Res.string.network_empty_response_body) })
-        }
-        payload
+    } catch (t: Throwable) {
+        coroutineContext.ensureActive() // a cancel-induced IOException becomes CancellationException
+        throw t
+    } finally {
+        cancelHook.dispose()
     }
 }
 
@@ -391,6 +444,7 @@ actual suspend fun httpStreamLines(
     userAgent: String?,
     dnsProvider: String?,
     headers: Map<String, String>,
+    maxBytes: Long,
     onLine: (String) -> Unit,
 ): Unit = withContext(Dispatchers.IO) {
     val builder = Request.Builder().url(url).get()
@@ -404,19 +458,18 @@ actual suspend fun httpStreamLines(
     // okio read does not observe coroutine cancellation, so wire it to OkHttp's Call.cancel(), which
     // closes the socket and unblocks the read. ensureActive() then surfaces it as CancellationException
     // (rather than the resulting SocketException) so the caller treats it as a cancel, not a failure.
-    val call = clientForDns(dnsProvider).newCall(request)
+    val call = clientForAttempt(dnsProvider).newCall(request)
     // onCancelling=true fires as soon as the job is cancelled — BEFORE the blocking read returns —
     // which is what unblocks it (a default invokeOnCompletion only fires once the block finishes,
     // deadlocking against the very read we need to interrupt).
-    @OptIn(InternalCoroutinesApi::class)
-    val cancelHook = coroutineContext.job.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { cause ->
-        if (cause != null) call.cancel()
-    }
+    val cancelHook = cancelCallWithJob(call)
     try {
         call.execute().use { response ->
             if (!response.isSuccessful) {
                 throw HttpStatusException(response.code, runBlocking { getString(Res.string.network_request_failed_http, response.code) })
             }
+            // 2xx headers are in (Step 0.3b): a racing attempt reports "answered" before any body byte is read.
+            signalHttpHeaders()
             val body = response.body ?: return@use
             val rawSource = body.source()
             val encoding = response.header("Content-Encoding")?.lowercase()
@@ -432,7 +485,7 @@ actual suspend fun httpStreamLines(
             } else {
                 rawSource
             }
-            streamBoundedLines(source, onLine)
+            streamBoundedLines(source, onLine, maxBytes)
         }
     } catch (t: Throwable) {
         coroutineContext.ensureActive() // a cancel-induced read failure becomes CancellationException
@@ -460,20 +513,26 @@ private const val MAX_LINE_BYTES = 1L * 1024 * 1024
  * Safe for both consumers: M3U lines are far below the cap so they still arrive whole, and the
  * XMLTV tokenizer explicitly accepts chunk boundaries falling anywhere, even mid-tag.
  */
-internal fun streamBoundedLines(source: okio.BufferedSource, onLine: (String) -> Unit) {
+internal fun streamBoundedLines(source: okio.BufferedSource, onLine: (String) -> Unit, maxBytes: Long = Long.MAX_VALUE) {
+    var consumed = 0L
     while (true) {
-        val newline = source.indexOf('\n'.code.toByte(), 0L, MAX_LINE_BYTES)
+        // [maxBytes] (the M3U validation probe reads ~1 KB and stops): the search window never reaches past it.
+        val window = minOf(MAX_LINE_BYTES, maxBytes - consumed)
+        if (window <= 0L) return
+        val newline = source.indexOf('\n'.code.toByte(), 0L, window)
         if (newline != -1L) {
             val line = source.readUtf8(newline)
             source.skip(1)                      // drop the '\n'
+            consumed += newline + 1
             onLine(line.removeSuffix("\r"))
             continue
         }
         if (!source.request(1)) return          // EOF
-        // No newline within the cap: emit what we have, cut on a character boundary so a
+        // No newline within the window: emit what we have, cut on a character boundary so a
         // multi-byte glyph is never split across two chunks.
-        val cut = utf8SafeCut(source.buffer, MAX_LINE_BYTES)
+        val cut = utf8SafeCut(source.buffer, window)
         if (cut <= 0L) return
+        consumed += cut
         onLine(source.readUtf8(cut))
     }
 }

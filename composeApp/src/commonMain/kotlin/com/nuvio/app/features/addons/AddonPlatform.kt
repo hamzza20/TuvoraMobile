@@ -5,6 +5,10 @@ internal expect object AddonStorage {
     fun saveInstalledAddonUrls(profileId: Int, urls: List<String>)
     fun loadAddonEnabledStates(profileId: Int): Map<String, Boolean>
     fun saveAddonEnabledStates(profileId: Int, states: Map<String, Boolean>)
+
+    /** The list this device and the server last agreed on, or null if it never synced. See [AddonSyncMerge]. */
+    fun loadSyncedAddonUrls(profileId: Int): List<String>?
+    fun saveSyncedAddonUrls(profileId: Int, urls: List<String>)
 }
 
 data class RawHttpResponse(
@@ -127,5 +131,8 @@ expect suspend fun httpStreamLines(
     // Extra request headers (P5, Stalker bulk-EPG streaming: Cookie/Referer/Authorization —
     // a MAG portal rejects bare requests). Additive default keeps every existing caller as-is.
     headers: Map<String, String> = emptyMap(),
+    // Stop (and close the connection) after handing out this many bytes. The M3U failover probe reads
+    // ~1 KB of a playlist that may be 190+ MB; Long.MAX_VALUE = read it all, as every other caller does.
+    maxBytes: Long = Long.MAX_VALUE,
     onLine: (String) -> Unit,
 )
