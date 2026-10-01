@@ -228,6 +228,74 @@ class HomeCatalogSettingsRepositoryTest {
         assertEquals(settings, HomeCatalogSettingsRepository.uiState.value)
     }
 
+    @Test
+    fun pinnedCollectionStaysAboveCatalogRowsAfterARemoteLayoutPull() {
+        HomeCatalogSettingsRepository.syncCatalogs(listOf(addonWithCatalogs("a", "b", "c")))
+        HomeCatalogSettingsRepository.syncCollections(listOf(collection().copy(pinToTop = true)))
+        assertEquals("collection_favorites", HomeCatalogSettingsRepository.uiState.value.items.first().key)
+
+        // B81: a layout synced from another device (TV pins at render time, so its stored order can
+        // place the collection anywhere) puts the pinned collection between catalog rows.
+        HomeCatalogSettingsRepository.applyFromRemote(
+            SyncHomeCatalogPayload(
+                items = listOf(
+                    catalogSyncItem("a", order = 0),
+                    catalogSyncItem("b", order = 1),
+                    SyncCatalogItem(
+                        addonId = "",
+                        type = "",
+                        catalogId = "",
+                        order = 2,
+                        isCollection = true,
+                        collectionId = "favorites",
+                        key = "collection_favorites",
+                    ),
+                    catalogSyncItem("c", order = 3),
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf("collection_favorites", "test:movie:a", "test:movie:b", "test:movie:c"),
+            HomeCatalogSettingsRepository.uiState.value.items.map { it.key },
+        )
+    }
+
+    @Test
+    fun pinnedCollectionStaysAboveCatalogRowsAfterResetToDefaults() {
+        HomeCatalogSettingsRepository.syncCatalogs(listOf(addonWithCatalogs("a", "b")))
+        HomeCatalogSettingsRepository.syncCollections(listOf(collection().copy(pinToTop = true)))
+
+        HomeCatalogSettingsRepository.resetToDefaults()
+
+        assertEquals(
+            listOf("collection_favorites", "test:movie:a", "test:movie:b"),
+            HomeCatalogSettingsRepository.uiState.value.items.map { it.key },
+        )
+    }
+
+    private fun catalogSyncItem(catalogId: String, order: Int) = SyncCatalogItem(
+        addonId = "test",
+        type = "movie",
+        catalogId = catalogId,
+        order = order,
+        key = "test:movie:$catalogId",
+    )
+
+    private fun addonWithCatalogs(vararg ids: String) = ManagedAddon(
+        manifestUrl = "https://example.com/manifest.json",
+        manifest = AddonManifest(
+            id = "test",
+            name = "Catalogs",
+            description = "",
+            version = "1",
+            resources = emptyList(),
+            types = listOf("movie"),
+            catalogs = ids.map { id -> AddonCatalog(type = "movie", id = id, name = id.uppercase()) },
+            transportUrl = "https://example.com",
+        ),
+    )
+
     private fun addon() = ManagedAddon(
         manifestUrl = "https://example.com/manifest.json",
         manifest = AddonManifest(
