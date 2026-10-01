@@ -264,6 +264,8 @@ fun SettingsScreen(
         var currentPage by rememberSaveable(initialPageName) { mutableStateOf(initialPage.name) }
         val scrollToTopRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val pageTitles = if (onNavigatePage != null) settingsPageTitles() else emptyMap()
+        // UX19: feature-owned title overrides (Edit vs Add Playlist), read when navigating.
+        val navigationTitleOverride = IptvSettingsSectionAccess.current()?.rememberNavigationTitleOverride()
         val page = remember(currentPage) {
             runCatching { SettingsPage.valueOf(currentPage) }
                 .getOrDefault(SettingsPage.Root)
@@ -285,7 +287,7 @@ fun SettingsScreen(
             }
             externalNavigator(
                 targetPage.name,
-                pageTitles.getValue(targetPage),
+                navigationTitleOverride?.invoke(targetPage) ?: pageTitles.getValue(targetPage),
             )
         }
 
