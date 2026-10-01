@@ -57,7 +57,10 @@ class PlaylistKeySyncTest {
     fun `an address edit keeps the playlist id`() = runBlocking {
         // THE regression: a provider moving domains re-keyed the playlist, orphaning hidden channels,
         // favourites and progress (all keyed on this id).
-        val old = XtreamAccount(id = "http://old.example:8080|u", name = "P", baseUrl = "http://old.example:8080", username = "u", password = "p")
+        val old = XtreamAccount(
+            id = "http://old.example:8080|u", name = "P", baseUrl = "http://old.example:8080", username = "u", password = "p",
+            backupUrls = listOf("http://backup.example"),
+        )
         XtreamRepository.installAccountsForTest(listOf(old))
         XtreamRepository.persistWriteForTest = { _, _ -> }
         XtreamRepository.verifyForTest = { Result.success(Unit) }
@@ -76,6 +79,7 @@ class PlaylistKeySyncTest {
         assertEquals(old.id, saved.id, "the id is frozen across a server + username edit")
         assertEquals("https://new.example", saved.baseUrl, "the new address is saved")
         assertEquals("u2", saved.username)
+        assertEquals(listOf("http://backup.example"), saved.backupUrls, "the edit form does not touch the backup list")
         val wire = playlistPushPayload(listOf(saved)).single() as kotlinx.serialization.json.JsonObject
         assertEquals(JsonPrimitive(old.id), wire["playlist_key"], "and the server is told the same id")
     }

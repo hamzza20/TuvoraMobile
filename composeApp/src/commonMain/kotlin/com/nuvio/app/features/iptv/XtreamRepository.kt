@@ -252,6 +252,8 @@ object XtreamRepository : IptvCatalog {
      */
     private fun addFileFromForm(input: XtreamFormInput, existingId: String?, onResult: (Boolean) -> Unit) {
         val account = m3uFileAccountFromForm(input, existingId = existingId, uniqueSuffix = TraktPlatformClock.nowEpochMs())
+            // Step 0: an edit keeps the playlist's (not-on-the-form) backup list.
+            ?.let { acc -> _uiState.value.accounts.firstOrNull { it.id == existingId }?.let { acc.copy(backupUrls = it.backupUrls) } ?: acc }
         if (account == null) {
             _uiState.update { it.copy(error = "Choose an M3U file to import") }
             onResult(false)
@@ -763,6 +765,8 @@ internal fun carryPlaylistOptions(
             else -> null
         },
         categorySelections = if (same) old.categorySelections else CategorySelections(),
+        // Step 0: client-owned, not on the edit form (no UI yet) — an edit must not clear it.
+        backupUrls = old.backupUrls,
     )
 }
 
