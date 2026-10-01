@@ -846,7 +846,13 @@ private fun MobileSettingsScreen(
                     val handle = iptvSettingsState
                     if (section != null && handle != null) {
                         with(section) {
-                            renderPage(page, isTablet = false, state = handle, onPageChange = onPageChange)
+                            renderPage(
+                                page,
+                                isTablet = false,
+                                state = handle,
+                                onPageChange = onPageChange,
+                                onNavigateBack = onNavigateBack,
+                            )
                         }
                     }
                 }
@@ -1291,7 +1297,13 @@ private fun TabletSettingsScreen(
                         val handle = iptvSettingsState
                         if (section != null && handle != null) {
                             with(section) {
-                                renderPage(page, isTablet = true, state = handle, onPageChange = onPageChange)
+                                renderPage(
+                                    page,
+                                    isTablet = true,
+                                    state = handle,
+                                    onPageChange = onPageChange,
+                                    onNavigateBack = onNavigateBack,
+                                )
                             }
                         }
                     }
