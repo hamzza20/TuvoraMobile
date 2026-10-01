@@ -28,6 +28,12 @@ object TvPlaylists {
 
     fun ensureLoaded() = XtreamRepository.ensureLoaded()
 
+    /**
+     * Step 0.3: playlist id -> the backup server now answering (1-based), only for playlists that
+     * are NOT on their main server — the "Using backup server N" note. Device-local failover state.
+     */
+    val activeServers: StateFlow<Map<String, Int>> get() = XtreamRepository.activeServers
+
     fun add(form: TvPlaylistForm, onResult: (Boolean) -> Unit) {
         val input = TvPlaylistFormPolicy.toInput(form)
         if (input == null) {

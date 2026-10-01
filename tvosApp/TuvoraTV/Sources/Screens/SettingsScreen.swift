@@ -197,7 +197,15 @@ struct SettingsScreen: View {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-smokeSettingsDialog"), i + 1 < args.count else { return }
         switch args[i + 1] {
-        case "addPlaylist": dialogs.push(.playlistForm(PlaylistFormModel(editing: nil)))
+        case "addPlaylist":
+            // `-smokeFormSource <type>` picks the source; `-smokeFormM3u <url>` and
+            // `-smokeBackupRows <a,b,…>` pre-fill the M3U URL and the backup rows (UITests).
+            let form = PlaylistFormModel(editing: nil)
+            func arg(_ name: String) -> String? { args.firstIndex(of: name).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
+            if let type = arg("-smokeFormSource") { form.sourceType = type }
+            if let url = arg("-smokeFormM3u") { form.m3uUrl = url }
+            if let rows = arg("-smokeBackupRows") { form.backupUrls = rows.split(separator: ",").map(String.init) }
+            dialogs.push(.playlistForm(form))
         case "stalker":
             let form = PlaylistFormModel(editing: nil); form.sourceType = "stalker"; dialogs.push(.playlistForm(form))
         case "signOut": dialogs.push(.signOut)
@@ -265,6 +273,8 @@ struct SettingsScreen: View {
 final class SettingsModel: ObservableObject {
     @Published var auth: AuthState?
     @Published var xtream: XtreamUiState?
+    /// Step 0.3: playlist id -> the backup server answering now (1-based); absent = on its main server.
+    @Published var activeServers: [String: Int] = [:]
     @Published var addons: [ManagedAddon] = []
     @Published var player: PlayerSettingsUiState?
     @Published var theme: AppTheme = .marigold
@@ -277,6 +287,9 @@ final class SettingsModel: ObservableObject {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { @MainActor in for await s in AuthRepository.shared.state { self.auth = s } }
             group.addTask { @MainActor in for await s in TvPlaylists.shared.state { self.xtream = s } }
+            group.addTask { @MainActor in
+                for await m in TvPlaylists.shared.activeServers { self.activeServers = m.mapValues { $0.intValue } }
+            }
             group.addTask { @MainActor in for await s in AddonRepository.shared.uiState { self.addons = s.addons } }
             group.addTask { @MainActor in for await s in PlayerSettingsRepository.shared.uiState { self.player = s } }
             group.addTask { @MainActor in for await t in ThemeSettingsRepository.shared.selectedTheme { self.theme = t } }
@@ -296,6 +309,8 @@ enum SettingsDialogKind {
     case categoryChecklist(String, String)    // account id, content type
     case removePlaylist(XtreamAccount)
     case playlistForm(PlaylistFormModel)
+    /// Step 0.3: one backup row of the playlist form (address, move, remove).
+    case backupServer(PlaylistFormModel, index: Int)
     case addonActions(ManagedAddon)
     case removeAddon(ManagedAddon)
     case qr(url: String, instruction: String)
@@ -353,7 +368,7 @@ private struct SettingsDialogView: View {
                 spec.onSelect(id)
             }
         case .playlistActions(let account):
-            PlaylistActionsDialog(account: account, dialogs: dialogs)
+            PlaylistActionsDialog(account: account, activeServer: model.activeServers[account.id], dialogs: dialogs)
         case .hiddenItems(let account):
             HiddenItemsDialog(account: account, dialogs: dialogs)
         case .guideRegions:
@@ -368,6 +383,8 @@ private struct SettingsDialogView: View {
             RemovePlaylistDialog(account: account, dialogs: dialogs)
         case .playlistForm(let form):
             PlaylistFormDialog(form: form, xtream: model.xtream, dialogs: dialogs)
+        case .backupServer(let form, let index):
+            BackupServerEditorDialog(form: form, index: index, dialogs: dialogs)
         case .addonActions(let addon):
             NuvioDialog(title: addon.displayTitle, subtitle: addon.manifestUrl) {
                 SettingsActionRow(title: addon.enabled ? "Disable" : "Enable", showChevron: false) {
@@ -832,12 +849,15 @@ struct IptvSettingsDetail: View {
                     dialogs.push(.guideRegions)
                 }
                 ForEach(model.xtream?.accounts ?? [], id: \.id) { account in
+                    // Step 0.3: name the backup that is answering when it isn't the main server (NuvioTV).
+                    let source = model.activeServers[account.id].map(BackupServerCopy.using) ?? (account.fileName ?? account.baseUrl)
                     SettingsActionRow(title: account.name,
-                                      subtitle: [account.fileName ?? account.baseUrl, model.xtream?.saveWarnings[account.id]]
+                                      subtitle: [source, model.xtream?.saveWarnings[account.id]]
                                           .compactMap { $0 }.joined(separator: "\n"),
                                       value: account.enabled ? "On" : "Off") {
                         dialogs.push(.playlistActions(account))
                     }
+                    .accessibilityIdentifier("playlist.row.\(account.name)")
                 }
             }
         }
@@ -965,10 +985,20 @@ private struct RegionCheckRow: View {
 
 private struct PlaylistActionsDialog: View {
     let account: XtreamAccount
+    /// Step 0.3: the backup server answering now (1-based), nil on the main server.
+    let activeServer: Int?
     @ObservedObject var dialogs: SettingsDialogs
 
+    private var subtitle: String {
+        if let file = account.fileName { return file }
+        guard let n = activeServer else { return account.baseUrl }
+        let note = TvBackupServers.shared.activeBackupAddress(backupUrls: account.backupUrls, activeIndex: Int32(n))
+            .map { BackupServerCopy.usingAddress(n, $0) } ?? BackupServerCopy.using(n)
+        return account.baseUrl + "\n" + note
+    }
+
     var body: some View {
-        NuvioDialog(title: account.name, subtitle: account.fileName ?? account.baseUrl) {
+        NuvioDialog(title: account.name, subtitle: subtitle) {
             if account.sourceType != "m3u_file" {
                 SettingsActionRow(title: "Edit URL / credentials") {
                     dialogs.pop()
@@ -1067,6 +1097,8 @@ final class PlaylistFormModel: ObservableObject {
     @Published var sendDeviceId = true
     @Published var epgUrl = ""
     @Published var autoRefreshHours: Int32 = TvPlaylistFormPolicy.shared.DEFAULT_AUTO_REFRESH_HOURS
+    /// Step 0.3: backup server rows as typed, priority order (validated by the shared rules on save).
+    @Published var backupUrls: [String] = []
 
     init(editing: XtreamAccount?) {
         self.editing = editing
@@ -1076,7 +1108,7 @@ final class PlaylistFormModel: ObservableObject {
         name = f.name; userAgent = f.userAgent; m3uUrl = f.m3uUrl; portalUrl = f.portalUrl
         macAddress = f.macAddress; stalkerUsername = f.stalkerUsername; stalkerPassword = f.stalkerPassword
         serialNumber = f.serialNumber; deviceId = f.deviceId; sendDeviceId = f.sendDeviceId
-        epgUrl = f.epgUrl; autoRefreshHours = f.autoRefreshHours
+        epgUrl = f.epgUrl; autoRefreshHours = f.autoRefreshHours; backupUrls = f.backupUrls
     }
 
     var kotlin: TvPlaylistForm {
@@ -1084,7 +1116,8 @@ final class PlaylistFormModel: ObservableObject {
                        username: username, password: password, name: name, userAgent: userAgent, m3uUrl: m3uUrl,
                        portalUrl: portalUrl, macAddress: macAddress, stalkerUsername: stalkerUsername,
                        stalkerPassword: stalkerPassword, serialNumber: serialNumber, deviceId: deviceId,
-                       sendDeviceId: sendDeviceId, epgUrl: epgUrl, autoRefreshHours: autoRefreshHours)
+                       sendDeviceId: sendDeviceId, epgUrl: epgUrl, autoRefreshHours: autoRefreshHours,
+                       backupUrls: backupUrls)
     }
 }
 
@@ -1097,6 +1130,11 @@ private struct PlaylistFormDialog: View {
     @ObservedObject var dialogs: SettingsDialogs
     @Environment(\.nuvio) private var colors
     @FocusState private var sourceFocus: String?
+    /// The backup row (or "Add backup server") that opened the row editor: focus goes back to it when the
+    /// editor closes, instead of to the top of this long form.
+    @FocusState private var backupFocus: BackupFocus?
+    @State private var returnFocus: BackupFocus?
+    @State private var depth = 0
 
     private let sources = [("m3u_url", "URL"), ("m3u_file", "File"), ("xtream", "Xtream"), ("stalker", "Stalker")]
 
@@ -1117,6 +1155,8 @@ private struct PlaylistFormDialog: View {
 
                 sourceFields
 
+                if TvBackupServers.shared.supports(sourceType: form.sourceType) { backupServers }
+
                 label("EPG URL (optional)")
                 SettingsTextField(label: "EPG URL", hint: "http://host:port/xmltv.php?username=…&password=…", text: $form.epgUrl)
 
@@ -1134,6 +1174,7 @@ private struct PlaylistFormDialog: View {
 
                 AddPlaylistButton(label: validating ? "Verifying…" : (form.editing != nil ? "Save changes" : "Add Playlist"),
                                   enabled: TvPlaylistFormPolicy.shared.canSubmit(form: form.kotlin)) { submit() }
+                    .accessibilityIdentifier("playlist.submit")
 
                 if validating {
                     Text("Verifying…").font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
@@ -1143,7 +1184,56 @@ private struct PlaylistFormDialog: View {
             }
         }
         .defaultFocus($sourceFocus, form.sourceType)
-        .onAppear { let type = form.sourceType; DispatchQueue.main.async { sourceFocus = type } }
+        .onAppear {
+            depth = dialogs.stack.count
+            let type = form.sourceType; DispatchQueue.main.async { sourceFocus = type }
+        }
+        .onChange(of: dialogs.stack.count) { _, count in
+            // Back on top after the row editor closed: after the dialog host re-picks focus, put it on the
+            // row that opened the editor (the row index may have moved; clamp to what is left).
+            guard count == depth, let target = returnFocus else { return }
+            returnFocus = nil
+            let wanted = target.clamped(to: form.backupUrls.count)
+            // The host first parks focus on its entry point and lets tvOS re-pick; claim it once that
+            // settles (a few tries, so a slow hand-off can't leave focus at the top of the form).
+            for delay in [0.2, 0.45, 0.8, 1.3] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { if backupFocus != wanted { backupFocus = wanted } }
+            }
+        }
+    }
+
+    /// Step 0.3 "Backup servers" (NuvioTV BackupServersSection): one row per server, priority order; OK
+    /// opens the row editor, so moving through the form never pops the keyboard. A row's problem shows as
+    /// its value in the error colour; Add is offered until the shared maximum.
+    @ViewBuilder
+    private var backupServers: some View {
+        let problems = Dictionary(TvBackupServers.shared.problems(form: form.kotlin).map { (Int($0.index), $0.message) },
+                                  uniquingKeysWith: { first, _ in first })
+        label("Backup servers")
+        SettingsHelperText(text: "Used automatically if the main server doesn't respond.")
+        ForEach(Array(form.backupUrls.enumerated()), id: \.offset) { index, value in
+            SettingsActionRow(title: BackupServerCopy.row(index + 1),
+                              subtitle: value.isEmpty ? L("Not set — press OK to enter an address") : value,
+                              value: problems[index].map(L), valueColor: colors.error) {
+                openEditor(index: index)
+            }
+            .focused($backupFocus, equals: .row(index))
+            .accessibilityIdentifier("backup.row.\(index)")
+        }
+        if TvBackupServers.shared.canAdd(rows: form.backupUrls) {
+            SettingsActionRow(title: "Add backup server", subtitle: BackupServerCopy.addSubtitle(Int(TvBackupServers.shared.MAX_BACKUPS)),
+                              leadingIcon: "md_add") {
+                form.backupUrls = TvBackupServers.shared.add(rows: form.backupUrls)
+                openEditor(index: form.backupUrls.count - 1)
+            }
+            .focused($backupFocus, equals: .add)
+            .accessibilityIdentifier("backup.add")
+        }
+    }
+
+    private func openEditor(index: Int) {
+        returnFocus = .row(index)
+        dialogs.push(.backupServer(form, index: index))
     }
 
     @ViewBuilder
@@ -1195,6 +1285,7 @@ private struct PlaylistFormDialog: View {
     private func submit() {
         let kotlinForm = form.kotlin
         guard TvPlaylistFormPolicy.shared.canSubmit(form: kotlinForm), !(xtream?.isValidating ?? false) else { return }
+        NSLog("SMOKE playlist submit source=%@ backups=%ld", form.sourceType, form.backupUrls.count)
         let done: (KotlinBoolean) -> Void = { ok in
             if ok.boolValue { DispatchQueue.main.async { dialogs.pop() } }
         }
@@ -1225,6 +1316,160 @@ private struct AddPlaylistButton: View {
         .focused($focused)
         .reportsFocus(focused)
         .padding(.top, dp(12))
+    }
+}
+
+// MARK: - Backup servers (Step 0.3)
+
+/// Which backup control of the playlist form had focus (restored when the row editor closes).
+enum BackupFocus: Hashable {
+    case row(Int), add
+    func clamped(to count: Int) -> BackupFocus {
+        guard case .row(let i) = self else { return self }
+        return count == 0 ? .add : .row(min(i, count - 1))
+    }
+}
+
+/// NuvioTV's backup-server copy (iptv_backup_server_* / iptv_using_backup_server*), looked up by key so
+/// translations flow in through Scripts/gen-localizable.py.
+enum BackupServerCopy {
+    static func row(_ n: Int) -> String { String(format: LK("iptv_backup_server_row", "Backup server %1$ld"), n) }
+    static func addSubtitle(_ max: Int) -> String {
+        String(format: LK("iptv_backup_server_add_subtitle", "Another address for the same playlist (up to %1$ld)"), max)
+    }
+    static func using(_ n: Int) -> String { String(format: LK("iptv_using_backup_server", "Using backup server %1$ld"), n) }
+    static func usingAddress(_ n: Int, _ address: String) -> String {
+        String(format: LK("iptv_using_backup_server_host", "Using backup server %1$ld (%2$@)"), n, address)
+    }
+    static func removeTitle(_ n: Int) -> String {
+        String(format: LK("iptv_backup_server_remove_confirm_title", "Remove backup server %1$ld?"), n)
+    }
+    static func removeSubtitle(_ address: String) -> String {
+        String(format: LK("iptv_backup_server_remove_confirm_subtitle", "%1$@ won't be tried if the main server stops responding."), address)
+    }
+}
+
+/// NuvioTV BackupServerEditorDialog: one backup row — its address (the native keyboard opens only when
+/// the field is clicked), the moves that can act (UX100: a dead move is left out, not disabled), Remove
+/// (confirmed) and Done. The editor follows a moved server; a row left blank is dropped on close.
+private struct BackupServerEditorDialog: View {
+    @ObservedObject var form: PlaylistFormModel
+    @State var index: Int
+    @ObservedObject var dialogs: SettingsDialogs
+    @Environment(\.nuvio) private var colors
+    @FocusState private var focus: EditorFocus?
+    @State private var depth = 0
+    @State private var returnFocus: EditorFocus?
+    @State private var removed = false
+
+    enum EditorFocus: Hashable { case moveUp, moveDown, remove, done }
+
+    var body: some View {
+        let count = form.backupUrls.count
+        NuvioDialog(title: BackupServerCopy.row(index + 1), subtitle: "Used automatically if the main server doesn't respond.",
+                    width: dp(560)) {
+            if index < count {
+                // First focusable of the dialog, so the host's focus hand-off lands here on open.
+                SettingsTextField(label: "Server address", hint: TvBackupServers.shared.hint(sourceType: form.sourceType),
+                                  text: address, id: "backup.address")
+                if let problem = TvBackupServers.shared.problemAt(form: form.kotlin, index: Int32(index)) {
+                    Text(ui: problem).font(NuvioType.bodySmall).foregroundStyle(colors.error)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                ForEach(TvBackupServers.shared.rowActions(index: Int32(index), count: Int32(count)), id: \.self) { action in
+                    actionRow(action, count: count)
+                }
+            }
+            SettingsDialogButton(title: "Done", primary: true, fullWidth: true) { close() }
+                .focused($focus, equals: .done)
+                .accessibilityIdentifier("backup.done")
+        }
+        .onAppear { depth = dialogs.stack.count }
+        .onChange(of: dialogs.stack.count) { _, now in
+            // Back from "Remove backup server N?" (Cancel): focus returns to Remove, as on NuvioTV.
+            guard now == depth, let target = returnFocus else { return }
+            returnFocus = nil
+            for delay in [0.2, 0.45, 0.8, 1.3] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { if focus != target { focus = target } }
+            }
+        }
+        .onDisappear {
+            // Menu or Done on a row nobody typed into drops it (NuvioTV), never after a confirmed remove.
+            if !removed, index < form.backupUrls.count, form.backupUrls[index].trimmingCharacters(in: .whitespaces).isEmpty {
+                form.backupUrls = TvBackupServers.shared.remove(rows: form.backupUrls, index: Int32(index))
+            }
+        }
+    }
+
+    private var address: Binding<String> {
+        Binding(get: { index < form.backupUrls.count ? form.backupUrls[index] : "" },
+                set: { form.backupUrls = TvBackupServers.shared.update(rows: form.backupUrls, index: Int32(index), value: $0) })
+    }
+
+    @ViewBuilder
+    private func actionRow(_ action: TvBackupRowAction, count: Int) -> some View {
+        switch action {
+        case .moveUp:
+            SettingsActionRow(title: "Move up", subtitle: "Try this server earlier", showChevron: false) {
+                form.backupUrls = TvBackupServers.shared.moveUp(rows: form.backupUrls, index: Int32(index))
+                index -= 1
+                focus = index > 0 ? .moveUp : .moveDown
+            }
+            .focused($focus, equals: .moveUp)
+            .accessibilityIdentifier("backup.moveUp")
+        case .moveDown:
+            SettingsActionRow(title: "Move down", subtitle: "Try this server later", showChevron: false) {
+                form.backupUrls = TvBackupServers.shared.moveDown(rows: form.backupUrls, index: Int32(index))
+                index += 1
+                focus = index < count - 1 ? .moveDown : .moveUp
+            }
+            .focused($focus, equals: .moveDown)
+            .accessibilityIdentifier("backup.moveDown")
+        case .remove:
+            SettingsActionRow(title: "Remove backup server", showChevron: false) {
+                let value = form.backupUrls[index]
+                guard action.needsConfirmation else { removeRow(); return }
+                returnFocus = .remove
+                dialogs.push(.custom(AnyView(RemoveBackupServerDialog(index: index, address: value, dialogs: dialogs) { removeRow() })))
+            }
+            .focused($focus, equals: .remove)
+            .accessibilityIdentifier("backup.remove")
+        }
+    }
+
+    private func removeRow() {
+        removed = true
+        form.backupUrls = TvBackupServers.shared.remove(rows: form.backupUrls, index: Int32(index))
+        dialogs.pop()
+    }
+
+    private func close() { dialogs.pop() }
+}
+
+/// UX100 — "Remove backup server N?" in the Remove-playlist shape: a danger-tinted Remove over Cancel,
+/// focus on Cancel so a stray click can't delete; Cancel or Menu goes back to the row editor.
+private struct RemoveBackupServerDialog: View {
+    let index: Int
+    let address: String
+    @ObservedObject var dialogs: SettingsDialogs
+    let onConfirm: () -> Void
+    @FocusState private var cancelFocused: Bool
+
+    var body: some View {
+        NuvioDialog(title: BackupServerCopy.removeTitle(index + 1),
+                    subtitle: address.isEmpty ? nil : BackupServerCopy.removeSubtitle(address),
+                    width: dp(460)) {
+            SettingsDialogButton(title: "Remove backup server", destructive: true, fullWidth: true) {
+                dialogs.pop()
+                onConfirm()
+            }
+            .accessibilityIdentifier("backup.remove.confirm")
+            SettingsDialogButton(title: "Cancel", fullWidth: true) { dialogs.pop() }
+                .focused($cancelFocused)
+                .accessibilityIdentifier("backup.remove.cancel")
+        }
+        .defaultFocus($cancelFocused, true)
+        .onAppear { DispatchQueue.main.async { cancelFocused = true } }
     }
 }
 

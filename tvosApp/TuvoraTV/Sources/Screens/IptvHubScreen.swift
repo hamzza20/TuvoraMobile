@@ -48,6 +48,10 @@ struct IptvHubScreen: View {
                 }
             }
         }
+        // Follow the playlist store while the tab is on screen (the phone's repeatOnLifecycle): a playlist
+        // that arrives by sync, or a removal that resets the hub, shows here without leaving the tab.
+        // The task ends with the view, so nothing runs for a tab nobody is looking at; it never polls.
+        .task { try? await TvIptvBrowse.shared.followPlaylists() }
         .sheet(isPresented: $choosingPlaylist) {
             if let hub { PlaylistDialog(hub: hub) { choosingPlaylist = false } }
         }

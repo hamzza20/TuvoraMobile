@@ -83,10 +83,14 @@ object M3UFilePicker {
     }.getOrNull()
 
     internal fun playlistsDir(): File {
+        m3uPlaylistsDirForTests?.let { return it.apply { mkdirs() } }
         val ctx = checkNotNull(appContext) { "M3UFilePicker.initialize(context) not called" }
         return File(ctx.filesDir, "playlists").apply { mkdirs() }
     }
 }
+
+/** Test seam: host tests point the saved-copy directory at a temp dir (null in production). */
+internal var m3uPlaylistsDirForTests: File? = null
 
 actual fun pickM3UFile(onPicked: (PickedM3UFile?) -> Unit) = M3UFilePicker.launch(onPicked)
 
@@ -104,6 +108,15 @@ actual fun fileExists(path: String): Boolean = File(path).exists()
 
 actual fun deleteM3UFile(playlistId: String) {
     runCatching { File(M3UFilePicker.playlistsDir(), "${safeName(playlistId)}.m3u").delete() }
+}
+
+actual fun moveM3UFile(oldId: String, newId: String) {
+    val dir = M3UFilePicker.playlistsDir()
+    val from = File(dir, "${safeName(oldId)}.m3u")
+    if (!from.exists()) return
+    val to = File(dir, "${safeName(newId)}.m3u")
+    if (to.exists()) to.delete()
+    check(from.renameTo(to)) { "Could not move the playlist file" }
 }
 
 actual suspend fun streamFileLines(path: String, onLine: (String) -> Unit): Unit = withContext(Dispatchers.IO) {

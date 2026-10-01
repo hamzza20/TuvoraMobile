@@ -245,6 +245,8 @@ struct SettingsTextField: View {
     @Binding var text: String
     var secure = false
     var onSubmit: () -> Void = {}
+    /// Accessibility identifier of the field itself (UITests read focus by it).
+    var id: String? = nil
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
 
@@ -267,6 +269,7 @@ struct SettingsTextField: View {
             .onSubmit(onSubmit)
             .frame(maxWidth: .infinity, alignment: .leading)
             .reportsFocus(focused)
+            .accessibilityIdentifier(id ?? "")
         }
         .padding(.top, dp(12))
     }

@@ -63,7 +63,11 @@ def swift_literals():
 # NuvioTV keys used with arguments or outside a Text literal; emitted as "tv:<key>".
 KEYED = ["cw_next_up", "cw_hours_min_left", "cw_min_left", "type_movie", "type_series",
          "debrid_stream_max_results_count", "debrid_size_range_up_to", "debrid_size_range_min_plus",
-         "debrid_size_range_min_max"]
+         "debrid_size_range_min_max",
+         # Step 0.3 backup servers (SettingsScreen BackupServerCopy).
+         "iptv_backup_server_row", "iptv_backup_server_add_subtitle", "iptv_using_backup_server",
+         "iptv_using_backup_server_host", "iptv_backup_server_remove_confirm_title",
+         "iptv_backup_server_remove_confirm_subtitle"]
 
 def apple_format(s):  # Android %1$d / %s -> Foundation %1$ld / %@
     return re.sub(r"%(\d+\$)?d", lambda m: f"%{m.group(1) or ''}ld", s).replace("%s", "%@").replace("$s", "$@")

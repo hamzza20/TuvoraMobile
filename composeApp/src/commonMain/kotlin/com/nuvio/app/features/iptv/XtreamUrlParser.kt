@@ -23,7 +23,8 @@ fun parseXtreamAccount(input: String, name: String? = null): XtreamAccount? {
         if (url.port != url.protocol.defaultPort) append(":").append(url.port)
     }
     return XtreamAccount(
-        id = "$base|$user",
+        // Step 0: the permanent id comes from the shared builder (lowercased host, default port dropped).
+        id = PlaylistKey.xtream(base, user) ?: return null,
         name = name?.trim()?.takeIf { it.isNotEmpty() } ?: url.host,
         baseUrl = base,
         username = user,
@@ -42,7 +43,7 @@ fun xtreamAccountFromFields(serverUrl: String, username: String, password: Strin
     if (user.isEmpty() || pass.isEmpty()) return null
     val raw = serverUrl.trim()
     if (raw.isEmpty()) return null
-    val withScheme = if (raw.startsWith("http://") || raw.startsWith("https://")) raw else "http://$raw"
+    val withScheme = PlaylistKey.withHttpScheme(raw)   // case-insensitive: "HTTP://host" is not "http://HTTP://host"
     val url = try {
         Url(withScheme)
     } catch (e: Exception) {
@@ -54,7 +55,8 @@ fun xtreamAccountFromFields(serverUrl: String, username: String, password: Strin
         if (url.port != url.protocol.defaultPort) append(":").append(url.port)
     }
     return XtreamAccount(
-        id = "$base|$user",
+        // Step 0: the permanent id comes from the shared builder (lowercased host, default port dropped).
+        id = PlaylistKey.xtream(base, user) ?: return null,
         name = name?.trim()?.takeIf { it.isNotEmpty() } ?: url.host,
         baseUrl = base,
         username = user,
@@ -77,8 +79,13 @@ internal fun xtreamAccountFromForm(input: XtreamFormInput): XtreamAccount? {
         epgUrl = input.epgUrl?.trim()?.takeIf { it.isNotEmpty() },
         dnsProvider = input.dnsProvider,
         autoRefreshHours = input.autoRefreshHours,
+        backupUrls = validBackups(SOURCE_TYPE_XTREAM, base.baseUrl, input),
     )
 }
+
+/** Step 0.3: the form's backup rows, validated + normalized; rows with a problem are dropped. */
+private fun validBackups(sourceType: String, main: String, input: XtreamFormInput): List<String> =
+    BackupServerValidation.validate(sourceType, main, input.backupUrls).urls
 
 /**
  * Builds an M3U-URL playlist account from the "Add Playlist" form. The M3U URL IS the identity —
@@ -92,7 +99,7 @@ internal fun m3uAccountFromForm(input: XtreamFormInput): XtreamAccount? {
     val url = try { Url(withScheme) } catch (e: Exception) { return null }
     if (url.host.isBlank()) return null
     return XtreamAccount(
-        id = "m3u|$withScheme",
+        id = PlaylistKey.m3uUrl(raw) ?: return null,   // Step 0 shared builder (== "m3u|$withScheme")
         name = input.name?.trim()?.takeIf { it.isNotEmpty() } ?: url.host,
         baseUrl = withScheme,             // the full M3U URL (path + query kept — it's the fetch target)
         username = "",
@@ -102,6 +109,7 @@ internal fun m3uAccountFromForm(input: XtreamFormInput): XtreamAccount? {
         dnsProvider = input.dnsProvider,
         autoRefreshHours = input.autoRefreshHours,
         userAgent = input.userAgent?.trim()?.takeIf { it.isNotEmpty() },
+        backupUrls = validBackups(SOURCE_TYPE_M3U_URL, withScheme, input),
     )
 }
 
@@ -130,6 +138,9 @@ internal fun recogniseXtreamPanelInM3uField(input: XtreamFormInput): XtreamAccou
         dnsProvider = input.dnsProvider,
         autoRefreshHours = input.autoRefreshHours,
         userAgent = input.userAgent?.trim()?.takeIf { it.isNotEmpty() },
+        // The backup rows were typed as playlist URLs of the same panel elsewhere — as an Xtream
+        // account they reduce to those hosts' base URLs (Step 0.3).
+        backupUrls = validBackups(SOURCE_TYPE_XTREAM, parsed.baseUrl, input),
     )
 }
 
@@ -153,7 +164,7 @@ internal fun stalkerAccountFromForm(input: XtreamFormInput): XtreamAccount? {
         if (url.port != url.protocol.defaultPort) append(":").append(url.port)
     }
     return XtreamAccount(
-        id = "stalker|$base|$mac",
+        id = PlaylistKey.stalker(base, mac) ?: return null,   // Step 0 shared builder (MAC uppercased)
         name = input.name?.trim()?.takeIf { it.isNotEmpty() } ?: url.host,
         baseUrl = base,
         username = "",
@@ -167,6 +178,7 @@ internal fun stalkerAccountFromForm(input: XtreamFormInput): XtreamAccount? {
         serialNumber = input.serialNumber?.trim()?.takeIf { it.isNotEmpty() },
         deviceId = input.deviceId?.trim()?.takeIf { it.isNotEmpty() },
         sendDeviceId = input.sendDeviceId,
+        backupUrls = validBackups(SOURCE_TYPE_STALKER, base, input),
     )
 }
 
@@ -187,7 +199,7 @@ internal fun m3uFileAccountFromForm(
             // Editing options with no re-pick and no name: keep the id but we still need SOME name.
             m3uFileAccount(id, "Playlist", input)
         }
-    val id = existingId ?: "m3u_file|${fileName}|$uniqueSuffix"
+    val id = existingId ?: PlaylistKey.m3uFile(fileName, uniqueSuffix) ?: return null
     val displayName = input.name?.trim()?.takeIf { it.isNotEmpty() } ?: fileName.substringBeforeLast('.')
     return m3uFileAccount(id, displayName, input, fileName)
 }
