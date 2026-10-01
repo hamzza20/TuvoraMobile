@@ -457,8 +457,8 @@ private struct HomeRowsStates: View {
                     .padding(.leading, dp(48))
                 }
             } else if rows.sections.isEmpty && !hasContinueWatching {
-                NuvioStateMessage(title: "Nothing to show yet",
-                                  message: rows.errorMessage ?? "Install add-ons or add a playlist to fill your home screen.")
+                NuvioStateMessage(title: StoreCopy.emptyHomeTitle,
+                                  message: rows.errorMessage ?? StoreCopy.emptyHomeMessage)
                     .frame(height: dp(200))
             }
         }

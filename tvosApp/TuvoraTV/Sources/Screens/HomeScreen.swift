@@ -107,8 +107,8 @@ struct HomeScreen: View {
                         CatalogRow(section: section, onFocus: { pendingHero = HeroContent(preview: $0) }) { details = PreviewBox(preview: $0) }
                     }
                     if rows.sections.isEmpty && !rows.isLoading && continueWatching.isEmpty {
-                        NuvioStateMessage(title: "Nothing to show yet",
-                                          message: rows.errorMessage ?? "Install add-ons or add a playlist to fill your home screen.")
+                        NuvioStateMessage(title: StoreCopy.emptyHomeTitle,
+                                          message: rows.errorMessage ?? StoreCopy.emptyHomeMessage)
                             .frame(height: dp(200))
                     }
                 }
