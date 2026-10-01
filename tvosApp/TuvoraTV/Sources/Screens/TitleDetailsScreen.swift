@@ -82,6 +82,10 @@ struct TitleDetailsScreen: View {
                    let enriched = try? await TvTitleSections.shared.smokeTmdbEnriched(meta: meta) {
                     state = MetaDetailsUiState(isLoading: false, meta: enriched, errorMessage: nil)
                 }
+                // Simulator smoke hook: `-smokeMdbRatings` shows sample MDBList scores (no API key on the simulator).
+                if let meta = next.meta, Self.smokeMdbRatings {
+                    state = MetaDetailsUiState(isLoading: next.isLoading, meta: TvTitle.shared.smokeWithMdbRatings(meta: meta), errorMessage: nil)
+                }
                 if let meta = next.meta { saved = TvTitle.shared.isSaved(meta: meta); watched = TvTitle.shared.isWatched(meta: meta) }
                 // Simulator smoke hook: `-smokePressPlay` presses Play once the title loads.
                 if let meta = next.meta, sourcesFor == nil, !smokePressed, ProcessInfo.processInfo.arguments.contains("-smokePressPlay") {
@@ -101,6 +105,9 @@ struct TitleDetailsScreen: View {
             StreamPickerScreen(meta: target.meta, video: target.video).environmentObject(playback).environment(\.nuvio, colors)
         }
     }
+
+    private static let smokeMdbRatings = ProcessInfo.processInfo.arguments.contains("-smokeMdbRatings")
+    private var mdbListActive: Bool { Self.smokeMdbRatings || TvTitle.shared.mdbListActive() }
 
     private func reloadSelf() { TvTitle.shared.load(type: preview.type, id: preview.id) }
 
@@ -141,6 +148,7 @@ struct TitleDetailsScreen: View {
             .scrollClipDisabled()
             .focusSection()
             metaRow(meta)
+            ratingsRow(meta)
             if let description = meta.description_ {
                 Text(description).font(NuvioType.bodyMedium).foregroundStyle(colors.textPrimary)
                     .lineLimit(4).frame(maxWidth: dp(560), alignment: .leading)
@@ -156,11 +164,30 @@ struct TitleDetailsScreen: View {
                 if index > 0 { Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3)) }
                 Text(part).font(NuvioType.labelLarge).foregroundStyle(colors.textSecondary)
             }
-            if let rating = meta.imdbRating {
+            if let rating = meta.imdbRating,
+               TvRatingsPolicy.shared.showsImdbLine(imdbRating: rating, ratings: meta.externalRatings, mdbListActive: mdbListActive) {
                 Circle().fill(colors.textSecondary).frame(width: dp(3), height: dp(3))
                 ImdbBadge()
                 Text(ImdbBadge.format(rating)).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary)
             }
+        }
+    }
+
+    /// NuvioTV MDBListRatingsRow: logo (spacing.xl = 24dp) + labelMedium score in textSecondary, 14dp apart,
+    /// between the meta line and the synopsis. The scores come from MetaDetailsRepository's MDBList enrichment.
+    @ViewBuilder
+    private func ratingsRow(_ meta: MetaDetails) -> some View {
+        let chips = TvRatingsPolicy.shared.chips(ratings: meta.externalRatings, mdbListActive: mdbListActive)
+        if !chips.isEmpty {
+            HStack(spacing: dp(14)) {
+                ForEach(chips, id: \.source) { chip in
+                    HStack(spacing: dp(6)) {
+                        Image(chip.logo).resizable().scaledToFit().frame(width: dp(24), height: dp(24))
+                        Text(verbatim: chip.text).font(NuvioType.labelMedium).foregroundStyle(colors.textSecondary)
+                    }
+                }
+            }
+            .accessibilityElement(children: .combine)
         }
     }
 

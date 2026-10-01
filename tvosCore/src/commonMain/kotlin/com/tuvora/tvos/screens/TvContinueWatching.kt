@@ -27,7 +27,8 @@ data class TvCwItem(
  * suppressed for any series already in progress, capped. Pure, so tested without repositories.
  */
 object TvContinueWatching {
-    const val MAX_ITEMS = 20
+    /** Room for every Next Up lookup (TvContinueWatchingSources.NEXT_UP_LOOKUPS) plus recent in-progress titles. */
+    const val MAX_ITEMS = 40
 
     fun merge(inProgress: List<TvCwItem>, nextUp: List<TvCwItem>): List<TvCwItem> {
         val inProgressSeries = inProgress.map { it.parentMetaId }.toSet()
