@@ -318,7 +318,11 @@ final class MPVPlayerViewController: UIViewController {
 
     private var cachedPositionSeconds: Double = 0
     private var cachedPositionSampledAt: CFTimeInterval = 0
-    private var cachedRenderFrameRate: Double = 30.0
+
+    /// Observed mpv state, written on the event queue (see readEvents). Main-thread state and the
+    /// PiP capture's per-frame providers read THIS, never mpv: see MPVPropertyShadow.swift for the
+    /// vo-thread deadlock a synchronous read on the render path caused.
+    let propertyShadow = MPVPropertyShadow()
 
     /// Playback position for PiP sample timestamps, interpolated from the last 250ms poll so the
     /// PiP window's timeline advances smoothly without a per-frame mpv property read.
@@ -330,19 +334,16 @@ final class MPVPlayerViewController: UIViewController {
         return cachedPositionSeconds + elapsed * Double(currentSpeed)
     }
 
-    /// Frame rate for the CMSampleBuffer duration, cached off the same poll.
-    var currentRenderFrameRate: Double { cachedRenderFrameRate }
+    /// Frame rate for the CMSampleBuffer duration. Called per captured frame on the vo/render
+    /// thread, so it reads the observed shadow (estimated-vf-fps, else container-fps, sticky).
+    var currentRenderFrameRate: Double { propertyShadow.renderFrameRate }
 
-    // Video dimensions for the PiP capture's aspect handling. The fork caches these behind a
-    // media-info refresh; we read mpv directly, same source its snapshot JSON already uses.
-    var currentVideoWidth: Int {
-        let w = getInt("video-params/w")
-        return w > 0 ? w : 0
-    }
-    var currentVideoHeight: Int {
-        let h = getInt("video-params/h")
-        return h > 0 ? h : 0
-    }
+    // Video dimensions for the PiP capture's aspect handling. Called from INSIDE mpv's render path
+    // (MetalLayer.nextDrawable → capture → videoRegion), so this must never be a synchronous
+    // mpv_get_property: that waits on the core, which is itself in vo_wait_frame waiting for this
+    // frame — the 2026-10-01 whole-app freeze. Observed `video-params/w|h` instead.
+    var currentVideoWidth: Int { Int(propertyShadow.videoSize.width) }
+    var currentVideoHeight: Int { Int(propertyShadow.videoSize.height) }
 
     // The fork carries a Metal device-loss recovery subsystem (part of a larger bridge rework we
     // did not take) and the PiP code consults it before re-arming capture. We have no such
@@ -723,14 +724,19 @@ final class MPVPlayerViewController: UIViewController {
         checkError(mpv_initialize(mpv))
         applyAudioLanguagePreferences(preferredAudioLanguages)
 
-        // Observe properties
-        mpv_observe_property(mpv, 0, "pause", MPV_FORMAT_FLAG)
-        mpv_observe_property(mpv, 0, "paused-for-cache", MPV_FORMAT_FLAG)
-        mpv_observe_property(mpv, 0, "core-idle", MPV_FORMAT_FLAG)
-        mpv_observe_property(mpv, 0, "eof-reached", MPV_FORMAT_FLAG)
-        mpv_observe_property(mpv, 0, "seeking", MPV_FORMAT_FLAG)
-        mpv_observe_property(mpv, 0, "track-list", MPV_FORMAT_NODE)
-        mpv_observe_property(mpv, 0, "aid", MPV_FORMAT_INT64)
+        // Observe every property this bridge reads. The values land in propertyShadow on the event
+        // queue, so neither Main nor the render path ever has to take mpv's core lock to read them.
+        for (name, format) in MPVPlaybackProperties.observed {
+            let mpvFormat: mpv_format
+            switch format {
+            case .flag: mpvFormat = MPV_FORMAT_FLAG
+            case .int64: mpvFormat = MPV_FORMAT_INT64
+            case .double: mpvFormat = MPV_FORMAT_DOUBLE
+            case .string: mpvFormat = MPV_FORMAT_STRING
+            case .node: mpvFormat = MPV_FORMAT_NODE
+            }
+            checkError(mpv_observe_property(mpv, 0, name, mpvFormat))
+        }
 
         mpv_set_wakeup_callback(mpv, { ctx in
             let vc = unsafeBitCast(ctx, to: MPVPlayerViewController.self)
@@ -884,7 +890,7 @@ final class MPVPlayerViewController: UIViewController {
     /// "Start from beginning": reopen at 0:00 on this player. mpv drops a seek issued before playback
     /// initialises, and a slow resume is stuck exactly there, so reload with a start position instead.
     func restartFromBeginning() {
-        guard mpv != nil, let path = getString("path") else { return }
+        guard mpv != nil, let path = propertyShadow.snapshot.path else { return }
         clearPlaybackError()
         applyRequestHeaders(activeRequestHeaders)
         command("loadfile", args: [path, "replace", "-1", "start=0"])
@@ -892,10 +898,11 @@ final class MPVPlayerViewController: UIViewController {
 
     func retryPlayback() {
         guard mpv != nil else { return }
-        if let path = getString("path") {
+        let observed = propertyShadow.snapshot
+        if let path = observed.path {
             clearPlaybackError()
             applyRequestHeaders(activeRequestHeaders)
-            let pos = getDouble("time-pos")
+            let pos = observed.timePos
             // Reopen AT the position rather than seeking 0.5 s later — mpv drops a seek that lands
             // before playback is initialised, so the retry used to restart from 0:00 (B59b).
             if pos > 0 {
@@ -987,7 +994,7 @@ final class MPVPlayerViewController: UIViewController {
         preferredAudioLanguages = languages
         guard mpv != nil else { return }
         setStringProperty("alang", languages.joined(separator: ","))
-        if let currentId = getString("aid"), Int(currentId) != nil {
+        if let currentId = propertyShadow.snapshot.aid, Int(currentId) != nil {
             setStringProperty("aid", currentId)
         }
         setStringProperty("aid", "auto")
@@ -1030,28 +1037,16 @@ final class MPVPlayerViewController: UIViewController {
 
     func removeExternalSubtitles() {
         guard mpv != nil else { return }
-        let count = getInt("track-list/count")
-        for i in stride(from: count - 1, through: 0, by: -1) {
-            let type = getString("track-list/\(i)/type") ?? ""
-            let external = getFlag("track-list/\(i)/external")
-            if type == "sub" && external {
-                let id = getInt("track-list/\(i)/id")
-                command("sub-remove", args: ["\(id)"], checkForErrors: false)
-            }
+        for track in propertyShadow.snapshot.tracks.reversed() where track.type == "sub" && track.external {
+            command("sub-remove", args: ["\(track.id)"], checkForErrors: false)
         }
         setStringProperty("sid", "no")
     }
 
     func removeExternalSubtitlesAndSelect(_ trackId: Int) {
         guard mpv != nil else { return }
-        let count = getInt("track-list/count")
-        for i in stride(from: count - 1, through: 0, by: -1) {
-            let type = getString("track-list/\(i)/type") ?? ""
-            let external = getFlag("track-list/\(i)/external")
-            if type == "sub" && external {
-                let id = getInt("track-list/\(i)/id")
-                command("sub-remove", args: ["\(id)"], checkForErrors: false)
-            }
+        for track in propertyShadow.snapshot.tracks.reversed() where track.type == "sub" && track.external {
+            command("sub-remove", args: ["\(track.id)"], checkForErrors: false)
         }
         if trackId >= 0 {
             selectSubtitle(trackId)
@@ -1139,18 +1134,19 @@ final class MPVPlayerViewController: UIViewController {
     /// Only reads cheap scalar properties; does NOT re-enumerate tracks.
     func refreshPlaybackState() {
         guard mpv != nil else { return }
-        let duration = getDouble("duration")
-        let position = getDouble("time-pos")
-        let cached = getDouble("demuxer-cache-time")
-        let speed = getDouble("speed")
-        let paused = getFlag("pause")
-        let eofReached = getFlag("eof-reached")
-        let idle = getFlag("core-idle")
-        let seeking = getFlag("seeking")
-        let bufferingCache = getFlag("paused-for-cache")
+        // Main thread (Kotlin poll + event hops): read the observed shadow, never mpv itself — a
+        // synchronous read here queues behind the core lock (stalled demuxer, or the core waiting
+        // on a vo frame) and freezes the UI. Same values the old per-poll reads returned.
+        let observed = propertyShadow.snapshot
+        let duration = observed.duration
+        let position = observed.timePos
+        let cached = observed.demuxerCacheTime
+        let speed = observed.speed
+        let paused = observed.paused
+        let eofReached = observed.eofReached
 
-        isPlayerLoading = (idle && !paused && !eofReached) || seeking || bufferingCache
-        isPlayerPlaying = !paused && !idle && !eofReached
+        isPlayerLoading = observed.isLoading
+        isPlayerPlaying = observed.isPlaying
         isPlayerEnded = eofReached
         // Mirrored for the PiP paths, which run on Main — including inside the Home-swipe gesture
         // and AVKit's delegate callbacks. Reading these from mpv there means mpv_get_property, which
@@ -1173,29 +1169,22 @@ final class MPVPlayerViewController: UIViewController {
         currentSpeed = Float(speed > 0 ? speed : 1.0)
 
         // PiP frame capture reads position and frame rate for every CMSampleBuffer it enqueues.
-        // Those are per-presented-frame calls, so they must NOT touch mpv: mpv_get_property takes
-        // the core lock, which a live demuxer can hold for seconds (the Android rule that put every
-        // mpv read behind a shadow copy). Cache here on the existing 250ms poll and interpolate.
+        // Those are per-presented-frame calls on the render path, so they must NOT touch mpv (see
+        // currentVideoWidth). Position is cached here and interpolated; the frame rate comes from
+        // the observed shadow (currentRenderFrameRate).
         cachedPositionSeconds = max(position, 0)
         cachedPositionSampledAt = CACurrentMediaTime()
-        let sampledFps = getDouble("estimated-vf-fps")
-        if sampledFps.isFinite && sampledFps > 1 {
-            cachedRenderFrameRate = sampledFps
-        } else {
-            let container = getDouble("container-fps")
-            if container.isFinite && container > 1 { cachedRenderFrameRate = container }
-        }
 
         // Live-freeze detection: the picture can stop while audio plays on, which leaves every
         // other field here looking healthy. `estimated-vf-fps` is the one signal that stops too.
         // Advanced at read time here (this poll), which is the correct pattern — a callback-driven
         // count plateaus once the estimate settles. Floor of 1.0 fps matches Kotlin's
         // MpvVideoOutputSignal.MIN_LIVE_FPS so all platforms agree on "the picture is alive".
-        hasVideoTrack = !(getString("video-format") ?? "").isEmpty
-        if getDouble("estimated-vf-fps") >= 1 { videoFrameTicks &+= 1 }
+        hasVideoTrack = !(observed.videoFormat ?? "").isEmpty
+        if observed.estimatedVfFps >= 1 { videoFrameTicks &+= 1 }
         // VO-level counters for the playback snapshot; see the property declarations.
-        voDroppedFrames = Int64(getInt("frame-drop-count"))
-        voDelayedFrames = Int64(getInt("vo-delayed-frame-count"))
+        voDroppedFrames = observed.frameDropCount
+        voDelayedFrames = observed.voDelayedFrameCount
 
         let shouldPublishNowPlayingState = !isPlayerLoading || isPlayerPlaying || durationMs > 0 || positionMs > 0
         if shouldPublishNowPlayingState {
@@ -1222,20 +1211,20 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         var audio = [TrackInfo]()
         var subs = [TrackInfo]()
-        let count = getInt("track-list/count")
         var audioIdx = 0
         var subIdx = 0
 
-        for i in 0..<count {
-            let type = getString("track-list/\(i)/type") ?? ""
-            let id = getInt("track-list/\(i)/id")
-            let title = getTrackString(i, "title")
-            let lang = getTrackString(i, "lang")
-            let codec = getTrackString(i, "codec")
-            let decoderDescription = getTrackString(i, "decoder-desc")
-            let channels = getTrackString(i, "demux-channels")
-            let channelCount = getInt("track-list/\(i)/demux-channel-count")
-            let selected = getFlag("track-list/\(i)/selected")
+        // From the observed track-list node — previously ~10 synchronous reads per track on Main.
+        for track in propertyShadow.snapshot.tracks {
+            let type = track.type
+            let id = track.id
+            let title = track.title
+            let lang = track.lang
+            let codec = track.codec
+            let decoderDescription = track.decoderDescription
+            let channels = track.demuxChannels
+            let channelCount = track.demuxChannelCount
+            let selected = track.selected
             let displayTitle = formatTrackTitle(
                 type: type,
                 index: type == "audio" ? audioIdx : subIdx,
@@ -1306,14 +1295,12 @@ final class MPVPlayerViewController: UIViewController {
     /// desktop bridges: bitrates are bits per second, matching `Format.bitrate`.
     func streamInfoJson() -> String {
         guard mpv != nil else { return "" }
+        // Called on Main (Kotlin getStreamInfo): built from the observed shadow, not mpv reads.
+        let observed = propertyShadow.snapshot
 
-        // Index of the selected track of a given type, or nil when there is none.
-        func selectedTrack(_ type: String) -> Int? {
-            let count = getInt("track-list/count")
-            for i in 0..<count where getString("track-list/\(i)/type") == type {
-                if getFlag("track-list/\(i)/selected") { return i }
-            }
-            return nil
+        // The selected track of a given type, or nil when there is none.
+        func selectedTrack(_ type: String) -> MPVTrackShadow? {
+            observed.tracks.first { $0.type == type && $0.selected }
         }
 
         var fields: [String] = []
@@ -1329,31 +1316,26 @@ final class MPVPlayerViewController: UIViewController {
         }
 
         if let v = selectedTrack("video") {
-            put("videoCodec", getTrackString(v, "codec"))
-            put("videoWidth", getInt("video-params/w") > 0 ? getInt("video-params/w") : getInt("track-list/\(v)/demux-w"))
-            put("videoHeight", getInt("video-params/h") > 0 ? getInt("video-params/h") : getInt("track-list/\(v)/demux-h"))
-            put("videoFps", getDouble("track-list/\(v)/demux-fps"))
+            put("videoCodec", v.codec)
+            put("videoWidth", observed.videoWidth > 0 ? Int(observed.videoWidth) : v.demuxWidth)
+            put("videoHeight", observed.videoHeight > 0 ? Int(observed.videoHeight) : v.demuxHeight)
+            put("videoFps", v.demuxFps)
             // Measured first, then the container's average, then the HLS variant's rate —
             // live MPEG-TS usually declares none of the latter two.
-            var bitrate = getDouble("video-bitrate")
-            if bitrate <= 0 { bitrate = getDouble("track-list/\(v)/demux-bitrate") }
-            if bitrate <= 0 { bitrate = getDouble("track-list/\(v)/hls-bitrate") }
+            var bitrate = observed.videoBitrate
+            if bitrate <= 0 { bitrate = v.demuxBitrate }
+            if bitrate <= 0 { bitrate = v.hlsBitrate }
             put("videoBitrate", bitrate)
         }
 
         if let a = selectedTrack("audio") {
-            put("audioCodec", getTrackString(a, "codec"))
-            put("audioChannels", getInt("track-list/\(a)/demux-channel-count"))
-            put("audioSampleRate", getInt("track-list/\(a)/demux-samplerate"))
-            put("audioBitrate", getDouble("audio-bitrate"))
+            put("audioCodec", a.codec)
+            put("audioChannels", a.demuxChannelCount)
+            put("audioSampleRate", a.demuxSampleRate)
+            put("audioBitrate", observed.audioBitrate)
         }
 
         return fields.isEmpty ? "" : "{" + fields.joined(separator: ",") + "}"
-    }
-
-    private func getTrackString(_ index: Int, _ field: String) -> String {
-        (getString("track-list/\(index)/\(field)") ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func formatTrackTitle(
@@ -1488,7 +1470,20 @@ final class MPVPlayerViewController: UIViewController {
 
                 switch eventPtr.pointee.event_id {
                 case MPV_EVENT_PROPERTY_CHANGE:
-                    DispatchQueue.main.async { self.updateState() }
+                    // Copy the value into the shadow HERE, on the event queue: the event's data is
+                    // only valid until the next mpv_wait_event. Only the changes that always
+                    // refreshed Main still do; per-tick values wait for the 250ms poll.
+                    guard let data = eventPtr.pointee.data else { break }
+                    let property = UnsafePointer<mpv_event_property>(OpaquePointer(data)).pointee
+                    let name = String(cString: property.name)
+                    if name == "track-list" {
+                        self.propertyShadow.setTracks(Self.decodeTrackList(property))
+                    } else {
+                        self.propertyShadow.apply(name, Self.decodePropertyValue(property))
+                    }
+                    if MPVPlaybackProperties.mainRefreshProperties.contains(name) {
+                        DispatchQueue.main.async { self.updateState() }
+                    }
                 case MPV_EVENT_FILE_LOADED:
                     DispatchQueue.main.async {
                         self.clearPlaybackError()
@@ -1531,10 +1526,68 @@ final class MPVPlayerViewController: UIViewController {
         }
     }
 
+    // MARK: - Property-change decoding (event queue only)
+
+    /// Copies a scalar property-change payload out of mpv memory.
+    private static func decodePropertyValue(_ property: mpv_event_property) -> MPVPropertyValue {
+        guard let data = property.data else { return .none }
+        switch property.format {
+        case MPV_FORMAT_FLAG:
+            return .flag(data.assumingMemoryBound(to: Int32.self).pointee != 0)
+        case MPV_FORMAT_INT64:
+            return .int(data.assumingMemoryBound(to: Int64.self).pointee)
+        case MPV_FORMAT_DOUBLE:
+            return .double(data.assumingMemoryBound(to: Double.self).pointee)
+        case MPV_FORMAT_STRING:
+            guard let cString = data.assumingMemoryBound(to: UnsafePointer<CChar>?.self).pointee else {
+                return .none
+            }
+            return .string(String(cString: cString))
+        default:
+            return .none
+        }
+    }
+
+    private static func decodeNodeScalar(_ node: mpv_node) -> MPVPropertyValue {
+        switch node.format {
+        case MPV_FORMAT_FLAG: return .flag(node.u.flag != 0)
+        case MPV_FORMAT_INT64: return .int(node.u.int64)
+        case MPV_FORMAT_DOUBLE: return .double(node.u.double_)
+        case MPV_FORMAT_STRING:
+            guard let cString = node.u.string else { return .none }
+            return .string(String(cString: cString))
+        default: return .none
+        }
+    }
+
+    /// The observed `track-list` node (an array of maps) as plain tracks. `.none`/unexpected
+    /// shapes decode to no tracks, matching the old `track-list/count` read failing to 0.
+    private static func decodeTrackList(_ property: mpv_event_property) -> [MPVTrackShadow] {
+        guard property.format == MPV_FORMAT_NODE, let data = property.data else { return [] }
+        let root = data.assumingMemoryBound(to: mpv_node.self).pointee
+        guard root.format == MPV_FORMAT_NODE_ARRAY, let list = root.u.list?.pointee,
+              list.num > 0, let values = list.values else { return [] }
+        var tracks: [MPVTrackShadow] = []
+        tracks.reserveCapacity(Int(list.num))
+        for i in 0..<Int(list.num) {
+            let entry = values[i]
+            guard entry.format == MPV_FORMAT_NODE_MAP, let map = entry.u.list?.pointee,
+                  let keys = map.keys, let fieldValues = map.values else { continue }
+            var fields: [String: MPVPropertyValue] = [:]
+            for j in 0..<Int(map.num) {
+                guard let key = keys[j] else { continue }
+                fields[String(cString: key)] = decodeNodeScalar(fieldValues[j])
+            }
+            tracks.append(MPVTrackShadow(fields: fields))
+        }
+        return tracks
+    }
+
     // MARK: - MPV Helpers
 
     func command(_ command: String, args: [String?] = [], checkForErrors: Bool = true) {
         guard mpv != nil else { return }
+        MPVRenderThreadGuard.assertNotOnRenderCallback("command \(command)")
         var cargs = makeCArgs(command, args).map { $0.flatMap { UnsafePointer<CChar>(strdup($0)) } }
         defer { for ptr in cargs where ptr != nil { free(UnsafeMutablePointer(mutating: ptr!)) } }
         let ret = mpv_command(mpv, &cargs)
@@ -1550,6 +1603,7 @@ final class MPVPlayerViewController: UIViewController {
 
     func getDouble(_ name: String) -> Double {
         guard mpv != nil else { return 0.0 }
+        MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         var data = Double()
         mpv_get_property(mpv, name, MPV_FORMAT_DOUBLE, &data)
         return data
@@ -1557,6 +1611,7 @@ final class MPVPlayerViewController: UIViewController {
 
     func getString(_ name: String) -> String? {
         guard mpv != nil else { return nil }
+        MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         let cstr = mpv_get_property_string(mpv, name)
         let str: String? = cstr == nil ? nil : String(cString: cstr!)
         mpv_free(cstr)
@@ -1565,6 +1620,7 @@ final class MPVPlayerViewController: UIViewController {
 
     func getFlag(_ name: String) -> Bool {
         guard mpv != nil else { return false }
+        MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         var data = Int64()
         mpv_get_property(mpv, name, MPV_FORMAT_FLAG, &data)
         return data > 0
@@ -1572,12 +1628,14 @@ final class MPVPlayerViewController: UIViewController {
 
     private func setFlag(_ name: String, _ flag: Bool) {
         guard mpv != nil else { return }
+        MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         var data: Int = flag ? 1 : 0
         mpv_set_property(mpv, name, MPV_FORMAT_FLAG, &data)
     }
 
     func setStringProperty(_ name: String, _ value: String) {
         guard mpv != nil else { return }
+        MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         checkError(mpv_set_property_string(mpv, name, value))
     }
 
@@ -1589,6 +1647,7 @@ final class MPVPlayerViewController: UIViewController {
 
     private func getInt(_ name: String) -> Int {
         guard mpv != nil else { return 0 }
+        MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         var data = Int64()
         mpv_get_property(mpv, name, MPV_FORMAT_INT64, &data)
         return Int(data)

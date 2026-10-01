@@ -81,7 +81,12 @@ final class MPVPictureInPictureFrameCapture {
 
         metalLayer.framebufferOnly = false
         metalLayer.onDrawablePresented = { [weak self] drawable in
-            self?.handlePresentedDrawable(drawable)
+            // LOCAL: this runs on mpv's vo thread (inside nextDrawable) or Metal's presented
+            // handler. Nothing reachable from here may call mpv synchronously — the providers read
+            // MPVPropertyShadow. The guard makes a regression trap in DEBUG instead of deadlocking.
+            MPVRenderThreadGuard.whileOnRenderCallback {
+                self?.handlePresentedDrawable(drawable)
+            }
         }
     }
 
@@ -306,22 +311,25 @@ final class MPVPictureInPictureFrameCapture {
         )
         blit.endEncoding()
         commandBuffer.addCompletedHandler { [weak self] buffer in
-            guard let self else { return }
-            guard buffer.status == .completed else {
-                self.stateLock.lock()
-                self.failedBlitCount &+= 1
-                let failed = self.failedBlitCount
-                self.stateLock.unlock()
-                if failed <= 3 || failed % 100 == 0 {
-                    InAppLogBridge.shared.error(
-                        tag: "PiP/iOS",
-                        message: "PiP frame blit failed status=\(buffer.status.rawValue) count=\(failed) " +
-                            "error=\(buffer.error?.localizedDescription ?? "none")"
-                    )
+            // LOCAL: Metal completion thread — same no-synchronous-mpv rule as above.
+            MPVRenderThreadGuard.whileOnRenderCallback {
+                guard let self else { return }
+                guard buffer.status == .completed else {
+                    self.stateLock.lock()
+                    self.failedBlitCount &+= 1
+                    let failed = self.failedBlitCount
+                    self.stateLock.unlock()
+                    if failed <= 3 || failed % 100 == 0 {
+                        InAppLogBridge.shared.error(
+                            tag: "PiP/iOS",
+                            message: "PiP frame blit failed status=\(buffer.status.rawValue) count=\(failed) " +
+                                "error=\(buffer.error?.localizedDescription ?? "none")"
+                        )
+                    }
+                    return
                 }
-                return
+                self.enqueueSampleBuffer(for: pixelBuffer)
             }
-            self.enqueueSampleBuffer(for: pixelBuffer)
         }
         commandBuffer.commit()
     }
