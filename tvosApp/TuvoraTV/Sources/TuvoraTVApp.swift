@@ -9,6 +9,12 @@ struct TuvoraTVApp: App {
     init() {
         // Before anything reads storage: route the shared code's defaults to Apple TV's tiers.
         TieredUserDefaults.install()
+        // Simulator hook: `-smokeCollapseSidebar <true|false>` sets Settings -> Layout -> Collapse Sidebar
+        // (the tiered defaults don't read the launch-argument domain, so `-key value` alone does nothing).
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-smokeCollapseSidebar"), i + 1 < args.count {
+            UserDefaults.standard.set(args[i + 1] != "false", forKey: NuvioLayoutPrefs.collapseSidebarKey)
+        }
         // PostHog with crash autocapture, the iPhone app's scrubbing and its consent switch.
         TuvoraTelemetry.start()
         AnalyticsSink.shared.register { event, properties in

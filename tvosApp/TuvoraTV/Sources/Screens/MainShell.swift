@@ -85,7 +85,9 @@ struct MainShell: View {
             colors.background.ignoresSafeArea()
 
             content
-                .padding(.leading, dp(80))
+                // "Collapse Sidebar" hides the drawer until LEFT/Menu: the content then takes the full width
+                // (it kept the drawer's inset, leaving an empty strip - tester report 2026-10-01).
+                .padding(.leading, collapseSidebar ? 0 : dp(80))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .overlay(Color.black.opacity(expanded ? 0.55 : 0).allowsHitTesting(false).ignoresSafeArea())
                 .animation(NuvioTokens.Motion.medium, value: expanded)
@@ -127,7 +129,9 @@ struct MainShell: View {
             // drawer is open so it can't cover the drawer's own fences.
             if !railEngaged {
             Rectangle().fill(Color.white.opacity(0.001))   // Color.clear is not a focus target
-                .frame(width: dp(70))
+                // A sliver at the screen edge when the sidebar is collapsed: anything wider would cover the
+                // leftmost cards (now at the 104 pt gutter), and the focus engine skips covered views.
+                .frame(width: collapseSidebar ? 40 : dp(70))
                 .frame(maxHeight: .infinity)
                 .focusable(contentFocus.everFocused && !contentFocus.leftEdgeOwned)
                 .focused($edgeFocused)

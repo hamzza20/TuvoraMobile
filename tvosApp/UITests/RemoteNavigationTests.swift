@@ -169,16 +169,40 @@ final class RemoteNavigationTests: XCTestCase {
 
         // Switch to the other profile, then back, and Home must have its rows.
         for round in 0..<2 {
+            let before = focusedId()
             press(.menu)
-            XCTAssertTrue(waitForFocus(where: { $0.hasPrefix("sidebar.") }, timeout: 5))
+            XCTAssertTrue(waitForFocus(where: { $0.hasPrefix("sidebar.") }, timeout: 5),
+                          "round \(round): Menu did not open the sidebar; focus before Menu \(before), now \(focusedId())")
             for _ in 0..<8 where focusedId() != "sidebar.profile" { press(.up, settle: 0.5) }
             press(.select, settle: 3)
             XCTAssertTrue(app.staticTexts["Who's watching?"].waitForExistence(timeout: 10))
             press(round == 0 ? .right : .left, settle: 1)
             press(.select, settle: 8)
             XCTAssertTrue(app.buttons["sidebar.home"].waitForExistence(timeout: 30), "round \(round): the switch never reached the app")
-            Thread.sleep(forTimeInterval: 10)
+            // The switch re-syncs: wait (as a viewer would) until Home's content holds focus.
+            XCTAssertTrue(waitForFocus(where: { $0 != "<none>" && !$0.hasPrefix("sidebar.") }, timeout: 40),
+                          "round \(round): nothing in Home took focus after the switch")
             XCTAssertFalse(app.staticTexts["Nothing to show yet"].exists, "round \(round): Home is empty after the switch")
         }
+    }
+
+    /// Tester report 2026-10-01 (Apple TV, French): with Settings -> Layout -> Collapse Sidebar on, Home
+    /// stayed shifted right, leaving an empty strip where the hidden sidebar would be.
+    func testCollapsedSidebarLetsContentFillTheScreen() {
+        launch(["-smokeTab", "home", "-smokeCollapseSidebar", "true"])
+        addTeardownBlock { [self] in   // put the setting back for the other tests
+            app.terminate(); app.launchArguments = ["-smokePickProfile", "1", "-smokeCollapseSidebar", "false"]; app.launch()
+            Thread.sleep(forTimeInterval: 3); app.terminate()
+        }
+        XCTAssertTrue(waitForFocus(where: { $0 != "<none>" && !$0.hasPrefix("sidebar.") }), "nothing focused on Home")
+        // Leftmost card of the focused row: walk LEFT until the next press would leave the content.
+        var minX = focused.frame.minX
+        for _ in 0..<8 {
+            press(.left, settle: 0.6)
+            if focusedId().hasPrefix("sidebar.") { break }
+            minX = min(minX, focused.frame.minX)
+        }
+        XCTAssertLessThan(minX, 140, "with the sidebar collapsed, content still starts at x=\(minX) - the sidebar's inset was kept")
+        XCTAssertTrue(focusedId().hasPrefix("sidebar."), "LEFT from the leftmost card should still open the hidden sidebar; focus \(focusedId())")
     }
 }
