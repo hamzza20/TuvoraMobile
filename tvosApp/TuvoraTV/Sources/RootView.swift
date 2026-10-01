@@ -46,6 +46,27 @@ struct RootView: View {
         return TvPlayerSession(launch: launch, liveReresolve: nil)
     }
 
+    /// Simulator smoke hook: `-smokeAddM3uLater <seconds> <url> [-smokeAddM3uBackup <url>]` adds an M3U
+    /// playlist that long after the main screen opens — a playlist arriving (as a sync pull would)
+    /// while a screen such as the IPTV tab is already showing. Local test profiles only.
+    private static var smokeAddDone = false
+    private static func smokeAddPlaylistLater() {
+        let args = ProcessInfo.processInfo.arguments
+        guard !smokeAddDone, let i = args.firstIndex(of: "-smokeAddM3uLater"), i + 2 < args.count,
+              let delay = Double(args[i + 1]) else { return }
+        smokeAddDone = true
+        let backup = args.firstIndex(of: "-smokeAddM3uBackup").flatMap { $0 + 1 < args.count ? [args[$0 + 1]] : nil } ?? []
+        let form = TvPlaylistForm(
+            sourceType: "m3u_url", pasteLink: false, playlistUrl: "", server: "", username: "", password: "",
+            name: "Smoke M3U", userAgent: "", m3uUrl: args[i + 2], portalUrl: "", macAddress: "", stalkerUsername: "",
+            stalkerPassword: "", serialNumber: "", deviceId: "", sendDeviceId: true, epgUrl: "",
+            autoRefreshHours: TvPlaylistFormPolicy.shared.DEFAULT_AUTO_REFRESH_HOURS, backupUrls: backup)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            NSLog("SMOKE adding playlist url=%@", args[i + 2])
+            TvPlaylists.shared.add(form: form) { ok in NSLog("SMOKE add playlist ok=%d", ok.boolValue ? 1 : 0) }
+        }
+    }
+
     private var gate: some View {
         Group {
             switch screen {
@@ -63,6 +84,7 @@ struct RootView: View {
                     try? await Task.sleep(nanoseconds: 2_000_000_000)   // let the add-ons load first
                     smokeSession = session
                 }
+                if next == .main { Self.smokeAddPlaylistLater() }
                 screen = next
                 TvAppGraph.shared.screenChanged(name: "tv_gate_\(next)")
             }

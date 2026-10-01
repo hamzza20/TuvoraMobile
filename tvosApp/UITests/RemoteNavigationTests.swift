@@ -116,6 +116,16 @@ final class RemoteNavigationTests: XCTestCase {
         XCTAssertTrue(focusedId().hasPrefix("sidebar."), "LEFT from the category rail should open the sidebar; \(focusedId())")
     }
 
+    /// App Store build: add-ons and plugins are compiled out, so the rail has no Content & Discovery
+    /// (the add-on installer), and asking for it by launch hook lands on Account instead.
+    func testStoreBuildHasNoContentAndDiscovery() {
+        launch(["-smokeTab", "settings", "-smokeSettings", "discovery"])
+        XCTAssertTrue(waitForFocus(where: { $0.hasPrefix("settings.rail.") }), "settings rail never took focus; \(focusedId())")
+        XCTAssertTrue(app.buttons["settings.rail.integrations"].exists, "the rail did not render")
+        XCTAssertFalse(app.buttons["settings.rail.discovery"].exists, "Content & Discovery (add-on installer) is showing in the store build")
+        XCTAssertFalse(app.staticTexts["Install addon"].exists, "the add-on installer opened from the launch hook")
+    }
+
     // MARK: - Profiles
 
     /// "Manage Profiles ... there is no way to come out / cannot go back to the home screen."

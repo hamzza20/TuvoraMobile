@@ -1,5 +1,6 @@
 package com.nuvio.app.features.iptv
 
+import com.nuvio.app.features.iptv.content.IptvContentDb
 import com.nuvio.app.features.iptv.match.XtreamMatchIndex
 import com.nuvio.app.features.iptv.match.XtreamTmdbResolver
 import com.nuvio.app.features.library.LibraryRepository
@@ -12,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
@@ -63,6 +65,14 @@ object XtreamRepository : IptvCatalog {
     override val servedStreamTypes: StateFlow<Set<String>> = uiState
         .map { servedStreamTypesOf(it.accounts) }
         .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    /**
+     * Step 0.3: playlist key -> active backup index, for playlists NOT on their main server (drives the
+     * "Using backup server N" row note). Re-read when the accounts or any failover state change.
+     */
+    val activeServers: StateFlow<Map<String, Int>> = combine(uiState.map { it.accounts }, PlaylistServerFailover.version) { accounts, _ ->
+        PlaylistServerFailover.activeIndexes(accounts)
+    }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private var loaded = false
 
@@ -251,6 +261,8 @@ object XtreamRepository : IptvCatalog {
      */
     private fun addFileFromForm(input: XtreamFormInput, existingId: String?, onResult: (Boolean) -> Unit) {
         val account = m3uFileAccountFromForm(input, existingId = existingId, uniqueSuffix = TraktPlatformClock.nowEpochMs())
+            // Step 0: an edit keeps the playlist's (not-on-the-form) backup list.
+            ?.let { acc -> _uiState.value.accounts.firstOrNull { it.id == existingId }?.let { acc.copy(backupUrls = it.backupUrls) } ?: acc }
         if (account == null) {
             _uiState.update { it.copy(error = "Choose an M3U file to import") }
             onResult(false)
@@ -371,13 +383,15 @@ object XtreamRepository : IptvCatalog {
 
     /**
      * Checks the edited connection live, then swaps the account in place (keeping its
-     * position + enabled flag) and re-runs the discovery cycle. Saved items (library,
-     * watch progress, watched marks, recent channels) follow the account when it's still
-     * the same playlist; a completely different playlist purges them instead.
+     * position + enabled flag) and re-runs the discovery cycle.
+     *
+     * Step 0: the playlist KEEPS ITS ID whatever was edited (server, username, password, MAC, URL).
+     * The id is the permanent key everything the user made hangs off — library, progress, watched,
+     * recents, and the overlay's hashed hidden/pinned channel keys, which cannot be re-keyed at all —
+     * so re-deriving it from the new address (the old behaviour) orphaned all of it on a domain move.
      *
      * B60: a failed check never discards the edit — it is saved and the reason shown on the row
-     * ([PlaylistEditVerifyPolicy]). An id-changing edit is recorded as ONE v2 replace, not an update
-     * (which the reconcile dropped, snapping the edit back) — see [recordReplace].
+     * ([PlaylistEditVerifyPolicy]).
      */
     private fun verifyAndReplace(
         oldId: String,
@@ -394,8 +408,12 @@ object XtreamRepository : IptvCatalog {
         }
         // A credential/URL edit must not wipe the playlist options — but provider-specific
         // ones only carry when the edit still targets the same playlist (see carryPlaylistOptions).
-        val account = carryPlaylistOptions(old, candidate, keepCandidateFormOptions)
+        val account = carryPlaylistOptions(old, candidate, keepCandidateFormOptions).copy(id = oldId)
         val profileAtStart = currentProfileId
+        // Step 0.3: an edited server list (main or backups) starts over on the main server — the old
+        // active index may now name a different server or none. Before the verify below, which itself
+        // may legitimately land on a backup.
+        if (serverListChanged(old, account)) PlaylistServerFailover.reset(oldId)
         scope.launch {
             _uiState.update { it.copy(isValidating = true, error = null) }
             // Options-only edit (name/EPG/DNS/refresh) — nothing about how we reach the provider
@@ -413,40 +431,94 @@ object XtreamRepository : IptvCatalog {
             }
             _uiState.update { st ->
                 st.copy(
-                    // Replace in place; drop any pre-existing duplicate of the new identity.
-                    accounts = st.accounts
-                        .filterNot { it.id == account.id && it.id != oldId }
-                        .map { if (it.id == oldId) account else it },
+                    // Replace in place — same id (Step 0), so nothing else in the list moves.
+                    accounts = st.accounts.map { if (it.id == oldId) account else it },
                     isValidating = false,
-                    saveWarnings = (st.saveWarnings - oldId - account.id) +
+                    saveWarnings = (st.saveWarnings - oldId) +
                         (outcome.warning?.let { mapOf(account.id to it) } ?: emptyMap()),
                 )
             }
-            if (account.id != oldId) migrateSavedData(old, account)
-            // A changed M3U URL invalidates the old catalog rows — drop them.
-            if (old.sourceType == SOURCE_TYPE_M3U_URL && old.id != account.id) M3UClient.clear(old)
+            // A changed M3U URL invalidates the old catalog rows (same id, other source) — drop them.
+            if (old.sourceType == SOURCE_TYPE_M3U_URL && old.baseUrl != account.baseUrl) M3UClient.clear(old)
             // Re-run the discovery cycle: drop caches/URLs built with the old server/creds.
             XtreamItemRegistry.resetForProfile()
             XtreamHubRepository.resetForProfile()
             XtreamSearchIndex.resetForProfile()
             XtreamTmdbResolver.warmUp(listOf(account))
-            // B24 v2: durable "user edited this playlist" intent. An id change is ONE replace (B60).
-            recordPending {
-                if (account.id != oldId) it.recordReplace(oldId, account, base = old)
-                else it.recordUpdate(account, base = old)
-            }
+            // B24 v2: durable "user edited this playlist" intent — always an update now (Step 0: the
+            // id never changes on edit, so the B60 replace op is only replayed from older pending logs).
+            recordPending { it.recordUpdate(account, base = old) }
             persistAndReport(onResult)
         }
     }
 
     /**
-     * Same playlist (same server or same username, e.g. a panel that moved domains or
-     * rotated creds) -> rewrite saved xtream content ids to the new account id. A completely
-     * different playlist -> the old ids point at content that no longer exists, so drop them.
+     * Step 0 — adopts the server's playlist keys for a pulled set ([PlaylistKeyAdoption]) and executes
+     * every re-key it decides, BEFORE the pulled set is applied. Returns the rows as they should be
+     * applied. A no-op (no store touched) when every id already matches — so a repeated pull is free.
      */
-    private fun migrateSavedData(old: XtreamAccount, new: XtreamAccount) {
-        val oldPrefix = XtreamItemRegistry.accountPrefix(old.id)
-        val newPrefix = if (samePlaylist(old, new)) XtreamItemRegistry.accountPrefix(new.id) else null
+    internal fun adoptFromPull(profileId: Int, pulled: List<PulledPlaylist>): PlaylistKeyAdoption.Result {
+        val result = PlaylistKeyAdoption.resolve(pulled, _uiState.value.accounts)
+        adoptPlaylistKeys(profileId, result.rekeys)
+        return result
+    }
+
+    /**
+     * Step 0 — moves each local playlist id in [rekeys] onto its server key, once:
+     *  - the account (and its row warning) is renamed in place and stored locally — no push echo, the
+     *    pull that decided this already carries the key;
+     *  - the durable v2 pending log is rewritten onto the new id, so a not-yet-synced edit still lands;
+     *  - the prefix-keyed user data follows ([rekeySavedData] — the same prefix rewrite an id-changing
+     *    edit used to do; see it for the synced writes it produces);
+     *  - a file playlist's saved copy is moved to the new id's path (its storage is keyed by id);
+     *  - caches built under the old id are purged ([PlaylistRemovalOrigin.SyncPull]: caches only, never
+     *    user data) and rebuild under the new one.
+     * The overlay (hidden/pinned channels) cannot follow: its keys hash the old id (accepted, Step 0).
+     */
+    internal fun adoptPlaylistKeys(profileId: Int, rekeys: List<PlaylistKeyAdoption.Rekey>) {
+        if (rekeys.isEmpty() || profileId != currentProfileId) return
+        val map = rekeys.associate { it.oldId to it.newId }
+        _uiState.update { st ->
+            st.copy(
+                accounts = st.accounts.map { acc -> map[acc.id]?.let { acc.copy(id = it) } ?: acc },
+                saveWarnings = st.saveWarnings.mapKeys { (id, _) -> map[id] ?: id },
+            )
+        }
+        if (!damaged) {
+            val merged = mergePlaylistJson(json, lastStoredRaw, _uiState.value.accounts)
+            val wrote = runCatching {
+                persistWriteForTest?.invoke(profileId, merged) ?: XtreamAccountStorage.saveAccountsJson(profileId, merged)
+            }.isSuccess
+            if (wrote) lastStoredRaw = merged
+        }
+        val st = decodePlaylistSyncState(XtreamAccountStorage.loadPlaylistSyncStateJson(profileId))
+        if (st.pending.isNotEmpty()) {
+            XtreamAccountStorage.savePlaylistSyncStateJson(
+                profileId,
+                encodePlaylistSyncState(st.copy(pending = PlaylistKeyAdoption.rewritePending(st.pending, rekeys))),
+            )
+        }
+        for (rekey in rekeys) {
+            runCatching { rekeySavedData(rekey.oldId, rekey.newId) }
+            runCatching { moveM3UFile(rekey.oldId, rekey.newId) }
+        }
+        purgeRemovedPlaylists(rekeys.map { it.oldId }, PlaylistRemovalOrigin.SyncPull)
+    }
+
+    /**
+     * Rewrites every saved `xtream:{oldId}:…` id to `xtream:{newId}:…` — library (incl. live
+     * favourites), watch progress, watched marks, recent channels. Synced writes this produces, per
+     * store (each is the repository's own migrateIdPrefix, unchanged from the old edit path):
+     *  - library: one delta push — upsert of every moved item under the new id + delete of the old ids;
+     *  - watch progress: a delete of every old entry + a scrobble (upsert) of every moved entry;
+     *  - watched: a delete of every old mark + an upsert (pushMarks) of every moved mark;
+     *  - recents: device-local, nothing synced.
+     * Nothing is dropped: every entry under the old prefix is re-written, never deleted without its
+     * replacement. A store with nothing under the old prefix makes no write at all.
+     */
+    private fun rekeySavedData(oldId: String, newId: String) {
+        val oldPrefix = XtreamItemRegistry.accountPrefix(oldId)
+        val newPrefix = XtreamItemRegistry.accountPrefix(newId)
         LibraryRepository.migrateIdPrefix(oldPrefix, newPrefix)
         WatchProgressRepository.migrateIdPrefix(oldPrefix, newPrefix)
         WatchedRepository.migrateIdPrefix(oldPrefix, newPrefix)
@@ -482,31 +554,77 @@ object XtreamRepository : IptvCatalog {
     }
 
     fun remove(id: String) {
-        val removed = _uiState.value.accounts.firstOrNull { it.id == id }
         recordPending { ops -> ops.recordDelete(id) }
         _uiState.update { it.copy(accounts = it.accounts.filterNot { acc -> acc.id == id }, saveWarnings = it.saveWarnings - id) }
-        // Caches keyed by this id leak otherwise (match db rows survive forever); saved
-        // refs would be dead ids (phantom favorites / continue-watching rows).
-        XtreamItemRegistry.resetForProfile()
-        XtreamHubRepository.resetForProfile()
-        XtreamSearchIndex.resetForProfile()
-        scope.launch { runCatching { XtreamMatchIndex.purge(id) } }
-        com.nuvio.app.features.iptv.overlay.IptvOverlayRepository.onPlaylistRemoved(id)
-        scope.launch { runCatching { com.nuvio.app.features.epg.EpgMirrorDb.purgeProvider(id) } }
-        val prefix = XtreamItemRegistry.accountPrefix(id)
-        LibraryRepository.migrateIdPrefix(prefix, null)
-        WatchProgressRepository.migrateIdPrefix(prefix, null)
-        WatchedRepository.migrateIdPrefix(prefix, null)
-        XtreamLiveRecents.migrateIdPrefix(prefix, null)
-        // Free the parsed catalog rows + EPG for a removed M3U playlist (can be hundreds of MB of DB),
-        // and drop a file playlist's saved local copy. Stalker rides the same clear: its bulk EPG
-        // now lives in the same per-playlist tables (P5 streamed ingest), and clearing a playlist
-        // with no catalog rows is a no-op for the other tables.
-        if (removed != null && (removed.sourceType.isM3u() || removed.sourceType == SOURCE_TYPE_STALKER)) scope.launch {
-            M3UClient.clear(removed)
-            if (removed.sourceType == SOURCE_TYPE_M3U_FILE) deleteM3UFile(removed.id)
-        }
+        // Everything keyed by this id leaks otherwise: caches and indexes sit on disk forever (a
+        // parsed M3U catalog can be hundreds of MB), and saved refs would be dead ids (phantom
+        // favorites / continue-watching rows). What goes is decided by PlaylistRemovalCleanup.
+        purgeRemovedPlaylists(listOf(id), PlaylistRemovalOrigin.UserDelete)
         persist()
+    }
+
+    /**
+     * Executes [PlaylistRemovalCleanup]'s plan for playlists that left this profile's list. Every step
+     * is isolated — one store failing never stops the rest. In-memory and prefs steps run on the
+     * caller's thread (the same one that just mutated the account list); the disk purges run on
+     * [scope] so a large catalog delete never blocks it.
+     */
+    private fun purgeRemovedPlaylists(ids: List<String>, origin: PlaylistRemovalOrigin) {
+        if (ids.isEmpty()) return
+        val plan = PlaylistRemovalCleanup.plan(origin)
+        val profileId = currentProfileId
+        // Session caches are shared across playlists — one reset covers every removed id.
+        if (PlaylistRemovalTarget.SessionCaches in plan) runCatching {
+            XtreamItemRegistry.resetForProfile()
+            XtreamHubRepository.resetForProfile()
+            XtreamSearchIndex.resetForProfile()
+        }
+        for (id in ids) {
+            val prefix = XtreamItemRegistry.accountPrefix(id)
+            for (target in plan) runCatching {
+                when (target) {
+                    PlaylistRemovalTarget.RefreshStamp -> IptvRefreshScheduler.forget(profileId, id)
+                    PlaylistRemovalTarget.CatchUp -> CatchUpEpgRepository.forget(id)
+                    PlaylistRemovalTarget.ServerFailover -> PlaylistServerFailover.forget(profileId, id)
+                    PlaylistRemovalTarget.HubSelection -> forgetHubSelection(profileId, id)
+                    PlaylistRemovalTarget.Overlay ->
+                        com.nuvio.app.features.iptv.overlay.IptvOverlayRepository.onPlaylistRemoved(id)
+                    PlaylistRemovalTarget.LiveChannels -> XtreamLiveRecents.migrateIdPrefix(prefix, null)
+                    PlaylistRemovalTarget.SavedRefs -> {
+                        // Live favourites are library entries here, so they ride this step.
+                        LibraryRepository.migrateIdPrefix(prefix, null)
+                        WatchProgressRepository.migrateIdPrefix(prefix, null)
+                        WatchedRepository.migrateIdPrefix(prefix, null)
+                    }
+                    // On disk — below, off the caller's thread. SessionCaches ran once above.
+                    PlaylistRemovalTarget.ContentDb, PlaylistRemovalTarget.MatchIndex,
+                    PlaylistRemovalTarget.EpgMirror, PlaylistRemovalTarget.M3uFileCopy,
+                    PlaylistRemovalTarget.SessionCaches -> Unit
+                }
+            }
+            scope.launch {
+                for (target in plan) runCatching {
+                    when (target) {
+                        // Every source type: Xtream fills the per-playlist EPG tables too (xmltv
+                        // store lane + catch-up refills), not just M3U/Stalker catalogs.
+                        PlaylistRemovalTarget.ContentDb -> IptvContentDb.clear(id)
+                        PlaylistRemovalTarget.MatchIndex -> XtreamMatchIndex.purge(id)
+                        PlaylistRemovalTarget.EpgMirror ->
+                            com.nuvio.app.features.epg.EpgMirrorRepository.purgeProvider(id)
+                        // No-op unless this was a file playlist with a saved copy.
+                        PlaylistRemovalTarget.M3uFileCopy -> deleteM3UFile(id)
+                        else -> Unit
+                    }
+                }
+            }
+        }
+    }
+
+    /** Forget the hub's remembered provider when it is the removed playlist (keeps the tab). */
+    private fun forgetHubSelection(profileId: Int, removedId: String) {
+        val stored = parseHubSelection(XtreamAccountStorage.loadHubSelectionJson(profileId)) ?: return
+        if (!PlaylistRemovalCleanup.dropsHubSelection(stored.accountId, removedId)) return
+        XtreamAccountStorage.saveHubSelectionJson(profileId, encodeHubSelection(stored.copy(accountId = null)))
     }
 
     /** Drop credential-bearing in-memory state after sign-out or account deletion. */
@@ -533,6 +651,12 @@ object XtreamRepository : IptvCatalog {
         currentProfileId = profileId
         val before = _uiState.value.accounts
         _uiState.update { it.copy(accounts = accounts) }
+        // Step 0.3: a server list changed on another device restarts this device on the main server.
+        val beforeById = before.associateBy { it.id }
+        for (acc in accounts) {
+            val prior = beforeById[acc.id] ?: continue
+            if (serverListChanged(prior, acc)) PlaylistServerFailover.reset(acc.id)
+        }
         // The server carries only known columns, so a pull's blob has no unknown keys to preserve.
         val encoded = json.encodeToString(accounts)
         XtreamAccountStorage.saveAccountsJson(profileId, encoded)
@@ -543,12 +667,12 @@ object XtreamRepository : IptvCatalog {
             XtreamItemRegistry.resetForProfile()
             XtreamHubRepository.resetForProfile()
             XtreamSearchIndex.resetForProfile()
-            val remaining = accounts.map { it.id }.toSet()
-            before.filter { it.id !in remaining }
-                .forEach { gone ->
-                    scope.launch { runCatching { XtreamMatchIndex.purge(gone.id) } }
-                    scope.launch { runCatching { com.nuvio.app.features.epg.EpgMirrorDb.purgeProvider(gone.id) } }
-                }
+            // Deleted on another device: the same cache purge as a local delete, but never the user's
+            // own data — a pull can be transient (see PlaylistRemovalOrigin.SyncPull).
+            purgeRemovedPlaylists(
+                PlaylistRemovalCleanup.removedIds(before.map { it.id }, accounts.map { it.id }),
+                PlaylistRemovalOrigin.SyncPull,
+            )
         }
         // An account added on another device should index here before its first play.
         XtreamTmdbResolver.warmUp(accounts)
@@ -661,8 +785,15 @@ internal fun carryPlaylistOptions(
             else -> null
         },
         categorySelections = if (same) old.categorySelections else CategorySelections(),
+        // Step 0.3: the full form shows the backup list, so its candidate wins; every other edit
+        // path (paste-URL / manual fields) doesn't carry it and must not clear it.
+        backupUrls = if (keepCandidateFormOptions) candidate.backupUrls else old.backupUrls,
     )
 }
+
+/** Step 0.3: whether an edit/pull changed which servers a playlist is reached on (main or backups). */
+internal fun serverListChanged(old: XtreamAccount, new: XtreamAccount): Boolean =
+    old.baseUrl != new.baseUrl || old.backupUrls != new.backupUrls
 
 /** Stremio content types the enabled accounts serve through the IPTV source lane (live is not a VOD source). */
 internal fun servedStreamTypesOf(accounts: List<XtreamAccount>): Set<String> =

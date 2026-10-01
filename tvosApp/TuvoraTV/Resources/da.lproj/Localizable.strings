@@ -95,12 +95,14 @@
 "Could not complete QR sign in" = "Kunne ikke fuldføre QR-login";
 "Could not start sign-in." = "Kunne ikke starte login.";
 "Could not verify PIN. Try again." = "Kunne ikke bekræfte PIN. Prøv igen.";
+"Couldn't load Trakt reviews right now." = "Kunne ikke indlæse Trakt-anmeldelser lige nu.";
 "Couldn't play this cloud file." = "Kunne ikke afspille denne cloud-fil.";
 "Create" = "Opret";
 "Create List" = "Opret liste";
 "Create Profile" = "Opret profil";
 "Create your own Client ID at anime-skip.com/account/settings" = "Opret dit eget Client ID på anime-skip.com/account/settings";
 "Creating…" = "Opretter…";
+"Creator and Cast" = "Skabere og medvirkende";
 "Current PIN is incorrect." = "Den nuværende PIN er forkert.";
 "Custom" = "Brugerdefineret";
 "Custom avatar URLs can be configured from the Tuvora web panel." = "Brugerdefinerede avatar-URL'er kan konfigureres fra Tuvora-webpanelet.";
@@ -137,6 +139,7 @@
 "Enter at least 2 characters" = "Indtast mindst 2 tegn";
 "Enter your %@ API key." = "Indtast din %1$@ API-nøgle.";
 "Enter your Torbox API key." = "Indtast din Torbox API-nøgle.";
+"Episode ratings are unavailable." = "Episodebedømmelser er ikke tilgængelige.";
 "Episode titles, overviews, thumbnails, and runtime from TMDB" = "Afsnitstitel, resumé, miniaturebilleder og varighed fra TMDB";
 "Episodes" = "Afsnit";
 "Experimental cloud account sources" = "Eksperimentelle cloud-kontokilder";
@@ -148,6 +151,7 @@
 "Fetch skip timestamps from anime-skip.com" = "Hent spring-tidsstempler fra anime-skip.com";
 "File" = "Fil";
 "Files" = "Filer";
+"Filmography" = "Filmografi";
 "Filter sources by video codec." = "Filtrer kilder efter videocodec.";
 "Filter streams by file size." = "Filtrer streams efter filstørrelse.";
 "Filters & Sorting" = "Filtre & Sortering";
@@ -190,6 +194,7 @@
 "List" = "Liste";
 "List name is required" = "Listenavn er påkrævet";
 "Load more" = "Indlæs mere";
+"Loading episode ratings..." = "Indlæser episodebedømmelser...";
 "Loading..." = "Indlæser...";
 "Loading…" = "Indlæser…";
 "Login approved. Finishing sign in…" = "Login godkendt. Afslutter login…";
@@ -210,12 +215,16 @@
 "Modern View" = "Moderne visning";
 "More Like This" = "Mere som dette";
 "More Like This source" = "Mere som dette-kilde";
+"More like this" = "Mere som dette";
 "Move Down" = "Flyt ned";
 "Move Up" = "Flyt op";
+"Move down" = "Flyt ned";
+"Move up" = "Flyt op";
 "Movie" = "Film";
 "Movies" = "Film";
 "Name" = "Navn";
 "Name template" = "Navnskabelon";
+"Network" = "Netværk";
 "Networks" = "Netværk";
 "Networks with logos from TMDB" = "Netværk med logoer fra TMDB";
 "Next Episode" = "Næste episode";
@@ -223,6 +232,7 @@
 "No %@ in this list" = "Ingen %1$@ på denne liste";
 "No %@ yet" = "Ingen %1$@ endnu";
 "No Results" = "Ingen resultater";
+"No Trakt reviews available yet." = "Ingen Trakt-anmeldelser tilgængelige endnu.";
 "No addons installed. Add one to get started." = "Ingen addons installeret. Tilføj en for at komme i gang.";
 "No cloud account connected" = "Ingen cloud-konto tilsluttet";
 "No content found" = "Intet indhold fundet";
@@ -266,6 +276,7 @@
 "Privacy" = "Privatliv";
 "Privacy Policy" = "Privatlivspolitik";
 "Private" = "Privat";
+"Production" = "Produktion";
 "Production companies from TMDB" = "Produktionsselskaber fra TMDB";
 "Productions" = "Produktioner";
 "Profile Options" = "Profilindstillinger";
@@ -276,6 +287,7 @@
 "QR login code" = "QR-loginkode";
 "QR login expired. Generate a new code." = "QR-login udløbet. Generér en ny kode.";
 "QR unavailable. Refresh to retry." = "QR utilgængelig. Opdater for at prøve igen.";
+"Ratings" = "Bedømmelser";
 "Ready to play" = "Klar til afspilning";
 "Recent" = "Nylig";
 "Recent searches" = "Seneste søgninger";
@@ -296,6 +308,8 @@
 "Restore default source formatting." = "Gendan standardformatering af kilder.";
 "Resume" = "Genoptag";
 "Retry" = "Prøv igen";
+"Review" = "Anmeldelse";
+"Reviews from Trakt" = "Anmeldelser fra Trakt";
 "Runtime, status, country, and language from TMDB" = "Varighed, status, land og sprog fra TMDB";
 "Save" = "Gem";
 "Save changes" = "Gem ændringer";
@@ -305,6 +319,7 @@
 "Search" = "Søg";
 "Search failed" = "Søgning mislykkedes";
 "Search movies & series" = "Søg efter film & serier";
+"Season %1$d - %2$d episodes" = "Sæson %1$d - %2$d episoder";
 "See All" = "Se alle";
 "See all" = "Se alle";
 "Select" = "Vælg";
@@ -338,10 +353,12 @@
 "Size range" = "Størrelsesinterval";
 "Skip Intro" = "Spring intro over";
 "Smallest first" = "Mindst først";
+"Something went wrong" = "Noget gik galt";
 "Sort" = "Sorter";
 "Sort results" = "Sortér resultater";
 "Source code and license terms are available in the project repository. Licensed under the GNU General Public License v3.0." = "Kildekode og licensvilkår er tilgængelige i projektets repository. Licenseret under GNU General Public License v3.0.";
 "Sources" = "Kilder";
+"Spoiler review. Press OK to reveal." = "Spoiler-anmeldelse. Tryk OK for at afsløre.";
 "Sports" = "Sport";
 "Start Searching" = "Begynd at søge";
 "Start from beginning" = "Start fra begyndelsen";

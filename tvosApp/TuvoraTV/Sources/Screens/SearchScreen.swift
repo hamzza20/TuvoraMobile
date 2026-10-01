@@ -95,7 +95,7 @@ struct SearchScreen: View {
         case .loading:
             ForEach(0..<2, id: \.self) { _ in SkeletonRow() }
         case .noCatalogs:
-            SearchErrorState(message: "No searchable catalogs found in installed addons") { retry() }
+            SearchErrorState(message: StoreCopy.noSearchCatalogsMessage) { retry() }
         case .error:
             SearchErrorState(message: results.errorMessage ?? "Search failed") { retry() }
         case .noResults:

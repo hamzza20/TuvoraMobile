@@ -27,6 +27,13 @@ object TvIptvBrowse {
         XtreamHubRepository.selectSection(section)
     }
 
+    /**
+     * Keeps the hub in step with the playlist store while the IPTV tab is on screen — the SwiftUI hub
+     * runs it in a `.task`, so it stops when the tab goes away (the phone's `repeatOnLifecycle`).
+     * Event-driven and local: it never polls; only a newly shown provider fetches anything.
+     */
+    suspend fun followPlaylists() = XtreamHubRepository.followAccounts()
+
     fun selectPlaylist(accountId: String) = XtreamHubRepository.selectAccount(accountId)
     fun loadCategory(categoryId: String) = XtreamHubRepository.loadCategory(categoryId)
     fun loadMore(categoryId: String) = XtreamHubRepository.loadMore(categoryId)

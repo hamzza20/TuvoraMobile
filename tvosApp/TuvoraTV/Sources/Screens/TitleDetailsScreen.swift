@@ -442,7 +442,7 @@ struct StreamPickerScreen: View {
             if streams?.isAnyLoading ?? true {
                 VStack(spacing: dp(12)) { ForEach(0..<5, id: \.self) { _ in NuvioShimmer().frame(height: dp(84)) } }
             } else {
-                NuvioStateMessage(title: "No sources found", message: "None of your add-ons or playlists have this title.")
+                NuvioStateMessage(title: "No sources found", message: StoreCopy.noSourcesMessage)
             }
         } else {
             ScrollView(.vertical, showsIndicators: false) {

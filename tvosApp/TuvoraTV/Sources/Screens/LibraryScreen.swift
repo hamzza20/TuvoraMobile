@@ -10,16 +10,18 @@ struct LibraryScreen: View {
     @Environment(\.nuvio) private var colors
     @State private var view: TvLibraryView?
     @State private var details: PreviewBox?
-    /// NuvioTV LibraryViewMode (Saved / Cloud). Smoke hook: `-smokeLibraryCloud`.
-    @State private var cloud = ProcessInfo.processInfo.arguments.contains("-smokeLibraryCloud")
+    /// NuvioTV LibraryViewMode (Saved / Cloud). Smoke hook: `-smokeLibraryCloud`. Cloud is the debrid
+    /// cloud library, so store builds (AppFeaturePolicy.debridEnabled false) are Saved only.
+    private static let cloudAvailable = AppFeaturePolicy.shared.debridEnabled
+    @State private var cloud = cloudAvailable && ProcessInfo.processInfo.arguments.contains("-smokeLibraryCloud")
     @State private var managingLists = ProcessInfo.processInfo.arguments.contains("-smokeManageLists")
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: dp(16)) {
                 header
-                viewModeRow
-                if cloud {
+                if Self.cloudAvailable { viewModeRow }
+                if cloud && Self.cloudAvailable {
                     CloudLibraryView()
                 } else if let view {
                     selectors(view).focusSection()
@@ -84,7 +86,7 @@ struct LibraryScreen: View {
             Text("Library").font(NuvioType.headlineMedium).kerning(dp(0.5)).foregroundStyle(colors.textPrimary)
             Spacer()
             if let view {
-                Text(cloud ? "CLOUD" : sourceLabel(view.sourceMode)).font(NuvioType.labelLarge).kerning(dp(2)).foregroundStyle(colors.textTertiary)
+                Text(cloud && Self.cloudAvailable ? "CLOUD" : sourceLabel(view.sourceMode)).font(NuvioType.labelLarge).kerning(dp(2)).foregroundStyle(colors.textTertiary)
             }
         }
     }
