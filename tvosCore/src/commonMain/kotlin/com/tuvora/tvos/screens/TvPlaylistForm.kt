@@ -34,6 +34,8 @@ data class TvPlaylistForm(
     val sendDeviceId: Boolean,
     val epgUrl: String,
     val autoRefreshHours: Int,
+    /** Step 0.3: backup server rows as typed, priority order (Xtream / M3U link / Stalker only). */
+    val backupUrls: List<String>,
 )
 
 /**
@@ -52,14 +54,15 @@ object TvPlaylistFormPolicy {
         sourceType = sourceType, pasteLink = false, playlistUrl = "", server = "", username = "",
         password = "", name = "", userAgent = "", m3uUrl = "", portalUrl = "", macAddress = "",
         stalkerUsername = "", stalkerPassword = "", serialNumber = "", deviceId = "", sendDeviceId = true,
-        epgUrl = "", autoRefreshHours = DEFAULT_AUTO_REFRESH_HOURS,
+        epgUrl = "", autoRefreshHours = DEFAULT_AUTO_REFRESH_HOURS, backupUrls = emptyList(),
     )
 
     /**
      * Whether Add/Save can be pressed. Apple TV has no document picker, so an M3U *file* playlist can
-     * never be submitted here (NuvioTV shows the same "no file picker" note when none resolves).
+     * never be submitted here (NuvioTV shows the same "no file picker" note when none resolves). A
+     * backup row with a problem blocks saving, as on the phone and NuvioTV.
      */
-    fun canSubmit(form: TvPlaylistForm): Boolean = when (form.sourceType) {
+    fun canSubmit(form: TvPlaylistForm): Boolean = TvBackupServers.isValid(form) && when (form.sourceType) {
         SOURCE_TYPE_M3U_URL -> form.m3uUrl.isNotBlank()
         SOURCE_TYPE_M3U_FILE -> false
         SOURCE_TYPE_STALKER -> form.portalUrl.isNotBlank() && form.macAddress.isNotBlank()
@@ -103,6 +106,8 @@ object TvPlaylistFormPolicy {
             serialNumber = form.serialNumber.trim().ifEmpty { null },
             deviceId = form.deviceId.trim().ifEmpty { null },
             sendDeviceId = form.sendDeviceId,
+            // Raw rows: the repository validates + normalizes them (BackupServerValidation) on save.
+            backupUrls = if (TvBackupServers.supports(form.sourceType)) form.backupUrls else emptyList(),
         )
     }
 
@@ -113,6 +118,7 @@ object TvPlaylistFormPolicy {
             userAgent = account.userAgent.orEmpty(),
             epgUrl = account.epgUrl.orEmpty(),
             autoRefreshHours = account.autoRefreshHours,
+            backupUrls = account.backupUrls,
         )
         return when (account.sourceType) {
             SOURCE_TYPE_M3U_URL -> base.copy(m3uUrl = account.baseUrl)
