@@ -125,11 +125,14 @@ struct CatalogRowSection: View {
 /// Continue Watching and the catalog rows (posters ×1.35), 32dp apart.
 struct ClassicHomeView: View {
     let rows: HomeUiState?
+    /// Catalog rows and collections in the profile's order (TvHomeCollectionsPolicy).
+    let entries: [TvHomeEntry]
     let continueWatching: [TvCwItem]
     let showHero: Bool
     let cwStyle: CwStyle
     let onOpenCw: (TvCwItem) -> Void
     let onOpen: (MetaPreview) -> Void
+    let onOpenFolder: (FolderTarget) -> Void
     @Environment(\.nuvio) private var colors
     @State private var active: MetaPreview?
     @State private var heroFocused = true
@@ -154,12 +157,16 @@ struct ClassicHomeView: View {
                     if !continueWatching.isEmpty {
                         ContinueWatchingRow(items: continueWatching, style: cwStyle, size: cwStyle.classicSize, header: .classic, onOpen: onOpenCw)
                     }
-                    HomeRowsStates(rows: rows, hasContinueWatching: !continueWatching.isEmpty)
-                    if let rows {
-                        ForEach(rows.sections, id: \.key) { section in
-                            CatalogRowSection(section: section, cardSize: CGSize(width: dp(NuvioCardSize.posterWidthDp * 1.35),
-                                                                                  height: dp(NuvioCardSize.posterWidthDp * 1.5 * 1.35)),
-                                              onOpen: onOpen)
+                    HomeRowsStates(rows: rows, hasContinueWatching: !continueWatching.isEmpty, hasCollections: entries.contains { $0.collection != nil })
+                    if rows != nil {
+                        ForEach(entries, id: \.key) { entry in
+                            if let section = entry.section {
+                                CatalogRowSection(section: section, cardSize: CGSize(width: dp(NuvioCardSize.posterWidthDp * 1.35),
+                                                                                      height: dp(NuvioCardSize.posterWidthDp * 1.5 * 1.35)),
+                                                  onOpen: onOpen)
+                            } else if let collection = entry.collection {
+                                CollectionRow(collection: collection, style: .classic, onOpen: onOpenFolder)
+                            }
                         }
                     }
                 }
@@ -294,11 +301,13 @@ private struct HeroCarousel: View {
 /// at 3 rows (2 for posters ≤104dp) with a "See All" card that opens the whole catalog.
 struct GridHomeView: View {
     let rows: HomeUiState?
+    let entries: [TvHomeEntry]
     let continueWatching: [TvCwItem]
     let showHero: Bool
     let cwStyle: CwStyle
     let onOpenCw: (TvCwItem) -> Void
     let onOpen: (MetaPreview) -> Void
+    let onOpenFolder: (FolderTarget) -> Void
     @Environment(\.nuvio) private var colors
     @State private var seeAll: HomeCatalogSectionBox?
     @State private var active: MetaPreview?
@@ -326,10 +335,14 @@ struct GridHomeView: View {
                         if !continueWatching.isEmpty {
                             ContinueWatchingRow(items: continueWatching, style: cwStyle, size: cwStyle.gridSize, header: .grid, onOpen: onOpenCw)
                         }
-                        HomeRowsStates(rows: rows, hasContinueWatching: !continueWatching.isEmpty)
-                        if let rows {
-                            ForEach(rows.sections, id: \.key) { section in
-                                gridSection(section, columns: columns, maxItems: columns * rowsPerSection, card: card)
+                        HomeRowsStates(rows: rows, hasContinueWatching: !continueWatching.isEmpty, hasCollections: entries.contains { $0.collection != nil })
+                        if rows != nil {
+                            ForEach(entries, id: \.key) { entry in
+                                if let section = entry.section {
+                                    gridSection(section, columns: columns, maxItems: columns * rowsPerSection, card: card)
+                                } else if let collection = entry.collection {
+                                    CollectionGridSection(collection: collection, columns: columns, card: card, onOpen: onOpenFolder)
+                                }
                             }
                         }
                     }
@@ -446,6 +459,7 @@ private struct CatalogSeeAllScreen: View {
 private struct HomeRowsStates: View {
     let rows: HomeUiState?
     let hasContinueWatching: Bool
+    var hasCollections = false
 
     var body: some View {
         if let rows {
@@ -456,7 +470,7 @@ private struct HomeRowsStates: View {
                     }
                     .padding(.leading, dp(48))
                 }
-            } else if rows.sections.isEmpty && !hasContinueWatching {
+            } else if rows.sections.isEmpty && !hasContinueWatching && !hasCollections {
                 NuvioStateMessage(title: StoreCopy.emptyHomeTitle,
                                   message: rows.errorMessage ?? StoreCopy.emptyHomeMessage)
                     .frame(height: dp(200))

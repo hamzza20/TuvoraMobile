@@ -34,6 +34,8 @@ struct HubChip: View {
     let title: String
     var trailingIcon: String? = nil
     let selected: Bool
+    /// Called when the chip takes focus (tab rows that select on focus, like NuvioTV's TabRow).
+    var onFocus: (() -> Void)? = nil
     let action: () -> Void
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
@@ -56,6 +58,7 @@ struct HubChip: View {
         .buttonStyle(PlainNoChromeButtonStyle())
         .focused($focused)
         .reportsFocus(focused)
+        .onChange(of: focused) { _, now in if now { onFocus?() } }
     }
 }
 
