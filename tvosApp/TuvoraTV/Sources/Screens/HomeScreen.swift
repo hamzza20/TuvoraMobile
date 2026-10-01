@@ -13,6 +13,10 @@ struct HomeScreen: View {
     @State private var pendingHero: HeroContent?
     @State private var details: PreviewBox?
     @State private var streamTarget: TvCwTargetBox?
+    /// Home rows in the profile's order: catalogs and collections (TvCollections / TvHomeCollectionsPolicy).
+    @State private var entries: [TvHomeEntry] = []
+    @State private var openFolder: FolderTarget?
+    @State private var smokeFolderOpened = false
     /// Settings → Layout (NuvioTV "Show Hero Section" / "Show Continue Watching").
     @AppStorage(NuvioLayoutPrefs.showHeroKey) private var showHero = true
     @AppStorage(NuvioLayoutPrefs.cwEnabledKey) private var cwEnabled = true
@@ -23,7 +27,9 @@ struct HomeScreen: View {
 
     /// Simulator smoke hooks: `-smokeHomeLayout <modern|grid|classic>`, `-smokeCwStyle <card|wide|poster>`,
     /// `-smokeShowHero <true|false>`
-    /// write the Settings → Layout preferences before the screen reads them.
+    /// write the Settings → Layout preferences before the screen reads them. `-smokeCollections` shows
+    /// in-memory sample collections (never saved or synced); `-smokeOpenFolder <n>` opens the first folder
+    /// of the n-th collection row.
     private static let applySmokePrefs: Void = {
         let args = ProcessInfo.processInfo.arguments
         for (flag, key) in [("-smokeHomeLayout", NuvioLayoutPrefs.homeLayoutKey), ("-smokeCwStyle", NuvioLayoutPrefs.cwStyleKey)] {
@@ -34,6 +40,7 @@ struct HomeScreen: View {
         if let i = args.firstIndex(of: "-smokeShowHero"), i + 1 < args.count {
             UserDefaults.standard.set(args[i + 1] != "false", forKey: NuvioLayoutPrefs.showHeroKey)
         }
+        if args.contains("-smokeCollections") { TvCollections.shared.enableSmokeSample() }
     }()
     init() { _ = Self.applySmokePrefs }
 
@@ -44,6 +51,10 @@ struct HomeScreen: View {
             for await next in TvHome.shared.rows { rows = next; if hero == nil, let first = next.heroItems.first ?? next.sections.first?.items.first { hero = HeroContent(preview: first) } }
         }
         .task { for await next in TvHome.shared.continueWatching { continueWatching = next } }
+        .task {
+            TvCollections.shared.start()
+            for await next in TvCollections.shared.entries { entries = next; smokeOpenFolder() }
+        }
         .task(id: pendingHero) {
             // Hero changes are debounced 450 ms (ModernHomeHero), so fast scrolling doesn't strobe.
             guard let pending = pendingHero else { return }
@@ -56,6 +67,18 @@ struct HomeScreen: View {
         .fullScreenCover(item: $streamTarget) { box in
             StreamPickerScreen(meta: box.target.meta, video: box.target.video).environmentObject(playback).environment(\.nuvio, colors)
         }
+        .fullScreenCover(item: $openFolder) { target in
+            CollectionFolderScreen(target: target).environmentObject(playback).environment(\.nuvio, colors)
+        }
+    }
+
+    private func smokeOpenFolder() {
+        let args = ProcessInfo.processInfo.arguments
+        guard !smokeFolderOpened, let i = args.firstIndex(of: "-smokeOpenFolder"), i + 1 < args.count, let n = Int(args[i + 1]) else { return }
+        let collections = entries.compactMap(\.collection)
+        guard n < collections.count, let folder = collections[n].folders.first else { return }
+        smokeFolderOpened = true
+        openFolder = FolderTarget(collectionId: collections[n].id, folderId: folder.id)
     }
 
     /// NuvioTV HomeScreen.kt: CLASSIC → ClassicHomeRoute, GRID → GridHomeRoute, MODERN → ModernHomeRoute.
@@ -63,11 +86,11 @@ struct HomeScreen: View {
     private var layoutBody: some View {
         switch homeLayout {
         case "classic":
-            ClassicHomeView(rows: rows, continueWatching: cwEnabled ? continueWatching : [], showHero: showHero, cwStyle: cwStyle,
-                            onOpenCw: open, onOpen: { details = PreviewBox(preview: $0) })
+            ClassicHomeView(rows: rows, entries: entries, continueWatching: cwEnabled ? continueWatching : [], showHero: showHero, cwStyle: cwStyle,
+                            onOpenCw: open, onOpen: { details = PreviewBox(preview: $0) }, onOpenFolder: { openFolder = $0 })
         case "grid":
-            GridHomeView(rows: rows, continueWatching: cwEnabled ? continueWatching : [], showHero: showHero, cwStyle: cwStyle,
-                         onOpenCw: open, onOpen: { details = PreviewBox(preview: $0) })
+            GridHomeView(rows: rows, entries: entries, continueWatching: cwEnabled ? continueWatching : [], showHero: showHero, cwStyle: cwStyle,
+                         onOpenCw: open, onOpen: { details = PreviewBox(preview: $0) }, onOpenFolder: { openFolder = $0 })
         default:
             modernBody
         }
@@ -103,10 +126,15 @@ struct HomeScreen: View {
                     if rows.sections.isEmpty && rows.isLoading {
                         ForEach(0..<2, id: \.self) { _ in shimmerRow }
                     }
-                    ForEach(rows.sections, id: \.key) { section in
-                        CatalogRow(section: section, onFocus: { pendingHero = HeroContent(preview: $0) }) { details = PreviewBox(preview: $0) }
+                    ForEach(entries, id: \.key) { entry in
+                        if let section = entry.section {
+                            CatalogRow(section: section, onFocus: { pendingHero = HeroContent(preview: $0) }) { details = PreviewBox(preview: $0) }
+                        } else if let collection = entry.collection {
+                            CollectionRow(collection: collection, style: .modern,
+                                          onFocus: { pendingHero = HeroContent(collection: collection, folder: $0) }) { openFolder = $0 }
+                        }
                     }
-                    if rows.sections.isEmpty && !rows.isLoading && continueWatching.isEmpty {
+                    if entries.isEmpty && !rows.isLoading && continueWatching.isEmpty {
                         NuvioStateMessage(title: StoreCopy.emptyHomeTitle,
                                           message: rows.errorMessage ?? StoreCopy.emptyHomeMessage)
                             .frame(height: dp(200))
