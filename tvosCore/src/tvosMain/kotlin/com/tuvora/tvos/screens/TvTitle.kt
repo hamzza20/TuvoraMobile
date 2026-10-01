@@ -6,11 +6,13 @@ import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaDetailsUiState
+import com.nuvio.app.features.details.MetaExternalRating
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.seriesPrimaryAction
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.toLibraryItem
+import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.player.PlayerLaunch
@@ -40,6 +42,18 @@ object TvTitle {
     val streams: StateFlow<StreamsUiState> get() = StreamsRepository.uiState
 
     fun load(type: String, id: String) = MetaDetailsRepository.load(type, id)
+
+    /** MDBList ratings are on (toggle plus an API key or a connected account): the hero shows them. */
+    fun mdbListActive(): Boolean = MdbListSettingsRepository.snapshot().isActive
+
+    /** Simulator smoke hook (`-smokeMdbRatings`): sample MDBList scores, since the simulator has no API key. */
+    fun smokeWithMdbRatings(meta: MetaDetails): MetaDetails = meta.copy(
+        externalRatings = listOf(
+            MetaExternalRating("imdb", 7.8), MetaExternalRating("tmdb", 78.0), MetaExternalRating("trakt", 80.0),
+            MetaExternalRating("letterboxd", 3.9), MetaExternalRating("tomatoes", 91.0, isCertified = true),
+            MetaExternalRating("audience", 55.0), MetaExternalRating("metacritic", 74.0),
+        ),
+    )
 
     /** [season]/[episode] of -1 mean "a movie" (Kotlin nullables don't cross cleanly into Swift). */
     fun loadStreams(type: String, videoId: String, parentMetaId: String, season: Int, episode: Int) {

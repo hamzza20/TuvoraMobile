@@ -20,7 +20,7 @@ class TvContinueWatchingTest {
 
     @Test
     fun `the row is capped`() {
-        val many = (0 until 40).map { item("s$it", "v$it", it.toLong()) }
+        val many = (0 until 60).map { item("s$it", "v$it", it.toLong()) }
         assertEquals(TvContinueWatching.MAX_ITEMS, TvContinueWatching.merge(many, emptyList()).size)
     }
 
