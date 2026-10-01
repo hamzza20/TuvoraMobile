@@ -108,12 +108,14 @@
 "Could not create profile. Try again." = "Kon het profiel niet maken. Probeer het opnieuw.";
 "Could not start sign-in." = "Kon de aanmelding niet starten.";
 "Could not verify PIN. Try again." = "Kon de pincode niet verifiëren. Probeer het opnieuw.";
+"Couldn't load Trakt reviews right now." = "Trakt-recensies konden nu niet worden geladen.";
 "Couldn't play this cloud file." = "Kon dit cloudbestand niet afspelen.";
 "Create" = "Maken";
 "Create List" = "Lijst maken";
 "Create Profile" = "Profiel maken";
 "Create your own Client ID at anime-skip.com/account/settings" = "Maak je eigen Client ID via anime-skip.com/account/settings";
 "Creating…" = "Maken…";
+"Creator and Cast" = "Maker en cast";
 "Crimson" = "Karmozijn";
 "Current PIN is incorrect." = "De huidige pincode is onjuist.";
 "Custom" = "Aangepast";
@@ -138,6 +140,7 @@
 "Discover" = "Ontdekken";
 "Display hero carousel at top of home." = "Toon de hero-carrousel bovenaan het startscherm.";
 "Done" = "Klaar";
+"E%1$d" = "A%1$d";
 "Edit" = "Bewerken";
 "Edit List" = "Lijst bewerken";
 "Edit Profile" = "Profiel bewerken";
@@ -154,6 +157,7 @@
 "Enter at least 2 characters" = "Voer minimaal 2 tekens in";
 "Enter your %@ API key." = "Voer je %1$@-API-sleutel in.";
 "Enter your Torbox API key." = "Voer je Torbox-API-sleutel in.";
+"Episode ratings are unavailable." = "Afleveringsbeoordelingen zijn niet beschikbaar.";
 "Episode titles, overviews, thumbnails, and runtime from TMDB" = "Afleveringstitels, beschrijvingen, miniaturen en speelduur van TMDB";
 "Episodes" = "Afleveringen";
 "Experimental cloud account sources" = "Experimentele cloudaccountbronnen";
@@ -166,6 +170,7 @@
 "File" = "Bestand";
 "Files" = "Bestanden";
 "Fill" = "Vullen";
+"Filmography" = "Filmografie";
 "Filter sources by video codec." = "Filter bronnen op videocodec.";
 "Filter streams by file size." = "Filter streams op bestandsgrootte.";
 "Filters & Sorting" = "Filters & sortering";
@@ -211,6 +216,7 @@
 "List" = "Lijst";
 "List name is required" = "Een lijstnaam is verplicht";
 "Load more" = "Meer laden";
+"Loading episode ratings..." = "Afleveringsbeoordelingen laden…";
 "Loading..." = "Laden…";
 "Loading…" = "Laden…";
 "Login approved. Finishing sign in…" = "Aanmelding goedgekeurd. Aanmelden wordt voltooid…";
@@ -232,12 +238,16 @@
 "Modern View" = "Moderne weergave";
 "More Like This" = "Vergelijkbare titels";
 "More Like This source" = "Bron voor Meer zoals dit";
+"More like this" = "Vergelijkbare titels";
 "Move Down" = "Omlaag";
 "Move Up" = "Omhoog";
+"Move down" = "Omlaag verplaatsen";
+"Move up" = "Omhoog verplaatsen";
 "Movie" = "Film";
 "Movies" = "Films";
 "Name" = "Naam";
 "Name template" = "Naamsjabloon";
+"Network" = "Netwerk";
 "Networks" = "Netwerken";
 "Networks with logos from TMDB" = "Netwerken met logo's van TMDB";
 "Next Episode" = "Volgende aflevering";
@@ -247,6 +257,7 @@
 "No %@ in this status" = "Geen %1$@ met deze status";
 "No %@ yet" = "Nog geen %1$@";
 "No Results" = "Geen resultaten";
+"No Trakt reviews available yet." = "Nog geen Trakt-recensies beschikbaar.";
 "No addons installed. Add one to get started." = "Er zijn geen add-ons geïnstalleerd. Voeg er één toe om te beginnen.";
 "No cloud account connected" = "Geen cloudaccount verbonden";
 "No content found" = "Geen inhoud gevonden";
@@ -296,6 +307,7 @@
 "Press back to cancel" = "Druk op terug om te annuleren";
 "Privacy Policy" = "Privacybeleid";
 "Private" = "Privé";
+"Production" = "Productie";
 "Production companies from TMDB" = "Productiebedrijven van TMDB";
 "Productions" = "Producties";
 "Profile Options" = "Profielopties";
@@ -307,6 +319,7 @@
 "QR login code" = "QR-aanmeldcode";
 "QR login expired. Generate a new code." = "QR-login verlopen. Genereer een nieuwe code.";
 "QR unavailable. Refresh to retry." = "QR niet beschikbaar. Vernieuw om opnieuw te proberen.";
+"Ratings" = "Beoordelingen";
 "Ready to play" = "Klaar om af te spelen";
 "Recent searches" = "Recente zoekopdrachten";
 "Refresh Addons" = "Add-ons vernieuwen";
@@ -329,6 +342,8 @@
 "Restore default source formatting." = "Herstel de standaardopmaak van bronnen.";
 "Resume" = "Hervatten";
 "Retry" = "Opnieuw proberen";
+"Review" = "Recensie";
+"Reviews from Trakt" = "Recensies van Trakt";
 "Rose" = "Roze";
 "Runtime, status, country, and language from TMDB" = "Speelduur, status, land en taal van TMDB";
 "SIMKL" = "Simkl";
@@ -341,6 +356,7 @@
 "Search cloud library" = "Cloudbibliotheek doorzoeken";
 "Search failed" = "Zoeken mislukt";
 "Search movies & series" = "Zoek films & series";
+"Season %1$d - %2$d episodes" = "Seizoen %1$d - %2$d afleveringen";
 "See All" = "Alles bekijken";
 "See all" = "Alles bekijken";
 "Select" = "Selecteren";
@@ -381,10 +397,12 @@
 "Size range" = "Groottebereik";
 "Skip Intro" = "Intro overslaan";
 "Smallest first" = "Kleinste eerst";
+"Something went wrong" = "Er is iets misgegaan";
 "Sort" = "Sorteren";
 "Sort results" = "Resultaten sorteren";
 "Source code and license terms are available in the project repository. Licensed under the GNU General Public License v3.0." = "De broncode en licentievoorwaarden zijn beschikbaar in de projectrepository. Gelicentieerd onder de GNU General Public License v3.0.";
 "Sources" = "Bronnen";
+"Spoiler review. Press OK to reveal." = "Recensie met spoiler. Druk op OK om te tonen.";
 "Sports" = "Sport";
 "Standard" = "Standaard";
 "Start Searching" = "Begin met zoeken";
@@ -434,6 +452,7 @@
 "Tuvora" = "TuvoraTV";
 "Tuvora Library" = "Tuvora-bibliotheek";
 "Unable to play this stream." = "Kan deze stream niet afspelen.";
+"Unable to play trailer" = "Kan trailer niet afspelen";
 "Unknown" = "Onbekend";
 "Unwatched" = "Onbekeken";
 "Use + in details to add items to a Simkl status" = "Gebruik + in de details om items aan een Simkl-status toe te voegen";
