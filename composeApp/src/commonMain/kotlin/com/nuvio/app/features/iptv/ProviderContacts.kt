@@ -1,5 +1,6 @@
 package com.nuvio.app.features.iptv
 
+import com.nuvio.app.core.ui.ExternalLinkPolicy
 import kotlinx.serialization.Serializable
 
 /** The contact kinds a provider can publish, in the order the buttons are shown (the contract's and the web's order). */
@@ -38,7 +39,6 @@ data class ProviderSupport(
 
 /** Shape rules for one contact value; each returns the normalized value or null (never throws). */
 object ProviderContacts {
-    private val emailShape = Regex("""^[A-Za-z0-9.!#$'*+/=_~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$""")
     private val telegramShape = Regex("""^[A-Za-z0-9_]{5,32}$""")
 
     /** Digits only (with country code), 7-15 long. "+44 7700 900123" -> "447700900123". */
@@ -58,7 +58,7 @@ object ProviderContacts {
     /** A plain address only: the mailto link is built from it, so no ? & % quotes or brackets. */
     fun email(value: String?): String? {
         val s = value.orEmpty().trim()
-        return s.takeIf { it.length <= 254 && emailShape.matches(it) }
+        return s.takeIf { ExternalLinkPolicy.isPlainEmailAddress(it) }
     }
 
     /**
@@ -76,28 +76,8 @@ object ProviderContacts {
         if (!s.startsWith("https://", ignoreCase = true)) return null
         val authority = s.substring("https://".length).takeWhile { it != '/' && it != '?' && it != '#' }
         if (authority.isEmpty() || '@' in authority || '%' in authority) return null
-        if (!isPublicLookingHost(authority)) return null
+        if (!ExternalLinkPolicy.isPublicLookingAuthority(authority)) return null
         return s
-    }
-
-    /** `host` or `host:port` (port digits only, 1-65535). */
-    internal fun isPublicLookingHost(authority: String): Boolean {
-        val host = authority.substringBefore(':')
-        if (':' in authority) {
-            val port = authority.substringAfter(':')
-            if (port.isEmpty() || port.length > 5 || !port.all { it in '0'..'9' } || port.toInt() !in 1..65535) return false
-        }
-        if (host.isEmpty() || host.length > 253) return false
-        val labels = host.split('.')
-        if (labels.size < 2) return false
-        for (label in labels) {
-            if (label.isEmpty() || label.length > 63) return false
-            if (label.startsWith("-") || label.endsWith("-")) return false
-            if (!label.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' }) return false
-            if (label.startsWith("xn--", ignoreCase = true)) return false
-        }
-        val tld = labels.last()
-        return tld.length >= 2 && tld.all { it in 'a'..'z' || it in 'A'..'Z' }
     }
 
     fun websiteHost(url: String): String =
