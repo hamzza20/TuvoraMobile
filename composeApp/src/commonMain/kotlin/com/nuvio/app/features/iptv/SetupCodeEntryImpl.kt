@@ -9,6 +9,15 @@ internal object SetupCodeEntryImpl : SetupCodeEntry {
         return SetupCodeController.shared.acceptLinkedCode(link)
     }
 
+    override fun holdLinkedCode(link: String): Boolean = SetupCodeController.shared.holdLinkedCode(link)
+
+    override fun hasHeldCode(): Boolean = SetupCodeController.shared.hasHeldCode()
+
+    override fun acceptHeldCode(): Boolean {
+        SetupPreviewEntry.fromAddPage = false
+        return SetupCodeController.shared.acceptHeldCode()
+    }
+
     override fun takeResumeAfterSignIn(): Boolean {
         val resume = SetupCodeController.shared.takeResumeAfterSignIn()
         if (resume) SetupPreviewEntry.fromAddPage = false

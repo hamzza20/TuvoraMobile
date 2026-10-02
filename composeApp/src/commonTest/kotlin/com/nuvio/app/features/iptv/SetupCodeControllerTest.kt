@@ -524,4 +524,45 @@ class SetupCodeControllerTest {
         c.finish(); holder.set("ABCDEFGHJKMN"); c.loadPreview(); c.confirm()
         assertEquals(listOf(false, true), api.skipAddonsSeen)
     }
+
+    // ---- a link while the profile picker shows is held, never dropped -------------------------------------
+
+    @Test
+    fun `a held link is only kept in memory and routes nowhere until accepted`() {
+        kind = AccountKind.SIGNED_OUT
+        val c = controller()
+        assertTrue(c.holdLinkedCode("https://tuvora.co/s/TUV-ABCD-EFGH-JKMN"))
+        assertEquals("ABCDEFGHJKMN", holder.peek())
+        assertEquals(0, signInRequests, "no sign-in routing while the picker is showing")
+        assertFalse(c.state.value.guestPrompt)
+        assertFalse(c.holdLinkedCode("https://tuvora.co/s/nope"), "a link that is not a code holds nothing")
+    }
+
+    @Test
+    fun `accepting the held link after the shell appears behaves like a linked code`() {
+        val c = controller()
+        c.holdLinkedCode("TUV-ABCD-EFGH-JKMN")
+        assertTrue(c.acceptHeldCode())
+        assertEquals("ABCDEFGHJKMN", holder.peek())
+        assertTrue(c.state.value.holdGeneration > 0, "the preview effect restarts for it")
+    }
+
+    @Test
+    fun `a held link older than 30 minutes is not accepted`() {
+        val c = controller()
+        c.holdLinkedCode("TUV-ABCD-EFGH-JKMN")
+        now += SetupCodeHolder.TTL_MS
+        assertFalse(c.acceptHeldCode())
+        assertFalse(c.hasHeldCode())
+    }
+
+    @Test
+    fun `a signed-out person whose link was held is sent to sign in when it is accepted`() {
+        kind = AccountKind.SIGNED_OUT
+        val c = controller()
+        c.holdLinkedCode("TUV-ABCD-EFGH-JKMN")
+        assertEquals(0, signInRequests)
+        assertTrue(c.acceptHeldCode())
+        assertEquals(1, signInRequests)
+    }
 }
