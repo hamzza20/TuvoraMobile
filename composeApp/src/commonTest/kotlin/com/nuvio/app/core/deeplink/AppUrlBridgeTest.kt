@@ -72,7 +72,7 @@ class AppUrlBridgeTest {
         )
         assertEquals(
             AppDeepLink.SetupCode("TUV-ABCD-EFGH-JKMN"),
-            parseAppDeepLink("https://www.tuvora.co/s/TUV-ABCD-EFGH-JKMN?utm=x"),
+            parseAppDeepLink("https://tuvora.co/s/TUV-ABCD-EFGH-JKMN?utm=x"),
         )
         assertEquals(AppDeepLink.SetupCode("TUV-ABCD-EFGH-JKMN"), parseAppDeepLink("nuvio://s/TUV-ABCD-EFGH-JKMN"))
     }
@@ -84,6 +84,15 @@ class AppUrlBridgeTest {
         assertNull(parseAppDeepLink("https://evil.example.com/s/TUV-ABCD-EFGH-JKMN"))
         assertNull(parseAppDeepLink("https://tuvora.co.evil.example.com/s/TUV-ABCD-EFGH-JKMN"))
         assertNull(parseAppDeepLink("nuvio://s"))
+    }
+
+    @Test
+    fun `the setup link is exactly https on tuvora dot co like the manifest filter and the app-site association`() {
+        // Security L12: the parser must not be wider than what the platforms verify.
+        assertNull(parseAppDeepLink("http://tuvora.co/s/TUV-ABCD-EFGH-JKMN"), "plain http")
+        assertNull(parseAppDeepLink("https://www.tuvora.co/s/TUV-ABCD-EFGH-JKMN"), "www is not a claimed host")
+        assertNull(parseAppDeepLink("https://TUVORA.CO.evil.example/s/TUV-ABCD-EFGH-JKMN"))
+        assertEquals(AppDeepLink.SetupCode("TUV-ABCD-EFGH-JKMN"), parseAppDeepLink("HTTPS://Tuvora.Co/s/TUV-ABCD-EFGH-JKMN"), "scheme and host are case-insensitive")
     }
 
     @Test
