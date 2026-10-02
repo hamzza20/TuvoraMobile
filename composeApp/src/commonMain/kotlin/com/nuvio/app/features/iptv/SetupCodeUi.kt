@@ -118,6 +118,11 @@ internal fun SetupCodeEntrySection(isTablet: Boolean, onOpenPreview: () -> Unit)
     // into the field would drop or reorder characters). It starts from what the controller holds (a
     // linked code) and the controller is told after every edit and paste.
     var field by remember { mutableStateOf(TextFieldValue(ui.typed, TextRange(ui.typed.length))) }
+    // The code is cleared (redeemed, cancelled, expired) while this page stays in the back stack: the
+    // field must not keep showing it.
+    LaunchedEffect(ui.typed) {
+        if (ui.typed.isEmpty() && field.text.isNotEmpty()) field = TextFieldValue("")
+    }
     val setField = { text: String ->
         val grouped = SetupCode.liveFormat(text)
         field = TextFieldValue(grouped, TextRange(grouped.length))
