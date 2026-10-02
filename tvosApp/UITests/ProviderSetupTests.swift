@@ -81,8 +81,11 @@ final class ProviderSetupTests: XCTestCase {
         XCTAssertTrue(waitFocus(10) { $0 == "confirm.cancel" }, "the confirmation did not start on Cancel; focus \(focusedId())")
         press(.down)
         XCTAssertEqual(focusedId(), "confirm.hold.detach")
+        XCTAssertEqual(app.descendants(matching: .any)["confirm.hold.detach"].value as? String, "Hold OK for 2 seconds")
         press(.select, settle: 1.5)   // a quick press
         XCTAssertTrue(app.descendants(matching: .any)["confirm.hold.detach"].exists, "a quick press closed the confirmation")
+        XCTAssertEqual(app.descendants(matching: .any)["confirm.hold.detach"].value as? String, "Keep holding OK until the ring is full",
+                       "an early release did not say to keep holding")
         XCTAssertTrue(app.descendants(matching: .any)["details.card.detach"].exists, "a quick press detached the playlist")
         press(.up)
         press(.select, settle: 1.5)   // Cancel
@@ -108,6 +111,24 @@ final class ProviderSetupTests: XCTestCase {
         Thread.sleep(forTimeInterval: 2)
         XCTAssertFalse(app.descendants(matching: .any)["confirm.hold.remove"].exists, "holding OK for 2.8 s did not confirm")
         XCTAssertFalse(app.buttons["playlist.row.Plain List"].exists, "the removed playlist is still listed")
+    }
+
+    /// Detach: holding OK for 2.8 s detaches; the page then has no provider shelf, no Detach card and no lock note.
+    func testDetachHoldConfirms() {
+        launch("playlistDetails", account: "Starshare Movies")
+        XCTAssertTrue(waitFocus { $0.hasPrefix("details.card.") }, "focus \(focusedId())")
+        XCTAssertTrue(app.descendants(matching: .any)["details.card.detach"].exists, "the managed playlist has no Detach")
+        for _ in 0..<4 where focusedId() != "details.card.detach" { press(.down) }
+        XCTAssertEqual(focusedId(), "details.card.detach")
+        press(.select, settle: 1.5)
+        XCTAssertTrue(waitFocus(10) { $0 == "confirm.cancel" }, "focus \(focusedId())")
+        press(.down)
+        XCTAssertEqual(focusedId(), "confirm.hold.detach")
+        remote.press(.select, forDuration: 2.8)
+        Thread.sleep(forTimeInterval: 6)
+        XCTAssertFalse(app.descendants(matching: .any)["confirm.hold.detach"].exists, "holding OK for 2.8 s did not confirm")
+        XCTAssertFalse(app.descendants(matching: .any)["details.card.detach"].waitForExistence(timeout: 20), "the playlist is still detachable after Detach")
+        XCTAssertFalse(app.descendants(matching: .any)["details.locked"].exists, "a detached playlist still shows the lock note")
     }
 
     // MARK: settings list
@@ -186,6 +207,7 @@ final class ProviderSetupTests: XCTestCase {
         launch("setupCode")
         XCTAssertTrue(waitFocus { $0 == "setup.key.A" }, "focus \(focusedId())")
         XCTAssertTrue(app.descendants(matching: .any)["setup.account"].exists, "the screen does not say which account it is adding to")
+        XCTAssertTrue(app.descendants(matching: .any)["setup.watching"].exists, "the screen does not say which profile it watches")
         // Waiting happens while the test runner redeems out of band (see the lane notes); allow 4 minutes.
         XCTAssertTrue(app.descendants(matching: .any)["details.banner"].waitForExistence(timeout: 240), "the screen did not finish by itself")
     }
