@@ -73,6 +73,7 @@
     <string name="provider_details_expired">Expired</string>
     <string name="provider_details_never_expires">Never expires</string>
     <string name="provider_details_expiry_not_reported">Expiry not reported by this provider</string>
+    <string name="provider_details_expiry_check_failed">Couldn&apos;t check expiry</string>
     <string name="provider_details_connections">%1$d of %2$d connections</string>
     <string name="provider_details_tab_overview">Overview</string>
     <string name="provider_details_tab_content">Content</string>

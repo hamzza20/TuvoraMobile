@@ -319,4 +319,31 @@ class SetupCodeControllerTest {
         assertEquals(CompletionKind.NOTHING_INVALID_URL, completion(skipped = listOf("invalid_url")).outcome)
         assertEquals(CompletionKind.NOTHING_MISSING_LOGIN, completion(skipped = listOf("invalid_url", "missing_login")).outcome)
     }
+
+    private fun done(profile: Int, key: String? = "key-1") = SetupCompletion("Acme TV", profile, 1, 0, false, key)
+
+    @Test
+    fun `every successful redeem ends on the new playlist's details when it is on this device`() {
+        assertEquals(SetupCompletionPlan(pops = 2, openDetailsKey = "key-1"), SetupCompletionNavigation.plan(done(1), fromAddPage = true))
+        assertEquals(SetupCompletionPlan(pops = 1, openDetailsKey = "key-1"), SetupCompletionNavigation.plan(done(1), fromAddPage = false))
+    }
+
+    @Test
+    fun `a redeem into another profile ends on the IPTV list because its details cannot open here`() {
+        val plan = SetupCompletionNavigation.plan(done(3, key = null), fromAddPage = true)
+        assertEquals(SetupCompletionPlan(pops = 2, openDetailsKey = null), plan)
+        assertEquals(1, SetupCompletionNavigation.plan(done(3, key = null), fromAddPage = false).pops)
+    }
+
+    @Test
+    fun `the controller hands the plan a key only for the active profile`() {
+        activeProfile = 1
+        val c = controller()
+        holder.set("ABCDEFGHJKMN"); c.loadPreview(); c.selectProfile(3); c.confirm()
+        val other = c.state.value.completed!!
+        assertNull(SetupCompletionNavigation.plan(other, fromAddPage = true).openDetailsKey)
+        c.finish()
+        holder.set("ABCDEFGHJKMN"); c.loadPreview(); c.selectProfile(1); c.confirm()
+        assertEquals("key-1", SetupCompletionNavigation.plan(c.state.value.completed!!, fromAddPage = true).openDetailsKey)
+    }
 }

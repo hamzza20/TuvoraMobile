@@ -60,6 +60,20 @@ class ManagedDetailsModelTest {
     }
 
     @Test
+    fun `a failed panel check is not reported as the provider having no expiry`() {
+        // The details screen's own build: the panel was asked and did not answer.
+        val failed = ManagedDetailsModel.build(xtream, info, null, DetailsCounts(), now, panelCheckFailed = true)
+        assertEquals(ExpiryDisplay.CheckFailed, failed.expiry)
+        // An answered call that carried no expiry is the provider's own statement.
+        val noExpiry = ManagedDetailsModel.build(xtream, info, panel.copy(expiresAtEpochSec = null), DetailsCounts(), now, panelCheckFailed = false)
+        assertEquals(ExpiryDisplay.NotReported, noExpiry.expiry)
+        // Still loading / nothing asked yet: not a failure.
+        assertEquals(ExpiryDisplay.NotReported, ManagedDetailsModel.build(xtream, info, null, DetailsCounts(), now).expiry)
+        // An answer always wins over a stale failure flag.
+        assertEquals(ExpiryDisplay.DaysLeft(12, 0.4f), ManagedDetailsModel.build(xtream, info, panel, DetailsCounts(), now, panelCheckFailed = true).expiry)
+    }
+
+    @Test
     fun `connections show only when the panel reports a maximum`() {
         assertEquals(ConnectionsDisplay(1, 2), build().connections)
         assertNull(build(panel = panel.copy(maxConnections = null)).connections)

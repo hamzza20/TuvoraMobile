@@ -418,6 +418,7 @@ private fun PreviewReady(
     TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth(), enabled = !ui.redeeming) {
         Text(stringResource(Res.string.provider_setup_cancel), color = tokens.colors.textSecondary)
     }
+    Spacer(Modifier.height(FLOATING_BAR_CLEARANCE))
 }
 
 /** A read-only row in the settings-group style (title over a muted description), no tap target. */

@@ -14,8 +14,10 @@ sealed interface ExpiryDisplay {
     data object NeverExpires : ExpiryDisplay
     /** A portal that reports expiry as free text only (Stalker): shown as text, no days, no bar. */
     data class Text(val text: String) : ExpiryDisplay
-    /** The provider does not report an expiry ("Expiry not reported by this provider"). No bar. */
+    /** The provider's panel answered and reported no expiry ("Expiry not reported by this provider"). No bar. */
     data object NotReported : ExpiryDisplay
+    /** The panel could not be asked (unreachable, refused): we do not know, and must not say the provider has none. */
+    data object CheckFailed : ExpiryDisplay
 }
 
 /** "N of M connections" — only when the panel reports a maximum. */
@@ -70,6 +72,8 @@ data class ManagedDetailsModel(
             nowEpochSec: Long,
             addressLine: String? = null,
             allowEdit: Boolean = true,
+            /** The panel was asked and did not answer. Distinct from an answer that carries no expiry. */
+            panelCheckFailed: Boolean = false,
         ): ManagedDetailsModel {
             val managed = info != null
             val contacts = info?.support?.links().orEmpty()
@@ -107,7 +111,7 @@ data class ManagedDetailsModel(
                 managedBy = info?.let(ManagedPlaylistPolicy::ownerLabel),
                 providerName = info?.providerName,
                 serviceUpdatedAt = info?.serviceUpdatedAt,
-                expiry = expiryOf(accountInfo, nowEpochSec),
+                expiry = expiryOf(accountInfo, nowEpochSec, panelCheckFailed),
                 connections = accountInfo?.maxConnections?.takeIf { it > 0 }
                     ?.let { ConnectionsDisplay((accountInfo.activeConnections ?: 0).coerceAtLeast(0), it) },
                 counts = counts,
@@ -120,8 +124,14 @@ data class ManagedDetailsModel(
             )
         }
 
-        fun expiryOf(info: XtreamAccountInfo?, nowEpochSec: Long): ExpiryDisplay {
-            if (info == null) return ExpiryDisplay.NotReported
+        /**
+         * [panelCheckFailed]: the panel was asked and did not answer. With no [info] that is [ExpiryDisplay.CheckFailed]
+         * ("Couldn't check expiry"), never "Expiry not reported by this provider", which is the provider's own answer
+         * and only ever follows a SUCCESSFUL call. No [info] and no failure (still loading, or no panel to ask)
+         * stays [ExpiryDisplay.NotReported].
+         */
+        fun expiryOf(info: XtreamAccountInfo?, nowEpochSec: Long, panelCheckFailed: Boolean = false): ExpiryDisplay {
+            if (info == null) return if (panelCheckFailed) ExpiryDisplay.CheckFailed else ExpiryDisplay.NotReported
             info.expiresText?.takeIf { it.isNotBlank() }?.let { return ExpiryDisplay.Text(it) }
             val at = info.expiresAtEpochSec ?: return ExpiryDisplay.NotReported
             if (at == 0L) return ExpiryDisplay.NeverExpires
