@@ -47,7 +47,7 @@ struct SettingsScreen: View {
     @StateObject private var dialogs = SettingsDialogs()
     @StateObject private var integrations = IntegrationsModel()
     @StateObject private var integrationsNav = IntegrationsNav()
-    /// Simulator smoke hook: `-smokeSettings <category>` opens a category, `-smokeSettingsDialog <addPlaylist|signOut|engine|removePlaylist>` a dialog.
+    /// Simulator smoke hook: `-smokeSettings <category>` opens a category, `-smokeSettingsDialog <addPlaylist|signOut|engine|playlistDetails|setupCode>` a dialog.
     @State private var selected: Category = {
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "-smokeSettings"), i + 1 < args.count, let c = Category(rawValue: args[i + 1]),
@@ -81,9 +81,17 @@ struct SettingsScreen: View {
                     }
                     ForEach(dialogs.stack) { entry in
                         let top = entry.id == dialogs.stack.last?.id
-                        SettingsDialogView(entry: entry, model: model, dialogs: dialogs)
-                            .opacity(top ? 1 : 0)
-                            .disabled(!top)
+                        let fullScreen = entry.kind.isFullScreen
+                        // A dialog opened over a full-screen page dims it; a full-screen page stays drawn under it.
+                        ZStack {
+                            if !fullScreen && top && dialogs.stack.dropLast().contains(where: { $0.kind.isFullScreen }) {
+                                Color.black.opacity(0.6).ignoresSafeArea()
+                            }
+                            SettingsDialogView(entry: entry, model: model, dialogs: dialogs)
+                        }
+                        .padding(.vertical, fullScreen ? -60 : 0)
+                        .opacity(top || fullScreen ? 1 : 0)
+                        .disabled(!top)
                     }
                 }
                 .padding(.vertical, 60)
@@ -230,7 +238,8 @@ struct SettingsScreen: View {
             dialogs.push(.picker(PlaybackSettingsDetail.enginePicker(current: UserDefaults.standard.string(forKey: "tvos.player.engine") ?? "auto")))
         case "guideRegions": dialogs.push(.guideRegions)
         case "iptvPairing": dialogs.push(.iptvPairing)
-        case "contentTypes", "categories", "catchUpCorrection", "guideOffset", "playlistActions":
+        case "setupCode": dialogs.push(.setupCode)
+        case "contentTypes", "categories", "catchUpCorrection", "guideOffset", "playlistActions", "playlistDetails":
             // `-smokeSettingsDialog <kind> [-smokeAccount <name>]`: the playlist's Content & Categories,
             // its Live TV category checklist, or its offset pickers.
             let kind = args[i + 1]
@@ -244,7 +253,7 @@ struct SettingsScreen: View {
                 case "categories": dialogs.push(.categoryChecklist(account.id, "live"))
                 case "catchUpCorrection": dialogs.push(.picker(IptvOffsetPickers.catchUp(account)))
                 case "guideOffset": dialogs.push(.picker(IptvOffsetPickers.guide(account)))
-                default: dialogs.push(.playlistActions(account))
+                default: dialogs.push(.playlistDetails(account.id, banner: args.firstIndex(of: "-smokeBanner").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }))
                 }
             }
         case "hiddenItems":
@@ -255,11 +264,6 @@ struct SettingsScreen: View {
                 let wanted = args.firstIndex(of: "-smokeAccount").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
                 let accounts = model.xtream?.accounts ?? []
                 if let account = accounts.first(where: { $0.name == wanted }) ?? accounts.first { dialogs.push(.hiddenItems(account)) }
-            }
-        case "removePlaylist":
-            Task {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                if let account = model.xtream?.accounts.first { dialogs.push(.removePlaylist(account)) }
             }
         default: break
         }
@@ -301,13 +305,18 @@ final class SettingsModel: ObservableObject {
 enum SettingsDialogKind {
     case signOut
     case picker(PickerSpec)
-    case playlistActions(XtreamAccount)
+    /// Step 2: the full-screen two-pane page for a playlist (replaces the old actions dialog). [banner] is a
+    /// persistent line such as "Starshare added your playlist".
+    case playlistDetails(String, banner: String?)
+    /// Step 2: "Enter setup code", full screen.
+    case setupCode
+    /// Detach / Remove: Cancel first, the destructive button needs OK held for two seconds.
+    case holdConfirm(HoldConfirmSpec)
     case hiddenItems(XtreamAccount)
     case guideRegions
     case iptvPairing
     case contentTypes(String)                 // account id
     case categoryChecklist(String, String)    // account id, content type
-    case removePlaylist(XtreamAccount)
     case playlistForm(PlaylistFormModel)
     /// Step 0.3: one backup row of the playlist form (address, move, remove).
     case backupServer(PlaylistFormModel, index: Int)
@@ -326,6 +335,16 @@ struct PickerSpec {
     let selectedId: String
     var width: CGFloat = dp(420)
     let onSelect: (String) -> Void
+}
+
+extension SettingsDialogKind {
+    /// Full-screen pages fill the content area (they are not centred cards) and stay visible behind a dialog opened over them.
+    var isFullScreen: Bool {
+        switch self {
+        case .playlistDetails, .setupCode: return true
+        default: return false
+        }
+    }
 }
 
 struct SettingsDialogEntry: Identifiable {
@@ -367,8 +386,12 @@ private struct SettingsDialogView: View {
                 dialogs.pop()
                 spec.onSelect(id)
             }
-        case .playlistActions(let account):
-            PlaylistActionsDialog(account: account, activeServer: model.activeServers[account.id], dialogs: dialogs)
+        case .playlistDetails(let accountId, let banner):
+            PlaylistDetailsPage(accountId: accountId, banner: banner, model: model, dialogs: dialogs)
+        case .setupCode:
+            SetupCodeScreen(dialogs: dialogs)
+        case .holdConfirm(let spec):
+            HoldConfirmDialog(spec: spec, dialogs: dialogs)
         case .hiddenItems(let account):
             HiddenItemsDialog(account: account, dialogs: dialogs)
         case .guideRegions:
@@ -379,8 +402,6 @@ private struct SettingsDialogView: View {
             ContentTypesDialog(accountId: accountId, model: model, dialogs: dialogs)
         case .categoryChecklist(let accountId, let type):
             CategoryChecklistDialog(accountId: accountId, type: type, model: model, dialogs: dialogs)
-        case .removePlaylist(let account):
-            RemovePlaylistDialog(account: account, dialogs: dialogs)
         case .playlistForm(let form):
             PlaylistFormDialog(form: form, xtream: model.xtream, dialogs: dialogs)
         case .backupServer(let form, let index):
@@ -829,6 +850,7 @@ struct IptvSettingsDetail: View {
     @ObservedObject var model: SettingsModel
     @EnvironmentObject private var dialogs: SettingsDialogs
     @State private var regionSummary = "—"
+    @State private var managedLines: [String: String] = [:]
 
     var body: some View {
         VStack(alignment: .leading, spacing: dp(12)) {
@@ -844,23 +866,33 @@ struct IptvSettingsDetail: View {
                                   leadingIcon: "md_phone_android") {
                     dialogs.push(.iptvPairing)
                 }
+                SettingsActionRow(title: "Enter setup code", subtitle: "A code from your provider adds everything they set up for you",
+                                  leadingIcon: "md_vpn_key") {
+                    dialogs.push(.setupCode)
+                }
+                .accessibilityIdentifier("iptv.setupCode")
                 SettingsActionRow(title: "Guide regions", subtitle: "Choose which countries' EPG this device keeps",
                                   value: regionSummary, leadingIcon: "md_explore") {
                     dialogs.push(.guideRegions)
                 }
                 ForEach(model.xtream?.accounts ?? [], id: \.id) { account in
-                    // Step 0.3: name the backup that is answering when it isn't the main server (NuvioTV).
-                    let source = model.activeServers[account.id].map(BackupServerCopy.using) ?? (account.fileName ?? account.baseUrl)
+                    // Step 0.3: name the backup that is answering when it isn't the main server (NuvioTV); then
+                    // Step 2's "Managed by X \u{00B7} N days left" for a playlist a provider installed; else the address.
+                    let source = model.activeServers[account.id].map(BackupServerCopy.using)
+                        ?? managedLines[account.id] ?? (account.fileName ?? account.baseUrl)
                     SettingsActionRow(title: account.name,
                                       subtitle: [source, model.xtream?.saveWarnings[account.id]]
                                           .compactMap { $0 }.joined(separator: "\n"),
-                                      value: account.enabled ? "On" : "Off") {
-                        dialogs.push(.playlistActions(account))
+                                      value: account.enabled ? "On" : "Off",
+                                      leadingIcon: managedLines[account.id] != nil ? "md_link" : nil) {
+                        dialogs.push(.playlistDetails(account.id, banner: nil))
                     }
                     .accessibilityIdentifier("playlist.row.\(account.name)")
                 }
             }
         }
+        .task { for await lines in TvPlaylistRows.shared.managedLines { managedLines = lines } }
+        .task(id: model.xtream?.accounts.map(\.id)) { TvPlaylistRows.shared.refresh() }
         // Re-read when the region picker closes (the dialog stack changes).
         .task(id: dialogs.stack.count) {
             let regions = (try? await TvIptvPersonalize.shared.regions()) ?? []
@@ -980,98 +1012,6 @@ private struct RegionCheckRow: View {
         .focused($focused)
         .reportsFocus(focused)
         .onAppear { if initialFocus { DispatchQueue.main.async { focused = true } } }
-    }
-}
-
-private struct PlaylistActionsDialog: View {
-    let account: XtreamAccount
-    /// Step 0.3: the backup server answering now (1-based), nil on the main server.
-    let activeServer: Int?
-    @ObservedObject var dialogs: SettingsDialogs
-
-    private var subtitle: String {
-        if let file = account.fileName { return file }
-        guard let n = activeServer else { return account.baseUrl }
-        let note = TvBackupServers.shared.activeBackupAddress(backupUrls: account.backupUrls, activeIndex: Int32(n))
-            .map { BackupServerCopy.usingAddress(n, $0) } ?? BackupServerCopy.using(n)
-        return account.baseUrl + "\n" + note
-    }
-
-    var body: some View {
-        NuvioDialog(title: account.name, subtitle: subtitle) {
-            if account.sourceType != "m3u_file" {
-                SettingsActionRow(title: "Edit URL / credentials") {
-                    dialogs.pop()
-                    TvPlaylists.shared.clearError()
-                    dialogs.push(.playlistForm(PlaylistFormModel(editing: account)))
-                }
-            }
-            SettingsActionRow(title: "Content & Categories", subtitle: "Choose which content types and categories to show") {
-                dialogs.pop()
-                dialogs.push(.contentTypes(account.id))
-            }
-            // F02: hides made on any device or the website are undone here.
-            SettingsActionRow(title: "Hidden channels & groups", subtitle: "Bring back what you hid") {
-                dialogs.pop()
-                dialogs.push(.hiddenItems(account))
-            }
-            if account.sourceType == "xtream" {
-                // Catch-up is Xtream-only: a Stalker portal builds its archive URLs server-side and an
-                // M3U playlist has no panel to ask, so neither has a container or clock to correct.
-                SettingsActionRow(title: "Catch-up container", subtitle: "m3u8 enables the scrub bar; TS is more widely served",
-                                  value: L(account.catchUpPreferM3u8 ? "Prefer m3u8" : "Prefer TS"), showChevron: false) {
-                    TvIptvContentSettings.shared.setPreferM3u8(accountId: account.id, prefer: !account.catchUpPreferM3u8)
-                    dialogs.pop()
-                    dialogs.push(.playlistActions(TvPlaylists.shared.state.value.accounts.first { $0.id == account.id } ?? account))
-                }
-                SettingsActionRow(title: "Catch-up time correction", subtitle: "Shift replay start times when the provider's clock is off",
-                                  value: IptvOffsetPickers.catchUpLabel(account.catchUpTimeCorrectionMinutes)) {
-                    dialogs.pop()
-                    dialogs.push(.picker(IptvOffsetPickers.catchUp(account)))
-                }
-                SettingsActionRow(title: "Guide EPG offset", subtitle: "Shift guide times when programmes show at the wrong hour",
-                                  value: IptvOffsetPickers.guideLabel(account.guideEpgCorrectionMinutes)) {
-                    dialogs.pop()
-                    dialogs.push(.picker(IptvOffsetPickers.guide(account)))
-                }
-            }
-            if TvPlaylists.shared.canRematch(account: account) {
-                SettingsActionRow(title: "Re-match catalog", subtitle: "Re-check titles this playlist was thought not to have") {
-                    TvPlaylists.shared.rematch(accountId: account.id)
-                    dialogs.pop()
-                }
-            }
-            SettingsActionRow(title: account.enabled ? "Disable" : "Enable", showChevron: false) {
-                TvPlaylists.shared.setEnabled(accountId: account.id, enabled: !account.enabled)
-                dialogs.pop()
-            }
-            SettingsActionRow(title: "Remove playlist", showChevron: false) {
-                dialogs.pop()
-                dialogs.push(.removePlaylist(account))
-            }
-        }
-    }
-}
-
-/// B57's confirmation: names the playlist and what goes with it; Cancel takes focus first.
-private struct RemovePlaylistDialog: View {
-    let account: XtreamAccount
-    @ObservedObject var dialogs: SettingsDialogs
-    @FocusState private var cancelFocused: Bool
-
-    var body: some View {
-        NuvioDialog(title: "Remove \u{201C}\(account.name)\u{201D}?",
-                    subtitle: "Its favourites, Continue Watching entries and watch progress go with it, on all your devices. This can't be undone.",
-                    width: dp(460)) {
-            SettingsDialogButton(title: "Remove playlist", destructive: true, fullWidth: true) {
-                TvPlaylists.shared.remove(accountId: account.id)
-                dialogs.pop()
-            }
-            SettingsDialogButton(title: "Cancel", fullWidth: true) { dialogs.pop() }
-                .focused($cancelFocused)
-        }
-        .defaultFocus($cancelFocused, true)
-        .onAppear { DispatchQueue.main.async { cancelFocused = true } }
     }
 }
 

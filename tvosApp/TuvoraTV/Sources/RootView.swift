@@ -22,6 +22,14 @@ struct RootView: View {
                 gate
             }
         }
+        // Simulator verification: `-smokeLocalSignIn <email> <password>` signs a TEST account in on a LOCAL
+        // backend (TvLocalSmoke refuses anything but a debug build pointed at 127.0.0.1 / localhost).
+        .task {
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-smokeLocalSignIn"), i + 2 < args.count {
+                TvLocalSmoke.shared.signIn(email: args[i + 1], password: args[i + 2])
+            }
+        }
         // Top Shelf items open here (tuvora://title?…); MainShell opens them once the gate reaches Main.
         .onOpenURL { url in if let link = DeepLink(url: url) { DeepLinkCenter.shared.pending = link } }
     }
