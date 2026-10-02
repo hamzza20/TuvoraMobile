@@ -187,6 +187,21 @@ internal class SetupCodeController(
         return true
     }
 
+    /**
+     * A link arrived while there was no shell to open it in (the profile picker): keep the code in memory only
+     * (the same holder, the same 30 minute bound) with no routing or sign-in side effects.
+     */
+    fun holdLinkedCode(codeOrLink: String): Boolean {
+        val code = SetupCode.extractFromLink(codeOrLink) ?: SetupCode.parse(codeOrLink) ?: return false
+        return holder.set(code)
+    }
+
+    /** The shell appeared: continue the held link as if it had just arrived. False when nothing is held any more. */
+    fun acceptHeldCode(): Boolean {
+        val code = holder.peek() ?: return false
+        return acceptLinkedCode(code)
+    }
+
     /** Continue on the code field. Holds the code in memory; a person without a real account signs in first. */
     fun onContinue(): ContinueResult {
         when (val parsed = SetupCode.normalize(_state.value.typed)) {

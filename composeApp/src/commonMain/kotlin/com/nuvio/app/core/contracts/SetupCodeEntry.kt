@@ -17,6 +17,18 @@ internal interface SetupCodeEntry {
      */
     fun acceptLinkedCode(link: String): Boolean
 
+    /**
+     * A link arrived while there is no shell to open it in (the profile picker is showing). Keeps the code in
+     * memory only (same 30 minutes) with no routing; the shell calls [acceptHeldCode] once it is on screen.
+     */
+    fun holdLinkedCode(link: String): Boolean
+
+    /** True while a code is held (and still inside its 30 minutes). */
+    fun hasHeldCode(): Boolean
+
+    /** The shell appeared: continue a held link as if it had just arrived. False when nothing is held (any more). */
+    fun acceptHeldCode(): Boolean
+
     /** True once (then false) after sign-in completed with a code held: the shell should open the preview. */
     fun takeResumeAfterSignIn(): Boolean
 

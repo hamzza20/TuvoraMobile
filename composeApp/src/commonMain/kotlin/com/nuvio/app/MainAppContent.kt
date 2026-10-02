@@ -41,6 +41,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -70,6 +71,9 @@ import com.nuvio.app.core.auth.isLocalOnly
 import com.nuvio.app.core.contracts.SetupCodeEntryAccess
 import com.nuvio.app.core.deeplink.AppDeepLink
 import com.nuvio.app.core.deeplink.AppDeepLinkRepository
+import com.nuvio.app.core.deeplink.DeferredSetupLink
+import com.nuvio.app.core.deeplink.LinkTiming
+import com.nuvio.app.core.deeplink.SetupLinkDeferralPolicy
 import com.nuvio.app.core.deeplink.SetupLinkRoutePolicy
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.network.NetworkCondition
@@ -876,6 +880,45 @@ internal fun MainAppContent(
         }
     }
 
+        // The shell is on screen once the launch overlay is gone: a profile is chosen and Home has rendered
+        // (rootContentReady). A link that arrives earlier (while the profile picker or loader shows) is held, never
+        // dropped: routing then lands on a tab bar that is not wired yet (iOS) or on content about to be rebuilt.
+        val shellReady = rootContentReady
+        val shellReadyNow by rememberUpdatedState(rootContentReady)
+
+        fun openSetupLink(entry: com.nuvio.app.core.contracts.SetupCodeEntry) {
+            val guest = AuthRepository.state.value.isLocalOnly
+            val route = SetupLinkRoutePolicy.decide(
+                isGuest = guest,
+                onTabs = navController.currentRoute is TabsRoute,
+                canPopToTabs = !useNativeNavigation,
+            )
+            // A guest sees the code on the Add Playlist page, where they are asked before being taken to sign-in.
+            if (guest) entry.prepareCodeEntryPage()
+            SettingsPageRequest.request(route.settingsPage)
+            activateTab(AppScreenTab.Settings)
+            // Over the player / stream list the settings shell is hidden: leave it the way Back does (the player
+            // saves progress and releases), so the preview is visible.
+            if (route.leaveToTabsFirst) {
+                var guard = navController.routes.size
+                while (navController.currentRoute !is TabsRoute && guard-- > 0) {
+                    if (!navController.popBackStack()) break
+                }
+            }
+        }
+
+        // A link that waited for the profile picker continues now that the shell is on screen.
+        LaunchedEffect(shellReady) {
+            if (!ownsAppRuntime) return@LaunchedEffect
+            val entry = SetupCodeEntryAccess.current() ?: return@LaunchedEffect
+            if (SetupLinkDeferralPolicy.shouldResume(DeferredSetupLink.pending, shellReady, entry.hasHeldCode())) {
+                DeferredSetupLink.pending = false
+                if (entry.acceptHeldCode()) openSetupLink(entry)
+            } else if (shellReady) {
+                DeferredSetupLink.pending = false
+            }
+        }
+
         LaunchedEffect(navController) {
             if (!ownsAppRuntime) return@LaunchedEffect
             AppDeepLinkRepository.pendingDeepLink.collectLatest { deepLink ->
@@ -927,29 +970,14 @@ internal fun MainAppContent(
                     }
 
                     is AppDeepLink.SetupCode -> {
-                        // The code is held in memory by the setup port (never in the route). Someone
-                        // without a real account is sent to sign in first; the effect below reopens the
-                        // preview once they are back.
+                        // The code is held in memory by the setup port (never in the route). While the profile
+                        // picker / launch loader is showing there is no shell to open the preview in, so the code
+                        // is only held (same 30 minute bound) and the effect below opens it once the shell appears.
                         val entry = SetupCodeEntryAccess.current()
-                        if (entry != null && entry.acceptLinkedCode(deepLink.code)) {
-                            val guest = AuthRepository.state.value.isLocalOnly
-                            val route = SetupLinkRoutePolicy.decide(
-                                isGuest = guest,
-                                onTabs = navController.currentRoute is TabsRoute,
-                                canPopToTabs = !useNativeNavigation,
-                            )
-                            // A guest sees the code on the Add Playlist page, where they are asked before
-                            // being taken to sign-in.
-                            if (guest) entry.prepareCodeEntryPage()
-                            SettingsPageRequest.request(route.settingsPage)
-                            activateTab(AppScreenTab.Settings)
-                            // Over the player / stream list the settings shell is hidden: leave it the way
-                            // Back does (the player saves progress and releases), so the preview is visible.
-                            if (route.leaveToTabsFirst) {
-                                var guard = navController.routes.size
-                                while (navController.currentRoute !is TabsRoute && guard-- > 0) {
-                                    if (!navController.popBackStack()) break
-                                }
+                        if (entry != null) {
+                            when (SetupLinkDeferralPolicy.timing(hasGate = ownsAppRuntime, shellReady = shellReadyNow)) {
+                                LinkTiming.HOLD_AND_WAIT -> if (entry.holdLinkedCode(deepLink.code)) DeferredSetupLink.pending = true
+                                LinkTiming.OPEN_NOW -> if (entry.acceptLinkedCode(deepLink.code)) openSetupLink(entry)
                             }
                         }
                         AppDeepLinkRepository.markConsumed(deepLink)
