@@ -42,6 +42,8 @@ val tvosExcludedCommon = listOf(
     "com/nuvio/app/core/rec/RecShelfTracking.kt", "com/nuvio/app/features/auth/AccountSessionPrompts.kt",
     "com/nuvio/app/features/library/TrackingMembershipRemovalConfirmation.kt",
     "com/nuvio/app/features/livetv/LiveTvOrientation.kt",
+    // Phone/desktop long-press channel menu (sheet + toast); Apple TV has its own SwiftUI context menu.
+    "com/nuvio/app/features/iptv/IptvLiveChannelMenu.kt",
     // iOS-only SwiftUI tab bridge, and the announcements feature (not in Apple TV v1).
     "com/nuvio/app/features/announcements/internal/AnnouncementsRepository.kt", "com/nuvio/app/features/home/HomeEpisodeShuffle.kt",
     // In-app APK updater: App Store builds update through the store.
