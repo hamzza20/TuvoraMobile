@@ -274,7 +274,8 @@ extension MPVPlayerViewController {
         // A live stream paused in the background goes stale (dead socket, old buffer): unpausing
         // plays the leftover buffer then stalls. Reload to rejoin the live edge. This is our
         // nuvio-live-resume fix; the fork has no live-TV path and drops straight into playPlayback.
-        if isLiveStream, let path = getString("path") {
+        // Main thread: the observed path, not a synchronous mpv read (see MPVPropertyShadow).
+        if isLiveStream, let path = propertyShadow.snapshot.path {
             clearPlaybackError()
             applyRequestHeaders(activeRequestHeaders)
             command("loadfile", args: [path, "replace"])
