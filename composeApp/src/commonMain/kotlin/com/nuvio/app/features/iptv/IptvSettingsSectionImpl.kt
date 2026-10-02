@@ -33,10 +33,28 @@ internal class IptvSettingsNavigation(
 ) {
     fun openPlaylistForm() = open(SettingsPage.IptvAddPlaylist)
     fun openContent() = open(SettingsPage.IptvContent)
+    fun openPlaylistDetails() = open(SettingsPage.IptvPlaylistDetails)
+    fun openSetupPreview() = open(SettingsPage.IptvSetupPreview)
     fun openCategoryChecklist() = open(SettingsPage.IptvCategoryChecklist)
 
     /** A successful Add/Edit save returns to the playlist list the form was opened from. */
     fun playlistFormDone() = back()
+
+    /**
+     * A redeemed setup code ([SetupCompletionNavigation]): leave the preview (and the Add Playlist page under it)
+     * as every finished form does, then open the new playlist's details when it is on this device — so Back from
+     * there returns to the playlist list, never to a preview whose code has been used.
+     */
+    fun setupDone(plan: SetupCompletionPlan) {
+        repeat(plan.pops) { back() }
+        plan.openDetailsKey?.let { key ->
+            XtreamPlaylistDetailsPage.open(key)
+            openPlaylistDetails()
+        }
+    }
+
+    /** Remove finished: leave the details of a playlist that no longer exists. */
+    fun detailsDone() = back()
 
     /** Process-death restore lost the page's plain-var target: leave the page. */
     fun bounceBackAfterRestore() = back()
@@ -65,11 +83,18 @@ internal object IptvSettingsSectionImpl : IptvSettingsSection {
     override fun headerTitleOrNull(page: SettingsPage): String? = rememberNavigationTitleOverride()(page)
 
     @Composable
-    override fun rememberNavigationTitleOverride(): (SettingsPage) -> String? =
-        playlistFormTitleOverride(
+    override fun rememberNavigationTitleOverride(): (SettingsPage) -> String? {
+        val form = playlistFormTitleOverride(
             editTitle = stringResource(Res.string.compose_settings_page_iptv_edit_playlist),
             isEditing = { XtreamAddPage.isEdit },
         )
+        // The details screen is titled with the playlist's own name.
+        return { page ->
+            form(page) ?: if (page == SettingsPage.IptvPlaylistDetails) {
+                XtreamPlaylistDetailsPage.accountId?.let { id -> XtreamRepository.uiState.value.accounts.firstOrNull { it.id == id }?.name }
+            } else null
+        }
+    }
 
     override fun LazyListScope.renderPage(
         page: SettingsPage,
@@ -89,20 +114,43 @@ internal object IptvSettingsSectionImpl : IptvSettingsSection {
                     XtreamAddPage.openAdd()
                     navigation.openPlaylistForm()
                 },
-                onEditPlaylist = { account ->
-                    XtreamRepository.clearError()
-                    XtreamAddPage.openEdit(account.id)
-                    navigation.openPlaylistForm()
+                onOpenPlaylist = { account ->
+                    XtreamPlaylistDetailsPage.open(account.id)
+                    navigation.openPlaylistDetails()
                 },
-                onOpenContent = { account ->
-                    XtreamContentPage.open(account.id)
-                    navigation.openContent()
-                },
+            )
+            SettingsPage.IptvPlaylistDetails -> if (XtreamPlaylistDetailsPage.accountId == null) {
+                // Process-death restore: the target playlist id is a plain var — bounce back.
+                item { LaunchedEffect(Unit) { navigation.bounceBackAfterRestore() } }
+            } else {
+                xtreamPlaylistDetailsContent(
+                    isTablet = isTablet,
+                    state = xtreamState,
+                    onEdit = { account ->
+                        XtreamRepository.clearError()
+                        XtreamAddPage.openEdit(account.id)
+                        navigation.openPlaylistForm()
+                    },
+                    onOpenContent = { account ->
+                        XtreamContentPage.open(account.id)
+                        navigation.openContent()
+                    },
+                    onLeave = navigation::detailsDone,
+                )
+            }
+            SettingsPage.IptvSetupPreview -> xtreamSetupPreviewContent(
+                isTablet = isTablet,
+                onCancelled = navigation::playlistFormDone,
+                onCompleted = { completion -> navigation.setupDone(SetupCompletionNavigation.plan(completion, SetupPreviewEntry.fromAddPage)) },
             )
             SettingsPage.IptvAddPlaylist -> xtreamAddPlaylistContent(
                 isTablet = isTablet,
                 state = xtreamState,
                 onDone = navigation::playlistFormDone,
+                onOpenSetupPreview = {
+                    SetupPreviewEntry.fromAddPage = true
+                    navigation.openSetupPreview()
+                },
             )
             SettingsPage.IptvContent -> if (XtreamContentPage.accountId == null) {
                 // Process-death restore: the page survives (rememberSaveable) but the

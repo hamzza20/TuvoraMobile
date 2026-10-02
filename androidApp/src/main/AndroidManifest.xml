@@ -27,6 +27,7 @@
         <activity
             android:exported="true"
             android:name="com.nuvio.app.MainActivity"
+            android:launchMode="singleTop"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Nuvio.Splash">
@@ -67,6 +68,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="stremio" />
+            </intent-filter>
+            <!-- Step 2: a provider's setup link (https://tuvora.co/s/<code>) opens the app on the setup
+                 preview. autoVerify needs https://tuvora.co/.well-known/assetlinks.json to list this app
+                 (served by nuvio-web); until it does, the link simply opens the web claim page. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="tuvora.co"
+                    android:pathPrefix="/s/" />
             </intent-filter>
         </activity>
 

@@ -20,6 +20,8 @@ import nuvio.composeapp.generated.resources.compose_settings_page_iptv
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv_add_playlist
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv_content
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv_category_checklist
+import nuvio.composeapp.generated.resources.provider_playlist_details_page
+import nuvio.composeapp.generated.resources.provider_setup_page_preview
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
@@ -173,6 +175,17 @@ internal enum class SettingsPage(
         titleRes = Res.string.compose_settings_page_iptv_category_checklist,
         category = SettingsCategory.General,
         parentPage = IptvContent,
+    ),
+    // Step 2: the redesigned playlist details screen, and the setup-code preview ("Setup from your provider").
+    IptvPlaylistDetails(
+        titleRes = Res.string.provider_playlist_details_page,
+        category = SettingsCategory.General,
+        parentPage = Iptv,
+    ),
+    IptvSetupPreview(
+        titleRes = Res.string.provider_setup_page_preview,
+        category = SettingsCategory.General,
+        parentPage = Iptv,
     ),
     TraktAuthentication(
         // Keep the enum name for saved navigation-state compatibility.
