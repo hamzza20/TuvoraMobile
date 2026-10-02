@@ -63,4 +63,32 @@ class AppUrlBridgeTest {
     fun `does not treat non-host stremio link as addon install`() {
         assertNull(parseAppDeepLink("stremio://detail/series/tt0944947"))
     }
+
+    @Test
+    fun `parses a provider setup link`() {
+        assertEquals(
+            AppDeepLink.SetupCode("TUV-ABCD-EFGH-JKMN"),
+            parseAppDeepLink("https://tuvora.co/s/TUV-ABCD-EFGH-JKMN"),
+        )
+        assertEquals(
+            AppDeepLink.SetupCode("TUV-ABCD-EFGH-JKMN"),
+            parseAppDeepLink("https://www.tuvora.co/s/TUV-ABCD-EFGH-JKMN?utm=x"),
+        )
+        assertEquals(AppDeepLink.SetupCode("TUV-ABCD-EFGH-JKMN"), parseAppDeepLink("nuvio://s/TUV-ABCD-EFGH-JKMN"))
+    }
+
+    @Test
+    fun `only the setup path on the Tuvora host is a setup link`() {
+        assertNull(parseAppDeepLink("https://tuvora.co/s"))
+        assertNull(parseAppDeepLink("https://tuvora.co/privacy"))
+        assertNull(parseAppDeepLink("https://evil.example.com/s/TUV-ABCD-EFGH-JKMN"))
+        assertNull(parseAppDeepLink("https://tuvora.co.evil.example.com/s/TUV-ABCD-EFGH-JKMN"))
+        assertNull(parseAppDeepLink("nuvio://s"))
+    }
+
+    @Test
+    fun `a setup link never prints its code`() {
+        val link = parseAppDeepLink("https://tuvora.co/s/TUV-ABCD-EFGH-JKMN")
+        assertEquals(false, link.toString().contains("ABCD"), "toString must not leak the code: $link")
+    }
 }

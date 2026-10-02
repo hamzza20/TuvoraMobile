@@ -136,6 +136,21 @@ class ProviderSetupApiTest {
     }
 
     @Test
+    fun `services the redeem skipped are counted with their reason`() = runBlocking {
+        val rpc = FakeRpc { _, _ ->
+            json("""{"ok":true,"status":"redeemed","profile_index":1,"added":0,"updated":0,"unchanged":0,
+                "playlists":[{"playlist_key":null,"name":"A","action":"skipped","reason":"invalid_url"},
+                             {"playlist_key":null,"name":"B","action":"skipped","reason":"missing_login"},
+                             {"playlist_key":null,"name":"C","action":"skipped"}],
+                "added_addons":0,"skipped_addons":0}""")
+        }
+        val summary = (api(rpc = rpc).redeem("abcdefghjkmn", 1) as RedeemResult.Redeemed).summary
+        assertEquals(listOf("invalid_url", "missing_login", "missing_login"), summary.skippedReasons)
+        assertEquals(3, summary.skipped)
+        assertEquals(emptyList(), summary.playlists, "a skipped service has no playlist key")
+    }
+
+    @Test
     fun `redeeming a code this account already used is not an error`() = runBlocking {
         val rpc = FakeRpc { _, _ -> json("""{"ok":true,"status":"already_redeemed","profile_index":1,"added":0,"updated":0,"unchanged":0,"playlists":[],"added_addons":0,"skipped_addons":0}""") }
         val result = api(rpc = rpc).redeem("abcdefghjkmn", 1) as RedeemResult.Redeemed

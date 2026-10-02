@@ -40,7 +40,11 @@ data class RedeemSummary(
     val addedAddons: Int,
     val skippedAddons: Int,
     val alreadyRedeemed: Boolean = false,
-)
+    /** Services the setup could not install: `missing_login` (the provider has not filled the login yet) or `invalid_url`. */
+    val skippedReasons: List<String> = emptyList(),
+) {
+    val skipped: Int get() = skippedReasons.size
+}
 
 sealed interface RedeemResult {
     data class Redeemed(val summary: RedeemSummary) : RedeemResult
@@ -189,6 +193,10 @@ internal class HttpProviderSetupApi(
             return RedeemResult.Refused(SetupCodeOutcome.fromErrorCode((o["error"] as? JsonPrimitive)?.contentOrNull))
         }
         fun int(key: String) = (o[key] as? JsonPrimitive)?.intOrNull ?: 0
+        val rows = (o["playlists"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+        val skippedReasons = rows
+            .filter { (it["action"] as? JsonPrimitive)?.contentOrNull == "skipped" }
+            .map { (it["reason"] as? JsonPrimitive)?.contentOrNull ?: "missing_login" }
         val playlists = (o["playlists"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { el ->
             val p = el as? JsonObject ?: return@mapNotNull null
             val key = (p["playlist_key"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
@@ -205,6 +213,7 @@ internal class HttpProviderSetupApi(
                 playlists = playlists,
                 addedAddons = int("added_addons"), skippedAddons = int("skipped_addons"),
                 alreadyRedeemed = (o["status"] as? JsonPrimitive)?.contentOrNull == "already_redeemed",
+                skippedReasons = skippedReasons,
             ),
         )
     }
