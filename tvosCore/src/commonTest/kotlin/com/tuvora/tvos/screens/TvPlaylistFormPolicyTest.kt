@@ -105,4 +105,89 @@ class TvPlaylistFormPolicyTest {
         assertEquals("Off", TvPlaylistFormPolicy.autoRefreshLabel(0))
         assertEquals("24h", TvPlaylistFormPolicy.autoRefreshLabel(24))
     }
+
+    // --- ManagedEditPolicy on the Apple TV edit path (contract section 6) --------------------------
+
+    /** Provider-owned fields chosen so any trim / lower-case / default-port / trailing-slash pass changes a byte. */
+    private val managedXtream = XtreamAccount(
+        id = "mx", name = "Acme Live", baseUrl = "HTTP://Panel.Example.COM:80/", username = " Alice ",
+        password = " p@ss ", userAgent = " Acme/1.0 ", epgUrl = " http://EPG.example.com:80/x.xml ",
+        backupUrls = listOf("http://Backup.Example.com:80/", "HTTPS://b2.example.com:443/"), autoRefreshHours = 12,
+    )
+
+    private fun assertProviderFieldsUntouched(pulled: XtreamAccount, input: com.nuvio.app.features.iptv.XtreamFormInput) {
+        val expectedServer = when (pulled.sourceType) {
+            SOURCE_TYPE_M3U_URL, SOURCE_TYPE_STALKER -> pulled.baseUrl
+            else -> pulled.baseUrl
+        }
+        assertEquals(expectedServer, input.serverUrl, "server address must be byte-identical")
+        assertEquals(pulled.username, input.username, "username")
+        assertEquals(pulled.password, input.password, "password")
+        assertEquals(pulled.epgUrl, input.epgUrl, "epg url")
+        assertEquals(pulled.userAgent, input.userAgent, "user agent")
+        assertEquals(pulled.backupUrls, input.backupUrls, "backup servers")
+        assertEquals(pulled.macAddress, input.macAddress, "mac")
+        assertEquals(pulled.stalkerUsername, input.stalkerUsername, "stalker username")
+        assertEquals(pulled.stalkerPassword, input.stalkerPassword, "stalker password")
+        assertEquals(pulled.serialNumber, input.serialNumber, "serial number")
+        assertEquals(pulled.deviceId, input.deviceId, "device id")
+        assertEquals(pulled.sendDeviceId, input.sendDeviceId, "send device id")
+        assertEquals(pulled.sourceType, input.sourceType, "source type")
+    }
+
+    @Test
+    fun `a managed xtream edit keeps every provider field byte identical`() {
+        val form = TvPlaylistFormPolicy.fromAccount(managedXtream).copy(name = "Renamed", autoRefreshHours = 6)
+        val input = assertNotNull(TvPlaylistFormPolicy.toEditInput(form, managedXtream, managed = true))
+        assertProviderFieldsUntouched(managedXtream, input)
+        assertEquals("Renamed", input.name)
+        assertEquals(6, input.autoRefreshHours, "a non-provider option still follows the form")
+    }
+
+    @Test
+    fun `a managed m3u url edit keeps the playlist address byte identical`() {
+        val pulled = XtreamAccount(
+            id = "mm", name = "List", baseUrl = " HTTP://Lists.Example.COM:80/get.php?username=U&password=P ", username = "", password = "",
+            sourceType = SOURCE_TYPE_M3U_URL, userAgent = " UA ", backupUrls = listOf("http://Mirror.Example.com:80/l.m3u/"),
+        )
+        val input = assertNotNull(TvPlaylistFormPolicy.toEditInput(TvPlaylistFormPolicy.fromAccount(pulled).copy(name = "Mine"), pulled, managed = true))
+        assertProviderFieldsUntouched(pulled, input)
+        assertEquals(pulled.baseUrl, input.m3uUrl, "the m3u address rides in both fields")
+    }
+
+    @Test
+    fun `a managed stalker edit keeps portal mac and portal login byte identical`() {
+        val pulled = XtreamAccount(
+            id = "ms", name = "Box", baseUrl = "HTTP://Portal.Example.COM:80/", username = "", password = "",
+            sourceType = SOURCE_TYPE_STALKER, macAddress = "00:1a:79:aa:bb:cc", stalkerUsername = " su ", stalkerPassword = " sp ",
+            serialNumber = " SN ", deviceId = " dev ", sendDeviceId = false, backupUrls = listOf("http://P2.example.com:80/"),
+        )
+        val input = assertNotNull(TvPlaylistFormPolicy.toEditInput(TvPlaylistFormPolicy.fromAccount(pulled).copy(name = "Lounge"), pulled, managed = true))
+        assertProviderFieldsUntouched(pulled, input)
+    }
+
+    @Test
+    fun `a managed edit ignores form fields the screen should not have offered`() {
+        // Even if a form somehow carried a changed server or login, a managed playlist's edit never reads them.
+        val tampered = TvPlaylistFormPolicy.fromAccount(managedXtream).copy(
+            server = "http://other.example.com", username = "mallory", password = "x", userAgent = "evil", epgUrl = "http://evil", backupUrls = emptyList(),
+        )
+        val input = assertNotNull(TvPlaylistFormPolicy.toEditInput(tampered, managedXtream, managed = true))
+        assertProviderFieldsUntouched(managedXtream, input)
+    }
+
+    @Test
+    fun `an unmanaged edit behaves exactly as before`() {
+        val form = TvPlaylistFormPolicy.fromAccount(managedXtream).copy(name = "Mine")
+        val expected = assertNotNull(TvPlaylistFormPolicy.toInput(form))
+        assertEquals(expected, TvPlaylistFormPolicy.toEditInput(form, managedXtream, managed = false))
+        // ...which is the normal trimming: nothing about it is byte-identical.
+        assertEquals("Alice", expected.username)
+    }
+
+    @Test
+    fun `a pasted link on an unmanaged edit still falls back to the url route`() {
+        val form = TvPlaylistFormPolicy.empty().copy(pasteLink = true, playlistUrl = "http://host:8080/")
+        assertNull(TvPlaylistFormPolicy.toEditInput(form, managedXtream, managed = false))
+    }
 }

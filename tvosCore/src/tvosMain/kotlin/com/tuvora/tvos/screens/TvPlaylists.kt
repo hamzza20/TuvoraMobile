@@ -1,6 +1,7 @@
 package com.tuvora.tvos.screens
 
 import com.nuvio.app.core.sync.SyncManager
+import com.nuvio.app.features.iptv.ManagedInfoRepository
 import com.nuvio.app.features.iptv.PlaylistActionsPolicy
 import com.nuvio.app.features.iptv.PlaylistAction
 import com.nuvio.app.features.iptv.XtreamAccount
@@ -45,7 +46,11 @@ object TvPlaylists {
     }
 
     fun edit(accountId: String, form: TvPlaylistForm, onResult: (Boolean) -> Unit) {
-        val input = TvPlaylistFormPolicy.toInput(form)
+        // A managed playlist (one a provider installed) is edited from the PULLED account so no provider-owned
+        // field can change a byte and silently detach it (ManagedEditPolicy; contract section 6).
+        val pulled = XtreamRepository.uiState.value.accounts.firstOrNull { it.id == accountId }
+        val managed = ManagedInfoRepository.isManaged(ProfileRepository.activeProfileId, accountId)
+        val input = TvPlaylistFormPolicy.toEditInput(form, pulled, managed)
         if (input == null) {
             XtreamRepository.editFromUrl(accountId, form.playlistUrl, onResult)
         } else {

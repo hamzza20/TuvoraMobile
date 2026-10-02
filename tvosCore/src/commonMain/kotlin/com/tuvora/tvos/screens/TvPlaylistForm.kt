@@ -111,6 +111,42 @@ object TvPlaylistFormPolicy {
         )
     }
 
+    /**
+     * The input for EDITING a saved playlist. An unmanaged playlist is the viewer's own: the form is read
+     * exactly as [toInput] reads it (null for a pasted link with no login, so the caller falls back to the
+     * URL route).
+     *
+     * A MANAGED playlist belongs to its provider, who keeps its server, login, backups, guide address and
+     * user agent up to date. The server silently detaches a managed row when a pushed row changes any of
+     * those by a single byte, and a form round trip does exactly that (trim, lower-case host, default port,
+     * re-defaulted user agent). So for a managed playlist this input is built from the PULLED [pulled]
+     * account (ManagedEditPolicy's rule: provider-owned fields byte-identical, never re-normalised) and the
+     * form contributes only what is the viewer's: the name and the auto-refresh option. Whatever else the
+     * form holds is never read. (The shared repository applies the same lock again when it saves.)
+     */
+    internal fun toEditInput(form: TvPlaylistForm, pulled: XtreamAccount?, managed: Boolean): XtreamFormInput? {
+        if (!managed || pulled == null) return toInput(form)
+        return XtreamFormInput(
+            serverUrl = pulled.baseUrl,
+            username = pulled.username,
+            password = pulled.password,
+            name = form.name.trim().ifEmpty { null },
+            epgUrl = pulled.epgUrl,
+            dnsProvider = pulled.dnsProvider,
+            autoRefreshHours = form.autoRefreshHours,
+            sourceType = pulled.sourceType,
+            m3uUrl = if (pulled.sourceType == SOURCE_TYPE_M3U_URL) pulled.baseUrl else "",
+            userAgent = pulled.userAgent,
+            macAddress = pulled.macAddress,
+            stalkerUsername = pulled.stalkerUsername,
+            stalkerPassword = pulled.stalkerPassword,
+            serialNumber = pulled.serialNumber,
+            deviceId = pulled.deviceId,
+            sendDeviceId = pulled.sendDeviceId,
+            backupUrls = pulled.backupUrls,
+        )
+    }
+
     /** Edit pre-fill: the saved playlist's identity and options, in the fields its source type shows. */
     fun fromAccount(account: XtreamAccount): TvPlaylistForm {
         val base = empty(account.sourceType).copy(
