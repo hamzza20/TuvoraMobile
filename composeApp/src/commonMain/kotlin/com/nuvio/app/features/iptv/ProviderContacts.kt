@@ -1,6 +1,6 @@
 package com.nuvio.app.features.iptv
 
-import com.nuvio.app.core.ui.ExternalLinkPolicy
+import com.nuvio.app.core.ui.ContactLinkRules
 import kotlinx.serialization.Serializable
 
 /** The contact kinds a provider can publish, in the order the buttons are shown (the contract's and the web's order). */
@@ -58,7 +58,7 @@ object ProviderContacts {
     /** A plain address only: the mailto link is built from it, so no ? & % quotes or brackets. */
     fun email(value: String?): String? {
         val s = value.orEmpty().trim()
-        return s.takeIf { ExternalLinkPolicy.isPlainEmailAddress(it) }
+        return s.takeIf { ContactLinkRules.isPlainEmailAddress(it) }
     }
 
     /**
@@ -66,7 +66,7 @@ object ProviderContacts {
      * labels with an alphabetic top level, an optional port, no userinfo. Plain http, IP literals (v4 and v6),
      * single-label hosts (localhost, intranet names), non-ASCII and punycode (IDN) hosts are not offered as
      * links: the link opener is handed provider-controlled text, so this is checked here and again in
-     * `ExternalLinkPolicy.isSafeContactLink`. The server applies the full public-address rules when the
+     * `ContactLinkRules.isSafeContactLink`. The server applies the full public-address rules when the
      * provider saves it.
      */
     fun website(value: String?): String? {
@@ -76,7 +76,7 @@ object ProviderContacts {
         if (!s.startsWith("https://", ignoreCase = true)) return null
         val authority = s.substring("https://".length).takeWhile { it != '/' && it != '?' && it != '#' }
         if (authority.isEmpty() || '@' in authority || '%' in authority) return null
-        if (!ExternalLinkPolicy.isPublicLookingAuthority(authority)) return null
+        if (!ContactLinkRules.isPublicLookingAuthority(authority)) return null
         return s
     }
 
