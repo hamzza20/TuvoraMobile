@@ -680,6 +680,7 @@ object XtreamRepository : IptvCatalog {
         XtreamHubRepository.resetForProfile()
         XtreamSearchIndex.resetForProfile()
         ManagedInfoRepository.clearLocalState()
+        ManagedInfoRefresher.clearLocalState()
     }
 
     fun clearError() = _uiState.update { it.copy(error = null) }
