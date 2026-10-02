@@ -150,6 +150,8 @@ internal class HttpProviderSetupApi(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
+            // The error class only: a message can carry the request URL, and the URL carries the code.
+            co.touchlab.kermit.Logger.withTag("ProviderSetupApi").w { "preview failed: ${e::class.simpleName}" }
             SetupCodeOutcome.Network
         }
     }
