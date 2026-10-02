@@ -79,6 +79,7 @@ import nuvio.composeapp.generated.resources.provider_setup_preview_loading
 import nuvio.composeapp.generated.resources.provider_setup_preview_playlists
 import nuvio.composeapp.generated.resources.provider_setup_preview_profile
 import nuvio.composeapp.generated.resources.provider_setup_section_title
+import nuvio.composeapp.generated.resources.provider_setup_nothing_added_toast
 import nuvio.composeapp.generated.resources.provider_setup_skipped_login_toast
 import nuvio.composeapp.generated.resources.provider_setup_skipped_url_toast
 import nuvio.composeapp.generated.resources.provider_setup_sign_in_needed
@@ -154,7 +155,10 @@ internal fun SetupCodeEntrySection(isTablet: Boolean, onOpenPreview: () -> Unit)
                 },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Characters,
-                    keyboardType = KeyboardType.Ascii,
+                    // A setup code is a one-time secret: no autocorrect, and the password keyboard type tells the
+                    // keyboard not to learn it (security L7). The text itself stays visible.
+                    autoCorrectEnabled = false,
+                    keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Go,
                 ),
                 keyboardActions = KeyboardActions(onGo = { submit() }),
@@ -197,7 +201,8 @@ internal fun LazyListScope.xtreamSetupPreviewContent(
         val ui by controller.state.collectAsStateWithLifecycle()
         val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
         val auth by AuthRepository.state.collectAsStateWithLifecycle()
-        LaunchedEffect(Unit) { controller.loadPreview() }
+        // Keyed on the held-code generation: a link (or a new Continue) while this page is open restarts the load.
+        LaunchedEffect(ui.holdGeneration) { controller.loadPreview() }
         GuestSignInDialog(ui, controller)
 
         val completion = ui.completed
@@ -206,6 +211,7 @@ internal fun LazyListScope.xtreamSetupPreviewContent(
                 CompletionKind.ALREADY_IN_ACCOUNT -> stringResource(Res.string.provider_setup_already_toast, completion.providerName)
                 CompletionKind.NOTHING_MISSING_LOGIN -> stringResource(Res.string.provider_setup_skipped_login_toast, completion.providerName)
                 CompletionKind.NOTHING_INVALID_URL -> stringResource(Res.string.provider_setup_skipped_url_toast, completion.providerName)
+                CompletionKind.NOTHING_ADDED -> stringResource(Res.string.provider_setup_nothing_added_toast)
                 CompletionKind.ADDED ->
                     if (completion.profileIndex != profileState.activeProfile?.profileIndex) {
                         stringResource(
@@ -418,6 +424,7 @@ private fun PreviewReady(
     TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth(), enabled = !ui.redeeming) {
         Text(stringResource(Res.string.provider_setup_cancel), color = tokens.colors.textSecondary)
     }
+    Spacer(Modifier.height(FLOATING_BAR_CLEARANCE))
 }
 
 /** A read-only row in the settings-group style (title over a muted description), no tap target. */

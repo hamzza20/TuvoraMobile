@@ -51,6 +51,7 @@
     <string name="provider_setup_added_toast">%1$s added your playlist</string>
     <string name="provider_setup_added_other_profile_toast">%1$s added your playlist to %2$s</string>
     <string name="provider_setup_already_toast">Your playlist from %1$s is already in your account</string>
+    <string name="provider_setup_nothing_added_toast">Nothing was added. Ask your provider to check your setup.</string>
     <string name="provider_setup_skipped_login_toast">%1$s has not filled in your login yet. Ask them to: your playlist is added as soon as they do.</string>
     <string name="provider_setup_skipped_url_toast">%1$s&apos;s address for this playlist isn&apos;t valid. Ask them to check it.</string>
     <string name="provider_contact_provider">Contact %1$s</string>
@@ -73,6 +74,7 @@
     <string name="provider_details_expired">Expired</string>
     <string name="provider_details_never_expires">Never expires</string>
     <string name="provider_details_expiry_not_reported">Expiry not reported by this provider</string>
+    <string name="provider_details_expiry_check_failed">Couldn&apos;t check expiry</string>
     <string name="provider_details_connections">%1$d of %2$d connections</string>
     <string name="provider_details_tab_overview">Overview</string>
     <string name="provider_details_tab_content">Content</string>

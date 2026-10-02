@@ -55,4 +55,37 @@ class PlaylistAccountInfoStoreTest {
         assertFalse(AccountInfoFreshnessPolicy.isFresh(0, AccountInfoFreshnessPolicy.TTL_MS))
         assertFalse(AccountInfoFreshnessPolicy.isFresh(10, 5), "a clock that went backwards is not fresh")
     }
+
+    // ---- code review M4: a failure is remembered for seconds, not hours --------------------------------
+
+    @Test
+    fun `a failed check is retried after a short wait and not after six hours`() = runBlocking {
+        answer = null
+        assertNull(store.infoFor(xtream))
+        assertEquals(1, calls)
+        now += AccountInfoFreshnessPolicy.FAILURE_TTL_MS - 1
+        assertNull(store.infoFor(xtream))
+        assertEquals(1, calls, "inside the short window nothing is re-asked (no hammering a dead panel)")
+        now += 1
+        answer = info
+        assertEquals(info, store.infoFor(xtream), "a minute later the panel is asked again and the answer shows")
+        assertEquals(2, calls)
+        assertTrue(AccountInfoFreshnessPolicy.FAILURE_TTL_MS in 30_000L..120_000L)
+    }
+
+    @Test
+    fun `a failure does not erase what the panel last said`() = runBlocking {
+        store.infoFor(xtream)
+        now += AccountInfoFreshnessPolicy.TTL_MS
+        answer = null
+        store.infoFor(xtream)
+        assertEquals(info, store.cached("k1"))
+    }
+
+    @Test
+    fun `freshness table for failures`() {
+        assertTrue(AccountInfoFreshnessPolicy.isFresh(0, 1, succeeded = false))
+        assertFalse(AccountInfoFreshnessPolicy.isFresh(0, AccountInfoFreshnessPolicy.FAILURE_TTL_MS, succeeded = false))
+        assertTrue(AccountInfoFreshnessPolicy.isFresh(0, AccountInfoFreshnessPolicy.FAILURE_TTL_MS, succeeded = true))
+    }
 }

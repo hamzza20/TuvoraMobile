@@ -14,6 +14,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nuvio.app.core.auth.AuthStorage
 import com.nuvio.app.core.network.ServerConfigurationStorage
 import com.nuvio.app.core.diagnostics.SentryInitializer
+import com.nuvio.app.core.deeplink.IncomingLinkPolicy
 import com.nuvio.app.core.deeplink.handleAppUrl
 import com.nuvio.app.core.storage.PlatformLocalAccountDataCleaner
 import com.nuvio.app.core.sync.SyncClientIdentityStorage
@@ -191,7 +192,9 @@ open class MainActivity : AppCompatActivity() {
         // Same deal for the profile-picture picker (PickVisualMedia).
         com.nuvio.app.features.profiles.AvatarImagePicker.initialize(applicationContext)
         com.nuvio.app.features.profiles.AvatarImagePicker.bindActivity(this)
-        handleIncomingAppIntent(intent)
+        // Only a genuine launch acts on its link; a recreated activity (locale / dark mode / process restore)
+        // would otherwise replay a Cancelled or spent setup code (security M2).
+        handleIncomingAppIntent(intent, restoredFromSavedState = savedInstanceState != null)
 
         setContent {
             installFeatures {
@@ -203,7 +206,7 @@ open class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIncomingAppIntent(intent)
+        handleIncomingAppIntent(intent, restoredFromSavedState = false)
     }
 
     override fun onUserLeaveHint() {
@@ -240,9 +243,13 @@ open class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
-    private fun handleIncomingAppIntent(intent: Intent?) {
-        val appUrl = intent?.dataString?.trim().orEmpty()
-        if (appUrl.isBlank()) return
+    private fun handleIncomingAppIntent(intent: Intent?, restoredFromSavedState: Boolean) {
+        val dataString = intent?.dataString
+        val appUrl = IncomingLinkPolicy.linkToHandle(restoredFromSavedState, dataString)
+        // Consumed either way: the OS keeps this Intent (and the code in its data) for the task and hands it back
+        // on every recreation, so the link is removed from it once seen.
+        if (dataString != null) intent?.data = null
+        if (appUrl == null) return
         handleAppUrl(appUrl)
     }
 }

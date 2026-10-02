@@ -74,9 +74,10 @@ internal fun parseAppDeepLink(url: String): AppDeepLink? {
     val parsedUrl = runCatching { Url(url) }.getOrNull() ?: return null
     val scheme = parsedUrl.protocol.name.lowercase()
     if (scheme == "https" || scheme == "http") {
+        // Exactly what the manifest filter and the app-site association claim: https on tuvora.co (not www, not http).
         val host = parsedUrl.host.lowercase()
         val segments = parsedUrl.pathSegments.map(String::trim).filter(String::isNotBlank)
-        return if ((host == "tuvora.co" || host == "www.tuvora.co") && segments.firstOrNull() == "s") {
+        return if (scheme == "https" && host == "tuvora.co" && segments.firstOrNull() == "s") {
             segments.getOrNull(1)?.let(AppDeepLink::SetupCode)
         } else {
             null

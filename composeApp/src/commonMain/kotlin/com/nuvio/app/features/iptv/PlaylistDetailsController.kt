@@ -81,7 +81,14 @@ internal class ManagedPlaylistActions(
     private val pull: suspend (Int) -> Unit = { XtreamSyncParticipant.pullFromServer(it) },
     private val refresh: suspend (Int) -> Boolean = { ManagedInfoRefresher.refresh(it) },
     private val telemetry: ProviderSetupTelemetry = ProviderSetupTelemetry,
+    /** App-lifetime: a detach started here outlives the page that started it. */
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
+    /** [detach] on this object's own scope; [onDone] gets whether it was detached. Leaving the page cannot cancel it. */
+    fun detachInBackground(playlistKey: String, onDone: (Boolean) -> Unit) {
+        scope.launch { onDone(detach(playlistKey)) }
+    }
+
     /** True when the server confirmed the playlist is no longer managed (including "already detached"). */
     suspend fun detach(playlistKey: String): Boolean {
         val profile = activeProfile()

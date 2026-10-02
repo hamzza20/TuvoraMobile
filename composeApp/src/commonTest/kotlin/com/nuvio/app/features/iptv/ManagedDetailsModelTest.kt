@@ -28,8 +28,9 @@ class ManagedDetailsModelTest {
         assertEquals("Managed by Acme TV", model.managedBy)
         assertEquals("Acme TV", model.providerName)
         assertEquals("2026-10-01T10:00:00Z", model.serviceUpdatedAt)
-        assertEquals(listOf(ContactKind.TELEGRAM, ContactKind.WHATSAPP, ContactKind.EMAIL), model.contacts.map { it.kind })
-        assertEquals(listOf("https://t.me/acme_tv", "https://wa.me/447700900123", "mailto:help@acme.example.com"), model.contacts.map { it.url })
+        // The contract's order (and the web's normalizeSupport): WhatsApp, Telegram, Email, Website — one order on every platform.
+        assertEquals(listOf(ContactKind.WHATSAPP, ContactKind.TELEGRAM, ContactKind.EMAIL), model.contacts.map { it.kind })
+        assertEquals(listOf("https://wa.me/447700900123", "https://t.me/acme_tv", "mailto:help@acme.example.com"), model.contacts.map { it.url })
         assertTrue(model.lockedServerLogin)
         assertTrue(model.isManaged)
     }
@@ -44,10 +45,28 @@ class ManagedDetailsModelTest {
     }
 
     @Test
-    fun `days left are whole days rounded up and the bar fills the last thirty days`() {
+    fun `days left are whole days rounded up and the thin bar shows only in the last thirty days`() {
         assertEquals(ExpiryDisplay.DaysLeft(12, 0.4f), build().expiry)
         assertEquals(ExpiryDisplay.DaysLeft(1, 1f / 30f), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 3 * 3600), now))
-        assertEquals(ExpiryDisplay.DaysLeft(90, 1f), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 90 * day), now))
+        // The bar rule (apply on every platform): days <= 30 -> fraction = days / 30 (so 30 days is a full bar);
+        // more than 30 days -> NO bar at all (null), only the "N days left" text.
+        assertEquals(ExpiryDisplay.DaysLeft(30, 1f), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 30 * day), now))
+        assertEquals(ExpiryDisplay.DaysLeft(31, null), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 31 * day), now))
+        assertEquals(ExpiryDisplay.DaysLeft(90, null), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 90 * day), now))
+        assertEquals(null, (ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 90 * day), now) as ExpiryDisplay.DaysLeft).fraction)
+    }
+
+    @Test
+    fun `a count of zero is hidden until the index knows better`() {
+        fun counts(c: DetailsCounts) = ManagedDetailsModel.build(xtream, info, panel, c, now).counts
+        // Not indexed yet reads as 0 for Xtream: never shown as "0 Movies / 0 Series".
+        assertEquals(DetailsCounts(null, null, null), counts(DetailsCounts(0, 0, 0)))
+        assertTrue(counts(DetailsCounts(0, 0, 0)).isEmpty, "the whole row is hidden, not three zero tiles")
+        // Only the counts that are known and positive show; the rest stay hidden.
+        assertEquals(DetailsCounts(null, 5, null), counts(DetailsCounts(0, 5, 0)))
+        assertEquals(DetailsCounts(12, 5, 9), counts(DetailsCounts(12, 5, 9)))
+        assertEquals(DetailsCounts(null, null, null), counts(DetailsCounts(null, -1, null)), "a negative or unknown count is hidden")
+        assertEquals(DetailsCounts(4, null, null), counts(DetailsCounts(4, null, null)))
     }
 
     @Test
@@ -57,6 +76,20 @@ class ManagedDetailsModelTest {
         assertEquals(ExpiryDisplay.NeverExpires, ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = 0L), now))
         assertEquals(ExpiryDisplay.Expired, ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now - 5), now))
         assertEquals(ExpiryDisplay.Text("February 20, 2027"), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = null, expiresText = "February 20, 2027"), now))
+    }
+
+    @Test
+    fun `a failed panel check is not reported as the provider having no expiry`() {
+        // The details screen's own build: the panel was asked and did not answer.
+        val failed = ManagedDetailsModel.build(xtream, info, null, DetailsCounts(), now, panelCheckFailed = true)
+        assertEquals(ExpiryDisplay.CheckFailed, failed.expiry)
+        // An answered call that carried no expiry is the provider's own statement.
+        val noExpiry = ManagedDetailsModel.build(xtream, info, panel.copy(expiresAtEpochSec = null), DetailsCounts(), now, panelCheckFailed = false)
+        assertEquals(ExpiryDisplay.NotReported, noExpiry.expiry)
+        // Still loading / nothing asked yet: not a failure.
+        assertEquals(ExpiryDisplay.NotReported, ManagedDetailsModel.build(xtream, info, null, DetailsCounts(), now).expiry)
+        // An answer always wins over a stale failure flag.
+        assertEquals(ExpiryDisplay.DaysLeft(12, 0.4f), ManagedDetailsModel.build(xtream, info, panel, DetailsCounts(), now, panelCheckFailed = true).expiry)
     }
 
     @Test
@@ -115,5 +148,27 @@ class ManagedDetailsModelTest {
         val ok = ProviderSupport(website = "https://acme.example.com/help", telegram = "https://t.me/acme_tv").links()
         assertEquals(listOf("https://t.me/acme_tv", "https://acme.example.com/help"), ok.map { it.url })
         assertEquals("acme.example.com", ok[1].text)
+    }
+
+    @Test
+    fun `a website contact is https and a public-looking host only`() {
+        fun site(v: String) = ProviderContacts.website(v)
+        assertEquals("https://acme.example.com/help?x=1", site("https://acme.example.com/help?x=1"))
+        assertEquals("https://acme.example.com:8443/", site("https://acme.example.com:8443/"))
+        assertNull(site("http://acme.example.com"), "plain http is not offered as a tappable contact")
+        assertNull(site("https://192.168.0.1/"), "an IP literal")
+        assertNull(site("https://10.0.0.1:8080/x"))
+        assertNull(site("https://[::1]/"), "an IPv6 literal")
+        assertNull(site("https://localhost/"), "a single-label host")
+        assertNull(site("https://intranet/"), "a single-label host")
+        assertNull(site("https://xn--e1afmkfd.example.com/"), "punycode (IDN) hosts are not shown as links here")
+        assertNull(site("https://аcme.example.com/"), "a non-ASCII host")
+        assertNull(site("https://user:pw@acme.example.com/"), "no userinfo")
+        assertNull(site("https://acme..example.com/"))
+        assertNull(site("https://-acme.example.com/"))
+        assertNull(site("https://.acme.example.com/"))
+        assertNull(site("https://acme.example.1/"), "a numeric TLD")
+        assertNull(site("javascript:alert(1)"))
+        assertNull(site("intent://scan/#Intent;scheme=zxing;end"))
     }
 }

@@ -185,7 +185,7 @@ internal enum class SettingsPage(
     IptvSetupPreview(
         titleRes = Res.string.provider_setup_page_preview,
         category = SettingsCategory.General,
-        parentPage = IptvAddPlaylist,
+        parentPage = Iptv,
     ),
     TraktAuthentication(
         // Keep the enum name for saved navigation-state compatibility.

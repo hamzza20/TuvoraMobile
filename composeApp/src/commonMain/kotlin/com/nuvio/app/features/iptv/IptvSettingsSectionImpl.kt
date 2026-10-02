@@ -41,14 +41,14 @@ internal class IptvSettingsNavigation(
     fun playlistFormDone() = back()
 
     /**
-     * A redeemed setup code: leave the preview (one pop, as every finished form does) and, when the new
-     * playlist is on this device, open its details — so Back from there returns to the playlist list
-     * side of the stack, never to a preview whose code has been used.
+     * A redeemed setup code ([SetupCompletionNavigation]): leave the preview (and the Add Playlist page under it)
+     * as every finished form does, then open the new playlist's details when it is on this device — so Back from
+     * there returns to the playlist list, never to a preview whose code has been used.
      */
-    fun setupDone(openPlaylistKey: String?) {
-        back()
-        if (openPlaylistKey != null) {
-            XtreamPlaylistDetailsPage.open(openPlaylistKey)
+    fun setupDone(plan: SetupCompletionPlan) {
+        repeat(plan.pops) { back() }
+        plan.openDetailsKey?.let { key ->
+            XtreamPlaylistDetailsPage.open(key)
             openPlaylistDetails()
         }
     }
@@ -141,13 +141,16 @@ internal object IptvSettingsSectionImpl : IptvSettingsSection {
             SettingsPage.IptvSetupPreview -> xtreamSetupPreviewContent(
                 isTablet = isTablet,
                 onCancelled = navigation::playlistFormDone,
-                onCompleted = { completion -> navigation.setupDone(completion.openPlaylistKey) },
+                onCompleted = { completion -> navigation.setupDone(SetupCompletionNavigation.plan(completion, SetupPreviewEntry.fromAddPage)) },
             )
             SettingsPage.IptvAddPlaylist -> xtreamAddPlaylistContent(
                 isTablet = isTablet,
                 state = xtreamState,
                 onDone = navigation::playlistFormDone,
-                onOpenSetupPreview = navigation::openSetupPreview,
+                onOpenSetupPreview = {
+                    SetupPreviewEntry.fromAddPage = true
+                    navigation.openSetupPreview()
+                },
             )
             SettingsPage.IptvContent -> if (XtreamContentPage.accountId == null) {
                 // Process-death restore: the page survives (rememberSaveable) but the

@@ -71,6 +71,7 @@ import nuvio.composeapp.generated.resources.provider_details_edit_hint_managed
 import nuvio.composeapp.generated.resources.provider_details_enabled
 import nuvio.composeapp.generated.resources.provider_details_enabled_hint
 import nuvio.composeapp.generated.resources.provider_details_expired
+import nuvio.composeapp.generated.resources.provider_details_expiry_check_failed
 import nuvio.composeapp.generated.resources.provider_details_expiry_not_reported
 import nuvio.composeapp.generated.resources.provider_details_gone
 import nuvio.composeapp.generated.resources.provider_details_locked_title
@@ -131,7 +132,6 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
             DetailsGoneCard(isTablet)
             return@item
         }
-        val scope = rememberCoroutineScope()
         val controller = remember { PlaylistDetailsController() }
         val live by controller.live.collectAsStateWithLifecycle()
         val managedMap by ManagedInfoRepository.state.collectAsStateWithLifecycle()
@@ -148,6 +148,8 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
             nowEpochSec = TraktPlatformClock.nowEpochMs() / 1000,
             addressLine = (ServerFailoverPolicy.backupLabel(activeServers[account.id] ?: 0)
                 ?: PlaylistAddress.hostOnly(account.baseUrl)),
+            // Asked and not answered: say so, instead of letting "no answer" read as "the provider has no expiry".
+            panelCheckFailed = live.hasPanel && !live.loading && live.info == null,
         )
 
         var tab by rememberSaveable(account.id) { mutableStateOf(DetailsTab.OVERVIEW.name) }
@@ -182,6 +184,8 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
                     onRemove = { confirming = DestructiveAction.REMOVE },
                 )
             }
+            // The floating tab bar draws over the end of the list: leave room so Remove is fully reachable.
+            Spacer(Modifier.height(FLOATING_BAR_CLEARANCE))
         }
 
         hiddenFor?.let { target ->
@@ -213,8 +217,9 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
                         }
                         DestructiveAction.DETACH -> {
                             detaching = true
-                            scope.launch {
-                                val ok = ManagedPlaylistActions.shared.detach(account.id)
+                            // Not on this page's scope: leaving mid-detach must not cancel the refresh + pull
+                            // that follow the RPC (the playlist would stay shown as managed until the next sync).
+                            ManagedPlaylistActions.shared.detachInBackground(account.id) { ok ->
                                 detaching = false
                                 confirming = null
                                 NuvioToastController.show(if (ok) detachedToast.orEmpty() else detachFailed)
@@ -298,7 +303,7 @@ private fun DetailsHeaderCard(model: ManagedDetailsModel, live: PlaylistDetailsL
                 if (expiry != null) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = expiry, style = MaterialTheme.typography.titleMedium, color = tokens.colors.textPrimary)
-                        (model.expiry as? ExpiryDisplay.DaysLeft)?.let { ThinBar(it.fraction) }
+                        (model.expiry as? ExpiryDisplay.DaysLeft)?.fraction?.let { ThinBar(it) }
                     }
                 }
                 if (connections != null) {
@@ -322,6 +327,9 @@ private fun DetailsHeaderCard(model: ManagedDetailsModel, live: PlaylistDetailsL
 
 private const val MAX_DOTS = 8
 
+/** Extra room below a screen's last control for the floating bottom bar. */
+internal val FLOATING_BAR_CLEARANCE = 56.dp
+
 @Composable
 private fun expiryText(expiry: ExpiryDisplay, live: PlaylistDetailsLive): String? = when (expiry) {
     is ExpiryDisplay.DaysLeft -> if (expiry.days == 1) stringResource(Res.string.provider_details_day_left) else stringResource(Res.string.provider_details_days_left, expiry.days)
@@ -330,6 +338,7 @@ private fun expiryText(expiry: ExpiryDisplay, live: PlaylistDetailsLive): String
     is ExpiryDisplay.Text -> expiry.text
     // While the panel has not answered there is nothing to say yet; once it has (or it has no panel), say so.
     ExpiryDisplay.NotReported -> if (live.loading) null else stringResource(Res.string.provider_details_expiry_not_reported)
+    ExpiryDisplay.CheckFailed -> stringResource(Res.string.provider_details_expiry_check_failed)
 }
 
 /** The thin gold bar under "N days left": the last 30 days of the subscription. Drawn only when there is an expiry. */
@@ -342,7 +351,7 @@ private fun ThinBar(fraction: Float) {
             .background(tokens.colors.borderDefault.copy(alpha = tokens.opacity.medium)),
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth(fraction.coerceIn(0.04f, 1f)).height(4.dp)
+            modifier = Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(4.dp)
                 .clip(RoundedCornerShape(NuvioTokens.Radius.full)).background(tokens.colors.accent),
         )
     }

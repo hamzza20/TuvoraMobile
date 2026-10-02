@@ -70,6 +70,7 @@ import com.nuvio.app.core.auth.isLocalOnly
 import com.nuvio.app.core.contracts.SetupCodeEntryAccess
 import com.nuvio.app.core.deeplink.AppDeepLink
 import com.nuvio.app.core.deeplink.AppDeepLinkRepository
+import com.nuvio.app.core.deeplink.SetupLinkRoutePolicy
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
@@ -931,15 +932,25 @@ internal fun MainAppContent(
                         // preview once they are back.
                         val entry = SetupCodeEntryAccess.current()
                         if (entry != null && entry.acceptLinkedCode(deepLink.code)) {
-                            if (!AuthRepository.state.value.isLocalOnly) {
-                                SettingsPageRequest.request("IptvSetupPreview")
-                            } else {
-                                // A guest sees the code on the Add Playlist page, where they are asked
-                                // before being taken to sign-in.
-                                entry.prepareCodeEntryPage()
-                                SettingsPageRequest.request("IptvAddPlaylist")
-                            }
+                            val guest = AuthRepository.state.value.isLocalOnly
+                            val route = SetupLinkRoutePolicy.decide(
+                                isGuest = guest,
+                                onTabs = navController.currentRoute is TabsRoute,
+                                canPopToTabs = !useNativeNavigation,
+                            )
+                            // A guest sees the code on the Add Playlist page, where they are asked before
+                            // being taken to sign-in.
+                            if (guest) entry.prepareCodeEntryPage()
+                            SettingsPageRequest.request(route.settingsPage)
                             activateTab(AppScreenTab.Settings)
+                            // Over the player / stream list the settings shell is hidden: leave it the way
+                            // Back does (the player saves progress and releases), so the preview is visible.
+                            if (route.leaveToTabsFirst) {
+                                var guard = navController.routes.size
+                                while (navController.currentRoute !is TabsRoute && guard-- > 0) {
+                                    if (!navController.popBackStack()) break
+                                }
+                            }
                         }
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }

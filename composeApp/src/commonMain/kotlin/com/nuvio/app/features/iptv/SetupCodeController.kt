@@ -2,6 +2,7 @@ package com.nuvio.app.features.iptv
 
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
+import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.features.profiles.ProfileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -32,8 +33,15 @@ internal data class SetupCodeUiState(
     val completed: SetupCompletion? = null,
     /** A guest (no account) pressed Continue/Add: ask before signing them out to reach sign-in. */
     val guestPrompt: Boolean = false,
+    /** Bumped every time a (new) code is held, so the preview screen restarts its load for it. */
+    val holdGeneration: Int = 0,
 ) {
     val preview: SetupPreview? get() = (previewOutcome as? SetupCodeOutcome.Ready)?.preview
+
+    /** Never prints [typed]: a state that reaches a log line must not carry the code. */
+    override fun toString(): String =
+        "SetupCodeUiState(previewLoading=$previewLoading, previewOutcome=${previewOutcome?.analyticsName}, " +
+            "redeeming=$redeeming, completed=${completed != null}, holdGeneration=$holdGeneration)"
 }
 
 /** The result a finished redeem hands the UI: who added what, and which playlist to open. */
@@ -47,20 +55,24 @@ internal data class SetupCompletion(
     val openPlaylistKey: String?,
     /** Why services were not installed (`missing_login` / `invalid_url`), if any. */
     val skippedReasons: List<String> = emptyList(),
+    /** Services the setup had already installed for this account (a second code for the same package). */
+    val unchanged: Int = 0,
 ) {
     /** What the person should be told. Pure, so every platform says the same thing for the same redeem. */
     val outcome: CompletionKind
         get() = when {
             alreadyRedeemed -> CompletionKind.ALREADY_IN_ACCOUNT
             added + updated > 0 -> CompletionKind.ADDED
+            // A second code for a package this account already holds: nothing new, and not "nothing went wrong" either.
+            unchanged > 0 -> CompletionKind.ALREADY_IN_ACCOUNT
             "invalid_url" in skippedReasons && "missing_login" !in skippedReasons -> CompletionKind.NOTHING_INVALID_URL
             skippedReasons.isNotEmpty() -> CompletionKind.NOTHING_MISSING_LOGIN
-            else -> CompletionKind.ADDED
+            else -> CompletionKind.NOTHING_ADDED
         }
 }
 
 /** The sentence a finished redeem earns. Nothing-added is NOT "added your playlist". */
-internal enum class CompletionKind { ADDED, ALREADY_IN_ACCOUNT, NOTHING_MISSING_LOGIN, NOTHING_INVALID_URL }
+internal enum class CompletionKind { ADDED, ALREADY_IN_ACCOUNT, NOTHING_MISSING_LOGIN, NOTHING_INVALID_URL, NOTHING_ADDED }
 
 /** What pressing Continue on the code field did. */
 internal enum class ContinueResult { OPEN_PREVIEW, NEEDS_SIGN_IN, REJECTED }
@@ -97,6 +109,8 @@ internal class SetupCodeController(
     private val localAccountKeys: () -> Set<String> = { XtreamRepository.uiState.value.accounts.map { it.id }.toSet() },
     private val pullPlaylists: suspend (Int) -> Unit = { XtreamSyncParticipant.pullFromServer(it) },
     private val refreshManaged: suspend (Int) -> Unit = { ManagedInfoRefresher.refresh(it) },
+    /** Store builds hide add-ons, so the redeem asks the server not to install them. */
+    private val skipAddons: () -> Boolean = { !AppFeaturePolicy.addonsEnabled },
     private val requestSignIn: () -> Unit = { AuthRepository.requestSignIn() },
     private val signOutToSignIn: suspend () -> Unit = { AuthRepository.signOut() },
     private val telemetry: ProviderSetupTelemetry = ProviderSetupTelemetry,
@@ -132,6 +146,20 @@ internal class SetupCodeController(
     private var previewJob: Job? = null
     private var redeemJob: Job? = null
 
+    /** The code the CURRENT preview was fetched for: confirm() redeems only a code the person was shown. */
+    private var previewedCode: String? = null
+
+    /** Incremented whenever a held code changes; a preview result from an older value is discarded. */
+    private var previewSeq = 0
+
+    /** A different code is now held: whatever was loading or shown belongs to the old one. */
+    private fun supersedePreview() {
+        previewSeq++
+        previewJob?.cancel()
+        previewJob = null
+        previewedCode = null
+    }
+
     /** Set when Continue routed the person to sign-in: the shell reopens the preview once they are back. */
     private var resumeAfterSignIn = false
 
@@ -151,7 +179,9 @@ internal class SetupCodeController(
     /** A code arrived from a link (https://tuvora.co/s/<code>). True when it was a code (and is now held). */
     fun acceptLinkedCode(codeOrLink: String): Boolean {
         val code = SetupCode.extractFromLink(codeOrLink) ?: SetupCode.parse(codeOrLink) ?: return false
-        _state.value = SetupCodeUiState(typed = SetupCode.format(code))
+        supersedePreview()
+        // A link while the preview page is open must restart ITS load: the generation keys that effect.
+        _state.value = SetupCodeUiState(typed = SetupCode.format(code), holdGeneration = _state.value.holdGeneration + 1)
         if (!holder.set(code)) return false
         if (!isRealAccount()) routeToSignIn()
         return true
@@ -166,7 +196,13 @@ internal class SetupCodeController(
             }
             is SetupCodeParse.Valid -> {
                 holder.set(parsed.code)
-                _state.update { it.copy(previewOutcome = null, redeemRefusal = null, completed = null, typedProblem = null) }
+                supersedePreview()
+                _state.update {
+                    it.copy(
+                        previewOutcome = null, previewLoading = false, redeemRefusal = null, completed = null,
+                        typedProblem = null, holdGeneration = it.holdGeneration + 1,
+                    )
+                }
             }
         }
         if (!isRealAccount()) {
@@ -189,24 +225,35 @@ internal class SetupCodeController(
     fun loadPreview(force: Boolean = false) {
         val code = holder.peek()
         if (code == null) {
-            _state.update { it.copy(previewOutcome = SetupCodeOutcome.Problem(SetupCodeProblem.EMPTY), previewLoading = false) }
+            // Nothing held: never held, spent, or past the 30 minute bound. The field must not keep showing it,
+            // and a dead code's own outcome (expired + its contacts) must not be rewritten to "enter a code".
+            _state.update {
+                it.copy(typed = "", previewLoading = false, previewOutcome = it.previewOutcome ?: SetupCodeOutcome.Problem(SetupCodeProblem.EMPTY))
+            }
             return
         }
         if (previewJob?.isActive == true) return
-        if (!force && _state.value.previewOutcome is SetupCodeOutcome.Ready) return
+        if (!force && _state.value.previewOutcome is SetupCodeOutcome.Ready && previewedCode == code) return
         _state.update { it.copy(previewLoading = true, previewOutcome = null, redeemRefusal = null) }
+        val seq = ++previewSeq
         previewJob = scope.launch {
             val outcome = api().preview(code)
+            // Superseded while in flight (a different code was held meanwhile): its answer is for a code the
+            // person is no longer looking at, and must never be shown beside the code that is held now.
+            if (seq != previewSeq || holder.peek() != code) return@launch
             telemetry.previewed(outcome)
+            previewedCode = if (outcome is SetupCodeOutcome.Ready) code else null
+            val dead = outcome is SetupCodeOutcome.Unusable || outcome is SetupCodeOutcome.Expired
             _state.update {
                 it.copy(
                     previewLoading = false,
                     previewOutcome = outcome,
                     selectedProfileIndex = it.selectedProfileIndex ?: activeProfileIndex(),
+                    // A dead code is not worth holding on to, and is not left in the field either.
+                    typed = if (dead) "" else it.typed,
                 )
             }
-            // A dead code is not worth holding on to.
-            if (outcome is SetupCodeOutcome.Unusable || outcome is SetupCodeOutcome.Expired) holder.clear()
+            if (dead) holder.clear()
         }
     }
 
@@ -223,14 +270,25 @@ internal class SetupCodeController(
             return
         }
         val code = holder.peek() ?: run {
-            _state.update { it.copy(redeemRefusal = SetupCodeOutcome.Unusable) }
+            _state.update { it.copy(typed = "", redeemRefusal = SetupCodeOutcome.Unusable) }
             return
         }
-        val profile = _state.value.selectedProfileIndex ?: activeProfileIndex()
-        _state.update { it.copy(redeeming = true, redeemRefusal = null) }
+        if (code != previewedCode) {
+            // The preview on screen is for another code than the one held: never redeem what was not shown.
+            _state.update { it.copy(previewOutcome = null, redeemRefusal = null) }
+            loadPreview(force = true)
+            return
+        }
+        val chosen = _state.value.selectedProfileIndex ?: activeProfileIndex()
+        val profile = chosen.takeIf(profileExists) ?: activeProfileIndex().takeIf(profileExists)
+        if (profile == null) {
+            _state.update { it.copy(selectedProfileIndex = null, redeemRefusal = SetupCodeOutcome.ProfileGone) }
+            return
+        }
+        _state.update { it.copy(selectedProfileIndex = profile, redeeming = true, redeemRefusal = null) }
         redeemJob = scope.launch {
             val result = try {
-                api().redeem(code, profile)
+                api().redeem(code, profile, skipAddons())
             } catch (e: CancellationException) {
                 throw e
             }
@@ -256,7 +314,7 @@ internal class SetupCodeController(
                 completed = SetupCompletion(
                     providerName = preview.providerName, profileIndex = profile,
                     added = summary.added, updated = summary.updated, alreadyRedeemed = summary.alreadyRedeemed,
-                    openPlaylistKey = open, skippedReasons = summary.skippedReasons,
+                    openPlaylistKey = open, skippedReasons = summary.skippedReasons, unchanged = summary.unchanged,
                 ),
             )
         }
@@ -266,14 +324,23 @@ internal class SetupCodeController(
         val shown = if (outcome is SetupCodeOutcome.Expired) SetupCodeOutcome.Expired(preview.support) else outcome
         telemetry.capture("setup_code_redeemed", mapOf("added" to 0, "updated" to 0, "outcome" to shown.analyticsName))
         if (shown is SetupCodeOutcome.NeedsSignIn) routeToSignIn()
-        // The code is dead for Unusable/Expired: forget it. Network/rate-limit/profile problems keep it for a retry.
-        if (shown is SetupCodeOutcome.Unusable || shown is SetupCodeOutcome.Expired) holder.clear()
-        _state.update { it.copy(redeeming = false, redeemRefusal = shown) }
+        // The code is dead for Unusable/Expired: forget it (and the field). Network/rate-limit problems keep it
+        // for a retry; a vanished profile is recovered by falling back to the active one on the next confirm.
+        val dead = shown is SetupCodeOutcome.Unusable || shown is SetupCodeOutcome.Expired
+        if (dead) holder.clear()
+        _state.update {
+            it.copy(
+                redeeming = false,
+                redeemRefusal = shown,
+                typed = if (dead) "" else it.typed,
+                selectedProfileIndex = if (shown is SetupCodeOutcome.ProfileGone) null else it.selectedProfileIndex,
+            )
+        }
     }
 
     /** The person pressed Cancel (or left the flow): forget the code and everything about it. */
     fun cancel() {
-        previewJob?.cancel()
+        supersedePreview()
         holder.clear()
         _state.value = SetupCodeUiState()
         resumeAfterSignIn = false
