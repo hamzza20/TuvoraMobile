@@ -119,7 +119,7 @@ class ManagedEditPolicyTest {
     }
 
     @Test
-    fun `a managed playlist's backup URL with a trailing slash, uppercase host and default port survives a rename`() {
+    fun `a managed playlist's backup URL with a trailing slash and uppercase host and default port survives a rename`() {
         managed(xtream)
         val after = rename(xtream, "Renamed")
         assertEquals(xtream.backupUrls, after.backupUrls, "backup URLs are not re-normalised")
@@ -171,7 +171,7 @@ class ManagedEditPolicyTest {
     }
 
     @Test
-    fun `managed playlists lock server and login, unmanaged ones do not`() {
+    fun `managed playlists lock server and login and unmanaged ones do not`() {
         assertFalse(ManagedPlaylistPolicy.showEditServerLogin(managed = true))
         assertTrue(ManagedPlaylistPolicy.showEditServerLogin(managed = false))
         assertEquals(setOf(PlaylistField.NAME), ManagedPlaylistPolicy.editScreenFields(managed = true))

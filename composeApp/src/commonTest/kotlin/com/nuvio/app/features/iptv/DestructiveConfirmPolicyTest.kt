@@ -17,7 +17,7 @@ class DestructiveConfirmPolicyTest {
     }
 
     @Test
-    fun `Detach is confirmed by the word, ignoring case, padding and accents`() {
+    fun `Detach is confirmed by the word and ignoring case and padding and accents`() {
         for (typed in listOf("DETACH", "detach", " Detach ", "détach", "DÉTÀCH", "détach", "ＤＥＴＡＣＨ")) {
             assertTrue(confirmed(DestructiveAction.DETACH, typed), "Detach `$typed`")
         }

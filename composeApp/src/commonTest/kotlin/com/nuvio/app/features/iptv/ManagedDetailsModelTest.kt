@@ -23,7 +23,7 @@ class ManagedDetailsModelTest {
     ) = ManagedDetailsModel.build(account, info, panel, DetailsCounts(10, 20, 30), now, allowEdit = allowEdit)
 
     @Test
-    fun `a managed playlist shows the ribbon, the provider and only the contacts it set`() {
+    fun `a managed playlist shows the ribbon and the provider and only the contacts it set`() {
         val model = build()
         assertEquals("Managed by Acme TV", model.managedBy)
         assertEquals("Acme TV", model.providerName)
@@ -35,7 +35,7 @@ class ManagedDetailsModelTest {
     }
 
     @Test
-    fun `an unmanaged playlist has no ribbon, no contacts and no lock`() {
+    fun `an unmanaged playlist has no ribbon and no contacts and no lock`() {
         val model = build(info = null)
         assertNull(model.managedBy)
         assertEquals(emptyList(), model.contacts)
@@ -75,7 +75,7 @@ class ManagedDetailsModelTest {
     }
 
     @Test
-    fun `a managed playlist's groups are the provider's, your library, and remove with Detach`() {
+    fun `a managed playlist's groups are the provider's and your library and and remove with Detach`() {
         val groups = build().groups
         assertEquals(listOf(DetailsGroupKind.PROVIDER, DetailsGroupKind.LIBRARY, DetailsGroupKind.REMOVE), groups.map { it.kind })
         assertEquals("ACME TV", groups[0].title)
