@@ -3,12 +3,25 @@ package com.nuvio.app.features.iptv
 /** Channel / movie / series counts from local data only (null = not known for this source type). */
 data class DetailsCounts(val channels: Int? = null, val movies: Int? = null, val series: Int? = null) {
     val isEmpty: Boolean get() = channels == null && movies == null && series == null
+
+    /**
+     * What the screen shows: a count is shown only when it is positive. A zero is "the index has not been built
+     * yet" as often as "none", and "0 Movies / 0 Series" on a fresh playlist is wrong either way, so a zero
+     * (or negative / unknown) count stays hidden, and the whole row with it when nothing is left.
+     */
+    fun hidingZeros(): DetailsCounts = DetailsCounts(
+        channels = channels?.takeIf { it > 0 }, movies = movies?.takeIf { it > 0 }, series = series?.takeIf { it > 0 },
+    )
 }
 
 /** What the header says about when the subscription ends. */
 sealed interface ExpiryDisplay {
-    /** [days] whole days left (0 = ends today); [fraction] fills the thin bar (see [ManagedDetailsModel.BAR_WINDOW_DAYS]). */
-    data class DaysLeft(val days: Int, val fraction: Float) : ExpiryDisplay
+    /**
+     * [days] whole days left (1 = ends within a day). [fraction] fills the thin bar and is non-null only in the last
+     * [ManagedDetailsModel.BAR_WINDOW_DAYS] days (days / 30, so 30 days is a full bar); beyond that there is NO bar,
+     * only the "N days left" text.
+     */
+    data class DaysLeft(val days: Int, val fraction: Float?) : ExpiryDisplay
     data object Expired : ExpiryDisplay
     /** The panel reports no end date (exp_date 0). No bar. */
     data object NeverExpires : ExpiryDisplay
@@ -55,7 +68,7 @@ data class ManagedDetailsModel(
     val isManaged: Boolean get() = managedBy != null
 
     companion object {
-        /** The bar shows the last 30 days of a subscription: full above, shrinking to empty at the end date. */
+        /** The thin bar shows only the last 30 days of a subscription, shrinking to empty at the end date. */
         const val BAR_WINDOW_DAYS = 30
         private const val SECONDS_PER_DAY = 86_400L
 
@@ -114,7 +127,7 @@ data class ManagedDetailsModel(
                 expiry = expiryOf(accountInfo, nowEpochSec, panelCheckFailed),
                 connections = accountInfo?.maxConnections?.takeIf { it > 0 }
                     ?.let { ConnectionsDisplay((accountInfo.activeConnections ?: 0).coerceAtLeast(0), it) },
-                counts = counts,
+                counts = counts.hidingZeros(),
                 statusText = accountInfo?.status?.replaceFirstChar { it.uppercase() }
                     ?.let { if (accountInfo.isTrial) "$it · Trial" else it },
                 contacts = contacts,
@@ -139,7 +152,7 @@ data class ManagedDetailsModel(
             if (remaining <= 0L) return ExpiryDisplay.Expired
             // Whole days, rounded up: 3 hours left reads "1 day left", never "0 days left" while it works.
             val days = ((remaining + SECONDS_PER_DAY - 1) / SECONDS_PER_DAY).toInt()
-            return ExpiryDisplay.DaysLeft(days, (days.toFloat() / BAR_WINDOW_DAYS).coerceIn(0f, 1f))
+            return ExpiryDisplay.DaysLeft(days, if (days > BAR_WINDOW_DAYS) null else days.toFloat() / BAR_WINDOW_DAYS)
         }
     }
 }

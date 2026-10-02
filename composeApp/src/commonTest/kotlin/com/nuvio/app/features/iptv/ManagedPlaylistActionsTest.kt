@@ -1,5 +1,10 @@
 package com.nuvio.app.features.iptv
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -60,5 +65,25 @@ class ManagedPlaylistActionsTest {
         assertFalse(actions.detach("key-1"))
         assertEquals(listOf("detach(2,key-1)"), log, "no refresh, no pull, nothing logged for the provider")
         assertEquals(emptyList(), events)
+    }
+
+    // ---- code review L8: leaving the details page mid-detach must not cancel the refresh + pull ---------
+
+    @Test
+    fun `a detach started from a page finishes even when that page is gone`() {
+        val gate = CompletableDeferred<Unit>()
+        val own = ManagedPlaylistActions(
+            api = { api }, activeProfile = { 2 },
+            pull = { gate.await(); log += "pull($it)" }, refresh = { log += "refresh($it)"; true },
+            telemetry = ProviderSetupTelemetry, scope = CoroutineScope(Dispatchers.Unconfined),
+        )
+        val page = Job()
+        var result: Boolean? = null
+        CoroutineScope(Dispatchers.Unconfined + page).launch { own.detachInBackground("key-1") { result = it } }
+        assertEquals(listOf("detach(2,key-1)", "refresh(2)"), log, "the RPC is out and the pull is waiting")
+        page.cancel()                                   // the person left the page
+        gate.complete(Unit)
+        assertEquals(listOf("detach(2,key-1)", "refresh(2)", "pull(2)"), log, "the pull still ran")
+        assertEquals(true, result)
     }
 }

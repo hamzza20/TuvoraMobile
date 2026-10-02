@@ -45,10 +45,28 @@ class ManagedDetailsModelTest {
     }
 
     @Test
-    fun `days left are whole days rounded up and the bar fills the last thirty days`() {
+    fun `days left are whole days rounded up and the thin bar shows only in the last thirty days`() {
         assertEquals(ExpiryDisplay.DaysLeft(12, 0.4f), build().expiry)
         assertEquals(ExpiryDisplay.DaysLeft(1, 1f / 30f), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 3 * 3600), now))
-        assertEquals(ExpiryDisplay.DaysLeft(90, 1f), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 90 * day), now))
+        // The bar rule (apply on every platform): days <= 30 -> fraction = days / 30 (so 30 days is a full bar);
+        // more than 30 days -> NO bar at all (null), only the "N days left" text.
+        assertEquals(ExpiryDisplay.DaysLeft(30, 1f), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 30 * day), now))
+        assertEquals(ExpiryDisplay.DaysLeft(31, null), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 31 * day), now))
+        assertEquals(ExpiryDisplay.DaysLeft(90, null), ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 90 * day), now))
+        assertEquals(null, (ManagedDetailsModel.expiryOf(panel.copy(expiresAtEpochSec = now + 90 * day), now) as ExpiryDisplay.DaysLeft).fraction)
+    }
+
+    @Test
+    fun `a count of zero is hidden until the index knows better`() {
+        fun counts(c: DetailsCounts) = ManagedDetailsModel.build(xtream, info, panel, c, now).counts
+        // Not indexed yet reads as 0 for Xtream: never shown as "0 Movies / 0 Series".
+        assertEquals(DetailsCounts(null, null, null), counts(DetailsCounts(0, 0, 0)))
+        assertTrue(counts(DetailsCounts(0, 0, 0)).isEmpty, "the whole row is hidden, not three zero tiles")
+        // Only the counts that are known and positive show; the rest stay hidden.
+        assertEquals(DetailsCounts(null, 5, null), counts(DetailsCounts(0, 5, 0)))
+        assertEquals(DetailsCounts(12, 5, 9), counts(DetailsCounts(12, 5, 9)))
+        assertEquals(DetailsCounts(null, null, null), counts(DetailsCounts(null, -1, null)), "a negative or unknown count is hidden")
+        assertEquals(DetailsCounts(4, null, null), counts(DetailsCounts(4, null, null)))
     }
 
     @Test

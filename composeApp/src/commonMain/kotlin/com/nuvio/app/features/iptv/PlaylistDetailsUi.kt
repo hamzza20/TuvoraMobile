@@ -132,7 +132,6 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
             DetailsGoneCard(isTablet)
             return@item
         }
-        val scope = rememberCoroutineScope()
         val controller = remember { PlaylistDetailsController() }
         val live by controller.live.collectAsStateWithLifecycle()
         val managedMap by ManagedInfoRepository.state.collectAsStateWithLifecycle()
@@ -218,8 +217,9 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
                         }
                         DestructiveAction.DETACH -> {
                             detaching = true
-                            scope.launch {
-                                val ok = ManagedPlaylistActions.shared.detach(account.id)
+                            // Not on this page's scope: leaving mid-detach must not cancel the refresh + pull
+                            // that follow the RPC (the playlist would stay shown as managed until the next sync).
+                            ManagedPlaylistActions.shared.detachInBackground(account.id) { ok ->
                                 detaching = false
                                 confirming = null
                                 NuvioToastController.show(if (ok) detachedToast.orEmpty() else detachFailed)
@@ -303,7 +303,7 @@ private fun DetailsHeaderCard(model: ManagedDetailsModel, live: PlaylistDetailsL
                 if (expiry != null) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = expiry, style = MaterialTheme.typography.titleMedium, color = tokens.colors.textPrimary)
-                        (model.expiry as? ExpiryDisplay.DaysLeft)?.let { ThinBar(it.fraction) }
+                        (model.expiry as? ExpiryDisplay.DaysLeft)?.fraction?.let { ThinBar(it) }
                     }
                 }
                 if (connections != null) {
@@ -351,7 +351,7 @@ private fun ThinBar(fraction: Float) {
             .background(tokens.colors.borderDefault.copy(alpha = tokens.opacity.medium)),
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth(fraction.coerceIn(0.04f, 1f)).height(4.dp)
+            modifier = Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(4.dp)
                 .clip(RoundedCornerShape(NuvioTokens.Radius.full)).background(tokens.colors.accent),
         )
     }
