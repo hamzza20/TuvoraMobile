@@ -127,7 +127,7 @@ struct TvPlayerScreen: View {
             bumpControls()
             // Simulator smoke hooks: `-smokePanel subtitles|audio|aspect` opens the track panel after 5 s;
             // `-smokeOverlay speed|info` a player dialog; `-smokeSkip <start>,<end>,<type>` adds a segment.
-            let args = ProcessInfo.processInfo.arguments
+            let args = AppArguments.list
             if let i = args.firstIndex(of: "-smokePanel"), i + 1 < args.count {
                 let kind: PlayerPanel = ["audio": .audio, "aspect": .aspect, "style": .style][args[i + 1]] ?? .subtitles
                 Task { try? await Task.sleep(nanoseconds: 5_000_000_000); panel = kind }

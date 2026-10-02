@@ -139,8 +139,10 @@ struct PlaylistDetailsPage: View {
             }
 
             VStack(alignment: .leading, spacing: dp(8)) {
-                Text(verbatim: state.expiryLine).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary)
-                    .accessibilityIdentifier("details.expiry")
+                if let line = state.expiryLine {
+                    Text(verbatim: line).font(NuvioType.titleMedium).foregroundStyle(colors.textPrimary)
+                        .accessibilityIdentifier("details.expiry")
+                }
                 if let bar = state.expiryBar?.floatValue {
                     ZStack(alignment: .leading) {
                         Capsule().fill(colors.border)
@@ -229,7 +231,8 @@ struct PlaylistDetailsPage: View {
 
     /// Simulator smoke hook: `-smokeDetailsCard <contact|detach|remove>` opens that card's dialog (screenshots).
     private func smokeCard() {
-        let args = ProcessInfo.processInfo.arguments
+        #if DEBUG
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokeDetailsCard"), i + 1 < args.count else { return }
         let card: TvDetailCard
         switch args[i + 1] {
@@ -238,6 +241,7 @@ struct PlaylistDetailsPage: View {
         default: card = .remove
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { act(card, key: DetailCardKey(shelf: 0, index: 0), state: details.state) }
+        #endif
     }
 
     // MARK: Actions
@@ -508,8 +512,12 @@ struct HoldToConfirmButton: View {
     @Environment(\.nuvio) private var colors
     @State private var focused = false
     @State private var pressStart: Date?
+    /// OK was let go before the ring filled: the hint says to keep holding (until the next press; nothing fades).
+    @State private var releasedEarly = false
 
     private let holdSeconds = Double(TvHoldToConfirm.shared.HOLD_MS) / 1000
+
+    private var hint: String { releasedEarly ? "Keep holding OK until the ring is full" : "Hold OK for 2 seconds" }
 
     var body: some View {
         let shape = Capsule()
@@ -526,7 +534,7 @@ struct HoldToConfirmButton: View {
                 VStack(alignment: .leading, spacing: dp(1)) {
                     Text(ui: working ? "Working\u{2026}" : label).font(NuvioType.labelLarge)
                         .foregroundStyle(focused ? Color.white : colors.textPrimary)
-                    Text(ui: "Hold OK for 2 seconds").font(NuvioType.bodySmall)
+                    Text(ui: hint).font(NuvioType.bodySmall)
                         .foregroundStyle(focused ? Color.white.opacity(0.8) : colors.textTertiary)
                 }
                 Spacer(minLength: 0)
@@ -547,10 +555,17 @@ struct HoldToConfirmButton: View {
         }
         .accessibilityHidden(true)
         .overlay {
-            HoldSelectSurface(holdSeconds: holdSeconds, label: label, identifier: identifier,
+            HoldSelectSurface(holdSeconds: holdSeconds, label: label, hint: hint, identifier: identifier,
                               onFocus: { focused = $0; if !$0 { pressStart = nil } },
-                              onPress: { pressStart = $0 ? Date() : nil },
-                              onConfirm: { pressStart = nil; onConfirm() })
+                              onPress: { pressing in
+                                  if pressing { releasedEarly = false; pressStart = Date() }
+                                  else {
+                                      // Released (or lost focus) before the hold was reached: say to keep holding.
+                                      if pressStart != nil, focused { releasedEarly = true }
+                                      pressStart = nil
+                                  }
+                              },
+                              onConfirm: { pressStart = nil; releasedEarly = false; onConfirm() })
         }
         .onChange(of: focused) { _, now in if now { ContentFocusActivity.touched() } }
     }
@@ -562,6 +577,7 @@ struct HoldToConfirmButton: View {
 struct HoldSelectSurface: UIViewRepresentable {
     let holdSeconds: TimeInterval
     let label: String
+    let hint: String
     let identifier: String
     let onFocus: (Bool) -> Void
     let onPress: (Bool) -> Void
@@ -576,6 +592,9 @@ struct HoldSelectSurface: UIViewRepresentable {
         view.onConfirm = onConfirm
         view.accessibilityLabel = label
         view.accessibilityIdentifier = identifier
+        // VoiceOver reads the hold instruction (and cannot shortcut it: there is no accessibility activate here).
+        view.accessibilityHint = hint
+        view.accessibilityValue = hint
     }
 }
 

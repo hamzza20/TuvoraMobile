@@ -638,7 +638,7 @@ enum TVHomeDebugTrace {
     static func elapsedMilliseconds(since start: CFAbsoluteTime) -> Int { Int((CFAbsoluteTimeGetCurrent() - start) * 1000) }
     static func log(_ message: @autoclosure () -> String) {
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-traceArtwork") { NSLog("[art] %@", message()) }
+        if AppArguments.list.contains("-traceArtwork") { NSLog("[art] %@", message()) }
         #endif
     }
 }

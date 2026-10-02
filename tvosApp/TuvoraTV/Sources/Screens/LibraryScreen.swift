@@ -13,8 +13,8 @@ struct LibraryScreen: View {
     /// NuvioTV LibraryViewMode (Saved / Cloud). Smoke hook: `-smokeLibraryCloud`. Cloud is the debrid
     /// cloud library, so store builds (AppFeaturePolicy.debridEnabled false) are Saved only.
     private static let cloudAvailable = AppFeaturePolicy.shared.debridEnabled
-    @State private var cloud = cloudAvailable && ProcessInfo.processInfo.arguments.contains("-smokeLibraryCloud")
-    @State private var managingLists = ProcessInfo.processInfo.arguments.contains("-smokeManageLists")
+    @State private var cloud = cloudAvailable && AppArguments.list.contains("-smokeLibraryCloud")
+    @State private var managingLists = AppArguments.list.contains("-smokeManageLists")
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {

@@ -386,7 +386,7 @@ enum IntegrationSection: String {
 @MainActor
 final class IntegrationsNav: ObservableObject {
     @Published var section: IntegrationSection = {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         if let i = args.firstIndex(of: "-smokeIntegration"), i + 1 < args.count,
            let s = IntegrationSection(rawValue: args[i + 1]), s.isAvailable { return s }
         return .hub
@@ -586,7 +586,7 @@ private struct DebridSettingsDetail: View {
     }
 
     /// Simulator smoke hook: `-smokeDebridFilters` shows the link and filter sections without an account.
-    private static let smokeFilters = ProcessInfo.processInfo.arguments.contains("-smokeDebridFilters")
+    private static let smokeFilters = AppArguments.list.contains("-smokeDebridFilters")
 
     private func sectionLabel(_ text: String) -> some View {
         Text(ui: text).font(NuvioType.labelLarge).foregroundStyle(colors.textPrimary).padding(.top, dp(4))

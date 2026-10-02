@@ -26,6 +26,8 @@ struct SetupCodeScreen: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var state = TvProviderSetup.shared.state.value
     @State private var typedHere = false
+    /// The 5-minute wait ended without a phone redeeming: a persistent line says so (nothing fades).
+    @State private var waitEnded = false
     @FocusState private var focus: SetupFocus?
 
     var body: some View {
@@ -54,7 +56,9 @@ struct SetupCodeScreen: View {
             case .done: target = .done
             }
             for delay in [0.1, 0.4] { DispatchQueue.main.asyncAfter(deadline: .now() + delay) { if focus != target { focus = target } } }
-            NSLog("SMOKE setup phase=%@ problem=%@", String(describing: phase), state.problem ?? "-")
+            #if DEBUG
+            NSLog("SMOKE setup phase=%@", String(describing: phase))
+            #endif
             if phase == .done { openIfReady() }
         }
         .onChange(of: state.typed) { _, text in if !text.isEmpty { typedHere = true } }
@@ -79,6 +83,16 @@ struct SetupCodeScreen: View {
             }
             Text("Or type the code here with the keypad.").font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if let profile = state.watchedProfile, !state.needsSignIn {
+                Text(verbatim: String(format: L("A code redeemed on your phone into %@ shows up here."), profile))
+                    .font(NuvioType.bodySmall).foregroundStyle(colors.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("setup.watching")
+            }
+            if waitEnded {
+                Text("Still not here? Type the code on this screen, or scan the code again.")
+                    .font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("setup.waitEnded")
+            }
             if let account = state.accountLabel {
                 VStack(alignment: .leading, spacing: dp(2)) {
                     Text("Adding to").font(NuvioType.labelSmall).foregroundStyle(colors.textTertiary)
@@ -268,12 +282,14 @@ struct SetupCodeScreen: View {
     /// Simulator smoke hooks: `-smokeSetupCode <code>` types a code through the system-keyboard route and
     /// `-smokeSetupContinue` presses Continue (test codes against a local backend only).
     private func smokeHooks() {
-        let args = ProcessInfo.processInfo.arguments
+        #if DEBUG
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokeSetupCode"), i + 1 < args.count else { return }
         TvProviderSetup.shared.typeText(raw: args[i + 1])
         if args.contains("-smokeSetupContinue") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { TvProviderSetup.shared.continueWithCode() }
         }
+        #endif
     }
 
     // MARK: Finishing
@@ -295,9 +311,10 @@ struct SetupCodeScreen: View {
     /// not been typed here. Leaving the screen cancels this task, which ends the Kotlin loop at once.
     private func watchForPhone() async {
         guard scenePhase == .active, !typedHere, state.phase == .entry, !state.needsSignIn else { return }
-        guard let outcome = try? await TvProviderSetup.shared.waitForPhone(), let key = outcome.foundKey else { return }
+        guard let outcome = try? await TvProviderSetup.shared.waitForPhone() else { return }
+        if outcome.reason == "timeout" { waitEnded = true }
+        guard let key = outcome.foundKey else { return }
         let banner = outcome.providerName.map { String(format: L("%@ added your playlist"), $0) }
-        NSLog("SMOKE setup waitFound key=%@", key)
         open(key: key, banner: banner)
     }
 }

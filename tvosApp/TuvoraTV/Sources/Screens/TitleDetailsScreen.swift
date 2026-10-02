@@ -78,7 +78,7 @@ struct TitleDetailsScreen: View {
                 if childDetails != nil || personTarget != nil { continue }
                 state = next
                 // Simulator smoke hook: `-smokeTmdbEnrich` shows the title as a TMDB-enabled profile sees it.
-                if let meta = next.meta, !next.isLoading, ProcessInfo.processInfo.arguments.contains("-smokeTmdbEnrich"),
+                if let meta = next.meta, !next.isLoading, AppArguments.list.contains("-smokeTmdbEnrich"),
                    let enriched = try? await TvTitleSections.shared.smokeTmdbEnriched(meta: meta) {
                     state = MetaDetailsUiState(isLoading: false, meta: enriched, errorMessage: nil)
                 }
@@ -88,7 +88,7 @@ struct TitleDetailsScreen: View {
                 }
                 if let meta = next.meta { saved = TvTitle.shared.isSaved(meta: meta); watched = TvTitle.shared.isWatched(meta: meta) }
                 // Simulator smoke hook: `-smokePressPlay` presses Play once the title loads.
-                if let meta = next.meta, sourcesFor == nil, !smokePressed, ProcessInfo.processInfo.arguments.contains("-smokePressPlay") {
+                if let meta = next.meta, sourcesFor == nil, !smokePressed, AppArguments.list.contains("-smokePressPlay") {
                     smokePressed = true
                     NSLog("SMOKE details loaded %@ videos=%d", meta.name, meta.videos.count)
                     sourcesFor = SourceTarget(meta: meta, video: isSeries ? resumeEpisode(meta) : nil)
@@ -106,14 +106,14 @@ struct TitleDetailsScreen: View {
         }
     }
 
-    private static let smokeMdbRatings = ProcessInfo.processInfo.arguments.contains("-smokeMdbRatings")
+    private static let smokeMdbRatings = AppArguments.list.contains("-smokeMdbRatings")
     private var mdbListActive: Bool { Self.smokeMdbRatings || TvTitle.shared.mdbListActive() }
 
     private func reloadSelf() { TvTitle.shared.load(type: preview.type, id: preview.id) }
 
     /// Simulator smoke hook: `-smokeDetailsScroll <cast|more|bottom>` scrolls the loaded page to that section.
     private func smokeScroll(_ proxy: ScrollViewProxy) async {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard !smokeScrolled, let i = args.firstIndex(of: "-smokeDetailsScroll"), i + 1 < args.count else { return }
         smokeScrolled = true
         try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -447,7 +447,7 @@ struct StreamPickerScreen: View {
                 streams = next
                 // Auto Stream Selection (phone parity): play the nominated source without the list.
                 // Simulator smoke hook: `-smokePickFirstSource` opens the first listed source.
-                if ProcessInfo.processInfo.arguments.contains("-smokePickFirstSource"), !opening, !smokePicked,
+                if AppArguments.list.contains("-smokePickFirstSource"), !opening, !smokePicked,
                    let first = next.groups.first(where: { !$0.streams.isEmpty })?.streams.first {
                     smokePicked = true
                     NSLog("SMOKE sources loaded groups=%d; opening %@", next.groups.count, first.streamLabel)

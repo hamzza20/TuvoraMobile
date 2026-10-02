@@ -15,7 +15,7 @@ struct RootView: View {
         Group {
             if let session = smokeSession {
                 TvPlayerScreen(session: session) { smokeSession = nil }.environmentObject(PlaybackCoordinator())
-            } else if ProcessInfo.processInfo.arguments.contains("-smokeSignIn") {
+            } else if AppArguments.list.contains("-smokeSignIn") {
                 // Simulator smoke hook: shows the sign-in screen without signing the simulator out.
                 SignInView()
             } else {
@@ -25,17 +25,19 @@ struct RootView: View {
         // Simulator verification: `-smokeLocalSignIn <email> <password>` signs a TEST account in on a LOCAL
         // backend (TvLocalSmoke refuses anything but a debug build pointed at 127.0.0.1 / localhost).
         .task {
-            let args = ProcessInfo.processInfo.arguments
+            #if DEBUG
+            let args = AppArguments.list
             if let i = args.firstIndex(of: "-smokeLocalSignIn"), i + 2 < args.count {
                 TvLocalSmoke.shared.signIn(email: args[i + 1], password: args[i + 2])
             }
+            #endif
         }
         // Top Shelf items open here (tuvora://title?…); MainShell opens them once the gate reaches Main.
         .onOpenURL { url in if let link = DeepLink(url: url) { DeepLinkCenter.shared.pending = link } }
     }
 
     private static func smokeSessionFromArguments() -> TvPlayerSession? {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count, !args.contains("-smokeAs") else { return nil }
         let launch = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: args.contains("-smokeLive"), startPositionMs: 0)
         return TvPlayerSession(launch: launch, liveReresolve: nil)
@@ -43,7 +45,7 @@ struct RootView: View {
 
     /// `-smokeAs`: the smoke session as a catalog title, built once the profile is loaded.
     private static func smokeCatalogSession() -> TvPlayerSession? {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count,
               let j = args.firstIndex(of: "-smokeAs"), j + 1 < args.count else { return nil }
         let spec = args[j + 1]
@@ -59,7 +61,7 @@ struct RootView: View {
     /// while a screen such as the IPTV tab is already showing. Local test profiles only.
     private static var smokeAddDone = false
     private static func smokeAddPlaylistLater() {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard !smokeAddDone, let i = args.firstIndex(of: "-smokeAddM3uLater"), i + 2 < args.count,
               let delay = Double(args[i + 1]) else { return }
         smokeAddDone = true
@@ -70,7 +72,9 @@ struct RootView: View {
             stalkerPassword: "", serialNumber: "", deviceId: "", sendDeviceId: true, epgUrl: "",
             autoRefreshHours: TvPlaylistFormPolicy.shared.DEFAULT_AUTO_REFRESH_HOURS, backupUrls: backup)
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            #if DEBUG
             NSLog("SMOKE adding playlist url=%@", args[i + 2])
+            #endif
             TvPlaylists.shared.add(form: form) { ok in NSLog("SMOKE add playlist ok=%d", ok.boolValue ? 1 : 0) }
         }
     }

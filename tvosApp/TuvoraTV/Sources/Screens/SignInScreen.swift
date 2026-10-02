@@ -53,7 +53,9 @@ struct SignInView: View {
                 state = next
                 switch onEnum(of: next) {
                 case .waiting(let waiting):
+                    #if DEBUG
                     NSLog("SMOKE device login code=%@ url=%@ completing=%d", waiting.code, waiting.verificationUrl, waiting.isCompleting)
+                    #endif
                 case .failed(let failed):
                     NSLog("SMOKE device login failed=%@", "\(failed.reason)")
                 default: break

@@ -49,7 +49,7 @@ struct SettingsScreen: View {
     @StateObject private var integrationsNav = IntegrationsNav()
     /// Simulator smoke hook: `-smokeSettings <category>` opens a category, `-smokeSettingsDialog <addPlaylist|signOut|engine|playlistDetails|setupCode>` a dialog.
     @State private var selected: Category = {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         if let i = args.firstIndex(of: "-smokeSettings"), i + 1 < args.count, let c = Category(rawValue: args[i + 1]),
            Category.visible.contains(c) { return c }
         return .account
@@ -156,7 +156,7 @@ struct SettingsScreen: View {
                     .padding(.horizontal, dp(6))
             }
             // Simulator smoke hook: `-smokeScrollBottom` opens the pane scrolled to its end.
-            .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-smokeScrollBottom") ? .bottom : .top)
+            .defaultScrollAnchor(AppArguments.list.contains("-smokeScrollBottom") ? .bottom : .top)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .focusSection()
             // Menu in the detail goes back to its rail item (the detail's parent), as NuvioTV's Back.
@@ -212,7 +212,7 @@ struct SettingsScreen: View {
     }
 
     private func smokeDialog() {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokeSettingsDialog"), i + 1 < args.count else { return }
         switch args[i + 1] {
         case "addPlaylist":
@@ -270,7 +270,7 @@ struct SettingsScreen: View {
             Task {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 // `-smokeAccount <name>` picks the playlist; else the first.
-                let args = ProcessInfo.processInfo.arguments
+                let args = AppArguments.list
                 let wanted = args.firstIndex(of: "-smokeAccount").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
                 let accounts = model.xtream?.accounts ?? []
                 if let account = accounts.first(where: { $0.name == wanted }) ?? accounts.first { dialogs.push(.hiddenItems(account)) }
@@ -936,7 +936,7 @@ private struct HiddenItemsDialog: View {
             NSLog("SMOKE settings hidden count=%d", items?.count ?? -1)
             // `-smokeUnhide <name>` (with `-smokeSettingsDialog hiddenItems`) reverts one verification hide,
             // by exact name — never anything else the account has hidden.
-            let args = ProcessInfo.processInfo.arguments
+            let args = AppArguments.list
             if let i = args.firstIndex(of: "-smokeUnhide"), i + 1 < args.count {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 for item in (items ?? []) where item.name == args[i + 1] {
@@ -1648,7 +1648,9 @@ private struct IptvPairingDialog: View {
             try? await TvIptvPairing.shared.run { next in
                 // The session reports from Kotlin's dispatcher threads; state belongs to the main actor.
                 DispatchQueue.main.async { state = next }
+                #if DEBUG
                 NSLog("SMOKE pairing status=%@ code=%@", next.status, next.code ?? "-")
+                #endif
             }
         }
         .task {

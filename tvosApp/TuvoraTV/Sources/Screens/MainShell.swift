@@ -35,7 +35,7 @@ struct MainShell: View {
     @StateObject private var theme = NuvioThemeModel()
     /// Simulator smoke hook: `-smokeTab <home|search|library|iptv|sports|settings>`.
     @State private var destination: Destination = {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         if let i = args.firstIndex(of: "-smokeTab"), i + 1 < args.count, let d = Destination(rawValue: args[i + 1]) { return d }
         return .home
     }()
@@ -46,7 +46,7 @@ struct MainShell: View {
     @FocusState private var profileFocused: Bool
     /// Simulator smoke hook: `-smokeDetails <type>:<id>` opens a title's details.
     @State private var smokeDetails: PreviewBox? = {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokeDetails"), i + 1 < args.count else { return nil }
         let parts = args[i + 1].split(separator: ":", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }

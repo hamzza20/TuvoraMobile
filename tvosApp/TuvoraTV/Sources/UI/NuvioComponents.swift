@@ -387,7 +387,7 @@ struct NuvioDropdownPicker: View {
         .onAppear {
             guard !smokeChecked else { return }
             smokeChecked = true
-            let args = ProcessInfo.processInfo.arguments
+            let args = AppArguments.list
             if let i = args.firstIndex(of: "-smokeOpenPicker"), i + 1 < args.count { open = args[i + 1] == title } else { open = false }
         }
         .sheet(isPresented: $open) {

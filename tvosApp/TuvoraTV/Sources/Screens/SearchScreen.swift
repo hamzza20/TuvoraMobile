@@ -11,7 +11,7 @@ struct SearchScreen: View {
     @Environment(\.nuvio) private var colors
     /// Simulator smoke hooks: `-smokeSearch <query>` types a query; `-smokeDiscover` opens Discover.
     @State private var query: String = SearchScreen.argument("-smokeSearch") ?? ""
-    @State private var showDiscover = ProcessInfo.processInfo.arguments.contains("-smokeDiscover")
+    @State private var showDiscover = AppArguments.list.contains("-smokeDiscover")
     @State private var requested: String?
     @State private var results: SearchUiState = TvSearch.shared.results.value
     @State private var recent: [String] = []
@@ -127,7 +127,7 @@ struct SearchScreen: View {
     }
 
     static func argument(_ flag: String) -> String? {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
         return args[i + 1]
     }

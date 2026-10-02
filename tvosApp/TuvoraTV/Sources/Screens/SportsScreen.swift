@@ -55,13 +55,13 @@ struct SportsScreen: View {
                 NSLog("SMOKE sports follows=%d fixtures=%d loading=%d", next.follows.count, next.fixturesByLeague.count, next.loadingFixtures)
                 // Simulator smoke hook: `-smokeSportsMatch` opens the first upcoming match's channel sheet.
                 // `-smokeSportsLeague <leagueId>` opens a league page.
-                let args = ProcessInfo.processInfo.arguments
+                let args = AppArguments.list
                 if !smokeMatchOpened, let i = args.firstIndex(of: "-smokeSportsLeague"), i + 1 < args.count,
                    let league = next.leagueById(id: args[i + 1]) {
                     smokeMatchOpened = true
                     showLeague(league)
                 }
-                if !smokeMatchOpened, ProcessInfo.processInfo.arguments.contains("-smokeSportsMatch"),
+                if !smokeMatchOpened, AppArguments.list.contains("-smokeSportsMatch"),
                    let first = TvSports.shared.hub(state: next, nowMs: now).upcoming.first {
                     smokeMatchOpened = true
                     open(first)

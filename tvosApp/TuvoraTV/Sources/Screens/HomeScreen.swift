@@ -31,7 +31,7 @@ struct HomeScreen: View {
     /// in-memory sample collections (never saved or synced); `-smokeOpenFolder <n>` opens the first folder
     /// of the n-th collection row.
     private static let applySmokePrefs: Void = {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         for (flag, key) in [("-smokeHomeLayout", NuvioLayoutPrefs.homeLayoutKey), ("-smokeCwStyle", NuvioLayoutPrefs.cwStyleKey)] {
             if let i = args.firstIndex(of: flag), i + 1 < args.count, UserDefaults.standard.string(forKey: key) != args[i + 1] {
                 UserDefaults.standard.set(args[i + 1], forKey: key)
@@ -73,7 +73,7 @@ struct HomeScreen: View {
     }
 
     private func smokeOpenFolder() {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         guard !smokeFolderOpened, let i = args.firstIndex(of: "-smokeOpenFolder"), i + 1 < args.count, let n = Int(args[i + 1]) else { return }
         let collections = entries.compactMap(\.collection)
         guard n < collections.count, let folder = collections[n].folders.first else { return }

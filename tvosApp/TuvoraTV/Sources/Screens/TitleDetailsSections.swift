@@ -45,8 +45,8 @@ struct DetailLowerSections: View {
         // Fetched once per title open; each shared repository caches (no polling, egress rule).
         // Re-split when enrichment replaces the cast (the repository publishes base meta, then enriched).
         .task(id: "\(meta.id)|\(meta.cast.count)|\(meta.cast.first?.name ?? "")") {
-            if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-smokeDetailsScroll"),
-               ProcessInfo.processInfo.arguments.dropFirst(i + 1).first == "more" { activeTab = .moreLikeThis }
+            if let i = AppArguments.list.firstIndex(of: "-smokeDetailsScroll"),
+               AppArguments.list.dropFirst(i + 1).first == "more" { activeTab = .moreLikeThis }
             cast = try? await TvTitleSections.shared.cast(meta: meta)
             NSLog("SMOKE sections tabs=%@ rows=%@ leading=%d cast=%d roles=%@ more=%d trailers=%d collection=%d",
                   "\(layout.tabs)", "\(layout.rows)", cast?.leading.count ?? -1, cast?.cast.count ?? -1,
@@ -141,7 +141,7 @@ struct DetailLowerSections: View {
 /// Scroll anchors for the simulator smoke hook (`-smokeDetailsScroll <cast|more|bottom>`).
 enum DetailAnchor: Hashable { case tabs, cast, more, companies }
 
-private func smokeArg(_ name: String) -> Bool { ProcessInfo.processInfo.arguments.contains(name) }
+private func smokeArg(_ name: String) -> Bool { AppArguments.list.contains(name) }
 
 private struct CommentBox: Identifiable {
     let review: TraktCommentReview

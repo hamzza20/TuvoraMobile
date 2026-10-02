@@ -42,7 +42,7 @@ struct IptvHubScreen: View {
             for await next in TvIptvBrowse.shared.state {
                 hub = next
                 // Simulator smoke hook: `-smokeIptvOpen <movies|series>` opens the first loaded title's details.
-                let args = ProcessInfo.processInfo.arguments
+                let args = AppArguments.list
                 if details == nil, let i = args.firstIndex(of: "-smokeIptvOpen"), i + 1 < args.count {
                     let want: XtreamHubSection = args[i + 1] == "series" ? .series : .movies
                     if next.section != want { TvIptvBrowse.shared.open(section: want) }
@@ -310,7 +310,7 @@ private struct LiveGuideView: View {
         }
         .task(id: categories.count) {
             // Simulator hook: `-smokeGuideHideAsk` opens the hide-group confirmation for the first category.
-            if ProcessInfo.processInfo.arguments.contains("-smokeGuideHideAsk"), hideAsk == nil, let first = categories.first {
+            if AppArguments.list.contains("-smokeGuideHideAsk"), hideAsk == nil, let first = categories.first {
                 hideAsk = first
             }
         }
@@ -686,7 +686,7 @@ private struct LiveGuideView: View {
     /// programme; `-smokeGuideReplay` replays its first finished kept programme; `-smokeGuideHideAsk`
     /// opens the hide-group confirmation for the first category; `-smokeGuideHideChannel` hides the first channel.
     private func runSmokeHooks() {
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         if args.contains("-smokeGuidePlay"), let first = channels.first {
             Task {
                 select(first)

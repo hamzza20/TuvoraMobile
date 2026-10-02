@@ -33,7 +33,7 @@ enum ProfilePickerLaunch {
     static var manageRequested = false
     static func consumeManage() -> Bool {
         defer { manageRequested = false }
-        return manageRequested || ProcessInfo.processInfo.arguments.contains("-smokeManage")
+        return manageRequested || AppArguments.list.contains("-smokeManage")
     }
 }
 
@@ -275,7 +275,7 @@ struct ProfilePickerView: View {
     private static var smokeRanThisLaunch = false
     private func runSmokeHooks(_ profiles: [NuvioProfile]) {
         guard !smokeHandled, !Self.smokeRanThisLaunch, !profiles.isEmpty else { return }
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         func value(after flag: String) -> String? {
             guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
             return args[i + 1]

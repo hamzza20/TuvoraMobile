@@ -11,7 +11,7 @@ struct TuvoraTVApp: App {
         TieredUserDefaults.install()
         // Simulator hook: `-smokeCollapseSidebar <true|false>` sets Settings -> Layout -> Collapse Sidebar
         // (the tiered defaults don't read the launch-argument domain, so `-key value` alone does nothing).
-        let args = ProcessInfo.processInfo.arguments
+        let args = AppArguments.list
         if let i = args.firstIndex(of: "-smokeCollapseSidebar"), i + 1 < args.count {
             UserDefaults.standard.set(args[i + 1] != "false", forKey: NuvioLayoutPrefs.collapseSidebarKey)
         }
