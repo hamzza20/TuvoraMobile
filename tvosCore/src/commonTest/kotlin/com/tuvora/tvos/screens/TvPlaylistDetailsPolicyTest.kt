@@ -1,6 +1,7 @@
 package com.tuvora.tvos.screens
 
 import com.nuvio.app.features.iptv.ConnectionsDisplay
+import com.nuvio.app.features.iptv.XtreamAccountInfo
 import com.nuvio.app.features.iptv.DetailsCounts
 import com.nuvio.app.features.iptv.ExpiryDisplay
 import com.nuvio.app.features.iptv.DetailsGroupKind
@@ -196,5 +197,48 @@ class TvPlaylistDetailsPolicyTest {
             listOf(TvDetailsCount("Movies", "120"), TvDetailsCount("Series", "8")),
             TvPlaylistDetailsPolicy.countLines(DetailsCounts(movies = 120, series = 8)),
         )
+    }
+
+    // --- Mobile's final semantics, through the shared model's own tables ----------------------------
+
+    private fun panel(daysFromNow: Long) = XtreamAccountInfo(
+        status = "Active", isTrial = false, expiresAtEpochSec = 1_000_000L + daysFromNow * 86_400L,
+        maxConnections = 2, activeConnections = 1,
+    )
+
+    private fun expiryFor(days: Long) = ManagedDetailsModel.expiryOf(panel(days), nowEpochSec = 1_000_000L)
+
+    @Test
+    fun `the bar is days over 30 inside the last 30 days and absent beyond that`() {
+        assertEquals(1f / 30f, TvPlaylistDetailsPolicy.expiryBar(expiryFor(1)))
+        assertEquals(29f / 30f, TvPlaylistDetailsPolicy.expiryBar(expiryFor(29)))
+        assertEquals(1f, TvPlaylistDetailsPolicy.expiryBar(expiryFor(30)))
+        assertNull(TvPlaylistDetailsPolicy.expiryBar(expiryFor(31)))
+        assertNull(TvPlaylistDetailsPolicy.expiryBar(expiryFor(365)))
+    }
+
+    @Test
+    fun `beyond thirty days the line says only how many days are left`() {
+        assertEquals("45 days left", TvPlaylistDetailsPolicy.expiryLine(expiryFor(45)))
+        assertEquals("1 day left", TvPlaylistDetailsPolicy.expiryLine(expiryFor(1)))
+    }
+
+    @Test
+    fun `a panel that could not be asked says it could not check never that none was reported`() {
+        val failed = ManagedDetailsModel.expiryOf(null, 1_000_000L, panelCheckFailed = true)
+        assertEquals(ExpiryDisplay.CheckFailed, failed)
+        assertEquals("Couldn't check expiry", TvPlaylistDetailsPolicy.expiryLine(failed))
+        assertNull(TvPlaylistDetailsPolicy.expiryBar(failed))
+    }
+
+    @Test
+    fun `while the panel is still being asked nothing is said about expiry`() {
+        assertNull(TvPlaylistDetailsPolicy.expiryLine(ExpiryDisplay.NotReported, loading = true))
+        assertEquals("Expiry not reported by this provider", TvPlaylistDetailsPolicy.expiryLine(ExpiryDisplay.NotReported, loading = false))
+    }
+
+    @Test
+    fun `negative and zero counts hide like unknown ones`() {
+        assertEquals(emptyList(), TvPlaylistDetailsPolicy.countLines(DetailsCounts(channels = -1, movies = 0, series = null)))
     }
 }

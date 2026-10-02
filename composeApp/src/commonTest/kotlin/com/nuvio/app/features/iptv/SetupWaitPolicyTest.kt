@@ -150,6 +150,15 @@ class SetupWaitPolicyTest {
     }
 
     @Test
+    fun `an answer that arrives after the screen was left reports nothing new`() {
+        val policy = SetupWaitPolicy(known, 0)
+        policy.requestStarted(3_000)
+        policy.leave()
+        assertEquals(emptyList(), policy.requestSucceeded(3_100, known + "late"))
+        assertEquals(SetupWaitPolicy.Step.Stop(SetupWaitPolicy.StopReason.LEFT), policy.step(3_100))
+    }
+
+    @Test
     fun `the first reason wins`() {
         val policy = SetupWaitPolicy(known, 0)
         policy.leave()

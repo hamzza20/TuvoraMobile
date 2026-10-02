@@ -45,6 +45,8 @@ data class TvSetupState(
     val addons: List<String> = emptyList(),
     val profiles: List<TvSetupProfile> = emptyList(),
     val selectedProfile: Int = 1,
+    /** The profile a phone redeem is watched for (the active one): the wait only sees that profile. */
+    val watchedProfile: String? = null,
     /** The sentence a finished redeem earns ("Starshare added your playlist"). */
     val doneText: String? = null,
     /** The playlist to open after a finished redeem, or null. */
@@ -100,6 +102,7 @@ object TvSetupStateBuilder {
             addons = if (showAddons) preview?.addons.orEmpty() else emptyList(),
             profiles = profiles,
             selectedProfile = selected,
+            watchedProfile = profiles.firstOrNull { it.index == activeProfile }?.name,
             doneText = ui.completed?.let { doneText(it, profiles, activeProfile) },
             openPlaylistKey = ui.completed?.openPlaylistKey,
         )
@@ -132,10 +135,21 @@ object TvSetupStateBuilder {
             CompletionKind.ALREADY_IN_ACCOUNT -> "Your playlist from $provider is already in your account"
             CompletionKind.NOTHING_MISSING_LOGIN -> "$provider has not filled in your login yet. Ask them to: your playlist is added as soon as they do."
             CompletionKind.NOTHING_INVALID_URL -> "$provider's address for this playlist isn't valid. Ask them to check it."
+            CompletionKind.NOTHING_ADDED -> "Nothing was added. Ask your provider to check your setup."
             CompletionKind.ADDED -> {
                 val other = done.profileIndex.takeIf { it != activeProfile }?.let { index -> profiles.firstOrNull { it.index == index }?.name }
                 if (other != null) "$provider added your playlist to $other" else "$provider added your playlist"
             }
         }
     }
+}
+
+/**
+ * What counts as "already here" when the wait for a phone starts: the SERVER's managed list when it answered (so a
+ * playlist redeemed on another device and never pulled here is not announced as new), else the cached map; plus every
+ * playlist already on this device, so a stale cache can never make an old playlist look new.
+ */
+object TvWaitSnapshot {
+    fun of(serverKeys: Set<String>?, cachedKeys: Set<String>, localIds: Set<String>): Set<String> =
+        (serverKeys ?: cachedKeys) + localIds
 }

@@ -172,4 +172,16 @@ class TvSetupStateTest {
         val done = SetupCompletion("Starshare", 2, added = 1, updated = 0, alreadyRedeemed = false, openPlaylistKey = null)
         assertEquals("Starshare added your playlist to Kids", build(SetupCodeUiState(completed = done), activeProfile = 1).doneText)
     }
+
+    @Test
+    fun `the screen names the profile a phone redeem is watched for`() {
+        assertEquals("Kids", build(activeProfile = 2).watchedProfile)
+        assertEquals("Main", build(activeProfile = 1).watchedProfile)
+    }
+
+    @Test
+    fun `the wait snapshot prefers the server's list and falls back to what the device already knows`() {
+        assertEquals(setOf("a", "b", "local"), TvWaitSnapshot.of(serverKeys = setOf("a", "b"), cachedKeys = setOf("old"), localIds = setOf("local")))
+        assertEquals(setOf("old", "local"), TvWaitSnapshot.of(serverKeys = null, cachedKeys = setOf("old"), localIds = setOf("local")))
+    }
 }

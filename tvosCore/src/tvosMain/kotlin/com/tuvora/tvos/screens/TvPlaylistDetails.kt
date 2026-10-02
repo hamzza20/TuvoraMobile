@@ -36,7 +36,8 @@ data class TvDetailsState(
     val ribbon: String? = null,
     val managedBy: String? = null,
     val providerName: String? = null,
-    val expiryLine: String = "",
+    /** What the header says about expiry; null says nothing (the panel is still being asked). */
+    val expiryLine: String? = null,
     /** The thin bar's fill (0..1); null when there is no count of days to show. */
     val expiryBar: Float? = null,
     val connectionsLine: String? = null,
@@ -81,6 +82,7 @@ class TvPlaylistDetailsSession(private val accountId: String) {
             nowEpochSec = TraktPlatformClock.nowEpochMs() / 1000,
             addressLine = ServerFailoverPolicy.backupLabel(active[account.id] ?: 0) ?: PlaylistAddress.hostOnly(account.baseUrl),
             allowEdit = false,
+            panelCheckFailed = live.hasPanel && !live.loading && live.info == null,
         )
         return TvDetailsState(
             name = model.name,
@@ -88,7 +90,7 @@ class TvPlaylistDetailsSession(private val accountId: String) {
             ribbon = TvPlaylistDetailsPolicy.ribbon(model.managedBy, PlaylistAddress.isoDate(model.serviceUpdatedAt)),
             managedBy = model.managedBy,
             providerName = model.providerName,
-            expiryLine = TvPlaylistDetailsPolicy.expiryLine(model.expiry),
+            expiryLine = TvPlaylistDetailsPolicy.expiryLine(model.expiry, loading = live.loading),
             expiryBar = TvPlaylistDetailsPolicy.expiryBar(model.expiry),
             connectionsLine = TvPlaylistDetailsPolicy.connectionsLine(model.connections),
             statusLine = TvPlaylistDetailsPolicy.statusLine(model.statusText, live.loading, live.hasPanel),

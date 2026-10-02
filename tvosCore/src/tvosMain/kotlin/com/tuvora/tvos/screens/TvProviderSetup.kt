@@ -15,6 +15,7 @@ import com.nuvio.app.features.iptv.XtreamSyncParticipant
 import com.nuvio.app.features.iptv.accountKindOf
 import com.nuvio.app.features.iptv.runSetupWait
 import com.nuvio.app.features.profiles.ProfileRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,13 +115,21 @@ object TvProviderSetup {
     suspend fun waitForPhone(): TvSetupWaitOutcome {
         if (accountKindOf(AuthRepository.state.value) != AccountKind.REAL) return TvSetupWaitOutcome(null, null, "not_signed_in")
         val profile = ProfileRepository.activeProfileId
-        // What is already known: the managed map AND every playlist on this device, so a stale cache can
-        // never make an old playlist look new.
-        val snapshot = ManagedInfoRepository.forProfile(profile).keys + XtreamRepository.uiState.value.accounts.map { it.id }
+        val api = ManagedInfoRefresher.api
+        // What is already here: the server's own list when it answers (one read), else the cache, plus every
+        // playlist on this device (TvWaitSnapshot), so neither a stale cache nor a playlist redeemed elsewhere
+        // earlier is announced as new.
+        val serverKeys = try {
+            api.managedPlaylists(profile).map { it.playlistKey }.toSet()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            null
+        }
+        val snapshot = TvWaitSnapshot.of(serverKeys, ManagedInfoRepository.forProfile(profile).keys, XtreamRepository.uiState.value.accounts.map { it.id }.toSet())
         val policy = SetupWaitPolicy(snapshot, startedAtMs = nowMs())
         waiting = policy
         try {
-            val api = ManagedInfoRefresher.api
             return when (val result = runSetupWait(policy, ::nowMs) { api.managedPlaylists(profile).map { it.playlistKey }.toSet() }) {
                 is SetupWaitResult.Found -> {
                     XtreamSyncParticipant.pullFromServer(profile)

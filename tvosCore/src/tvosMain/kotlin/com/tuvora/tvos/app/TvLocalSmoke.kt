@@ -4,6 +4,7 @@ import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.build.AppBuildConfig
 import com.nuvio.app.core.network.SupabaseConfig
+import com.nuvio.app.core.network.SyncBackendRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,10 +19,14 @@ import kotlinx.coroutines.launch
 object TvLocalSmoke {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private fun backendIsLocal(): Boolean {
-        val host = SupabaseConfig.URL.substringAfter("://").substringBefore('/').substringBefore(':')
+    private fun isLocalHost(url: String): Boolean {
+        val host = url.substringAfter("://").substringBefore('/').substringBefore(':')
         return host == "127.0.0.1" || host == "localhost"
     }
+
+    /** Both the build's own backend and the SELECTED sync backend (which sign-in really goes to) must be local. */
+    private fun backendIsLocal(): Boolean =
+        isLocalHost(SupabaseConfig.URL) && isLocalHost(SyncBackendRepository.selectedBackend.supabaseUrl)
 
     fun signIn(email: String, password: String) {
         if (!AppBuildConfig.IS_DEBUG_BUILD || !backendIsLocal()) return

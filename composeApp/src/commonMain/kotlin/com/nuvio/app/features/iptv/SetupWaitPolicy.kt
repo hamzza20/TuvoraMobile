@@ -66,10 +66,12 @@ class SetupWaitPolicy(
     /** The read was answered with [keys]: returns the keys that were not in the snapshot (success when not empty). */
     fun requestSucceeded(nowMs: Long, keys: Collection<String>): List<String> {
         inFlight = false
+        // An answer that lands after the screen was left (or the wait ended some other way) reports nothing.
+        if (stopped != null) return emptyList()
         consecutiveFailures = 0
         nextAtMs = nowMs + intervalMs
         val fresh = keys.filter { it !in known }.distinct().sorted()
-        if (fresh.isNotEmpty() && stopped == null) stopped = StopReason.SUCCESS
+        if (fresh.isNotEmpty()) stopped = StopReason.SUCCESS
         return fresh
     }
 

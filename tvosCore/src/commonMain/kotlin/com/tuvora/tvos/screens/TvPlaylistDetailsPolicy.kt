@@ -68,16 +68,25 @@ object TvPlaylistDetailsPolicy {
         }
     }
 
-    /** "12 days left", "Expiry not reported by this provider", and the other readings of the header. */
-    fun expiryLine(expiry: ExpiryDisplay): String = when (expiry) {
+    /**
+     * "12 days left", "Couldn't check expiry" and the other readings of the header; null says nothing at all.
+     * "Expiry not reported by this provider" is the provider's own answer and only ever follows a successful
+     * call, so while the panel is still being asked ([loading]) nothing is said, and when it could not be asked
+     * the line is [ExpiryDisplay.CheckFailed]'s "Couldn't check expiry" (the shared model decides which).
+     */
+    fun expiryLine(expiry: ExpiryDisplay, loading: Boolean = false): String? = when (expiry) {
         is ExpiryDisplay.DaysLeft -> if (expiry.days == 1) "1 day left" else "${expiry.days} days left"
         ExpiryDisplay.Expired -> "Expired"
         ExpiryDisplay.NeverExpires -> "Never expires"
         is ExpiryDisplay.Text -> expiry.text
-        ExpiryDisplay.NotReported -> "Expiry not reported by this provider"
+        ExpiryDisplay.NotReported -> if (loading) null else "Expiry not reported by this provider"
+        ExpiryDisplay.CheckFailed -> "Couldn't check expiry"
     }
 
-    /** The thin bar (0..1) exists only when there is a count of days to show; every other reading has no bar. */
+    /**
+     * The thin bar (0..1): only in the last 30 days, filled days/30 (the shared model's [ExpiryDisplay.DaysLeft.fraction],
+     * null beyond 30 days); every other reading has no bar.
+     */
     fun expiryBar(expiry: ExpiryDisplay): Float? = (expiry as? ExpiryDisplay.DaysLeft)?.fraction
 
     /** "1 of 3 connections", only when the panel reports a maximum. */
@@ -111,9 +120,10 @@ object TvPlaylistDetailsPolicy {
      * out: the match index reports 0 until it has been built, and "Movies 0" would read as a fact.
      */
     fun countLines(counts: DetailsCounts): List<TvDetailsCount> = buildList {
-        counts.channels?.takeIf { it > 0 }?.let { add(TvDetailsCount("Channels", it.toString())) }
-        counts.movies?.takeIf { it > 0 }?.let { add(TvDetailsCount("Movies", it.toString())) }
-        counts.series?.takeIf { it > 0 }?.let { add(TvDetailsCount("Series", it.toString())) }
+        val shown = counts.hidingZeros()   // the shared rule: only a count above zero is shown
+        shown.channels?.let { add(TvDetailsCount("Channels", it.toString())) }
+        shown.movies?.let { add(TvDetailsCount("Movies", it.toString())) }
+        shown.series?.let { add(TvDetailsCount("Series", it.toString())) }
     }
 }
 
