@@ -2,8 +2,8 @@ package com.nuvio.app.features.iptv
 
 import kotlinx.serialization.Serializable
 
-/** The contact kinds a provider can publish, in the order the buttons are shown. */
-enum class ContactKind { TELEGRAM, WHATSAPP, EMAIL, WEBSITE }
+/** The contact kinds a provider can publish, in the order the buttons are shown (the contract's and the web's order). */
+enum class ContactKind { WHATSAPP, TELEGRAM, EMAIL, WEBSITE }
 
 /** One tappable contact: [url] is what the platform opens, [text] what is shown beside/under it. */
 data class ContactLink(val kind: ContactKind, val text: String, val url: String)
@@ -21,10 +21,10 @@ data class ProviderSupport(
     val email: String? = null,
     val website: String? = null,
 ) {
-    /** The contacts that can be opened, Telegram first (the round buttons' order in the design). */
+    /** The contacts that can be opened: WhatsApp, Telegram, Email, Website (one order on every platform). */
     fun links(): List<ContactLink> = buildList {
-        ProviderContacts.telegram(telegram)?.let { add(ContactLink(ContactKind.TELEGRAM, "@$it", "https://t.me/$it")) }
         ProviderContacts.whatsapp(whatsapp)?.let { add(ContactLink(ContactKind.WHATSAPP, "+$it", "https://wa.me/$it")) }
+        ProviderContacts.telegram(telegram)?.let { add(ContactLink(ContactKind.TELEGRAM, "@$it", "https://t.me/$it")) }
         ProviderContacts.email(email)?.let { add(ContactLink(ContactKind.EMAIL, it, "mailto:$it")) }
         ProviderContacts.website(website)?.let { add(ContactLink(ContactKind.WEBSITE, ProviderContacts.websiteHost(it), it)) }
     }
@@ -62,24 +62,42 @@ object ProviderContacts {
     }
 
     /**
-     * An http(s) address with a host, no spaces/control characters and no userinfo. The server applies
-     * the full public-address rules when the provider saves it; this only refuses what must never be
-     * handed to the platform's link opener.
+     * An https address on a public-looking host: ASCII letters, digits and hyphens in at least two dot-separated
+     * labels with an alphabetic top level, an optional port, no userinfo. Plain http, IP literals (v4 and v6),
+     * single-label hosts (localhost, intranet names), non-ASCII and punycode (IDN) hosts are not offered as
+     * links: the link opener is handed provider-controlled text, so this is checked here and again in
+     * `ExternalLinkPolicy.isSafeContactLink`. The server applies the full public-address rules when the
+     * provider saves it.
      */
     fun website(value: String?): String? {
         val s = value.orEmpty().trim()
         if (s.isEmpty() || s.length > 2048) return null
         if (s.any { it.code <= 0x20 || it.code in 0x7f..0x9f || it in "<>\"\\^`|" }) return null
-        val scheme = when {
-            s.startsWith("https://", ignoreCase = true) -> "https://"
-            s.startsWith("http://", ignoreCase = true) -> "http://"
-            else -> return null
-        }
-        val authority = s.substring(scheme.length).takeWhile { it != '/' && it != '?' && it != '#' }
+        if (!s.startsWith("https://", ignoreCase = true)) return null
+        val authority = s.substring("https://".length).takeWhile { it != '/' && it != '?' && it != '#' }
         if (authority.isEmpty() || '@' in authority || '%' in authority) return null
-        val host = authority.substringBefore(':')
-        if (host.isEmpty() || '.' !in host) return null
+        if (!isPublicLookingHost(authority)) return null
         return s
+    }
+
+    /** `host` or `host:port` (port digits only, 1-65535). */
+    internal fun isPublicLookingHost(authority: String): Boolean {
+        val host = authority.substringBefore(':')
+        if (':' in authority) {
+            val port = authority.substringAfter(':')
+            if (port.isEmpty() || port.length > 5 || !port.all { it in '0'..'9' } || port.toInt() !in 1..65535) return false
+        }
+        if (host.isEmpty() || host.length > 253) return false
+        val labels = host.split('.')
+        if (labels.size < 2) return false
+        for (label in labels) {
+            if (label.isEmpty() || label.length > 63) return false
+            if (label.startsWith("-") || label.endsWith("-")) return false
+            if (!label.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' }) return false
+            if (label.startsWith("xn--", ignoreCase = true)) return false
+        }
+        val tld = labels.last()
+        return tld.length >= 2 && tld.all { it in 'a'..'z' || it in 'A'..'Z' }
     }
 
     fun websiteHost(url: String): String =

@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.ExternalLinkPolicy
 import com.nuvio.app.core.ui.rememberSafeUriOpener
 import org.jetbrains.compose.resources.stringResource
 
@@ -49,7 +50,7 @@ internal fun ProviderContactButtons(contacts: List<ContactLink>, modifier: Modif
         contacts.forEach { contact ->
             val description = contact.kind.label()
             Surface(
-                modifier = Modifier.size(44.dp).clickable(role = Role.Button, onClickLabel = description) { open(contact.url) },
+                modifier = Modifier.size(44.dp).clickable(role = Role.Button, onClickLabel = description) { if (ExternalLinkPolicy.isSafeContactLink(contact.url)) open(contact.url) },
                 shape = CircleShape,
                 color = tokens.colors.accent.copy(alpha = tokens.opacity.selected),
             ) {

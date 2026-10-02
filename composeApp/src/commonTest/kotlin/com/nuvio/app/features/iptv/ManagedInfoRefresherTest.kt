@@ -15,7 +15,7 @@ class ManagedInfoRefresherTest {
         var calls = 0
         var result: () -> List<ManagedInfo> = { emptyList() }
         override suspend fun preview(code: String): SetupCodeOutcome = error("not used")
-        override suspend fun redeem(code: String, profileIndex: Int): RedeemResult = error("not used")
+        override suspend fun redeem(code: String, profileIndex: Int, skipAddons: Boolean): RedeemResult = error("not used")
         override suspend fun managedPlaylists(profileId: Int): List<ManagedInfo> {
             calls++
             return result()

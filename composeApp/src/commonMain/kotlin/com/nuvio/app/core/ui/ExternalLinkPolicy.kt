@@ -25,6 +25,28 @@ internal object ExternalLinkPolicy {
         data class CopyFallback(val url: String) : Outcome
     }
 
+    /**
+     * A provider-supplied contact link may be opened only when it is `https://` on a public-looking host or a
+     * plain `mailto:` address (no `?` headers): the text is a provider's, so the opener is never handed
+     * `javascript:`, `intent:`, `file:`, `tel:`, a custom scheme, plain http, an IP literal or an intranet name
+     * (security L10). Other app links keep using [open], unchanged.
+     */
+    fun isSafeContactLink(url: String): Boolean {
+        val s = url.trim()
+        if (s.isEmpty() || s.any { it.code <= 0x20 || it.code in 0x7f..0x9f }) return false
+        if (s.startsWith("mailto:", ignoreCase = true)) {
+            val address = s.substring("mailto:".length)
+            return address.isNotEmpty() && '?' !in address && ',' !in address && ';' !in address && '%' !in address &&
+                address.count { it == '@' } == 1 && com.nuvio.app.features.iptv.ProviderContacts.email(address) != null
+        }
+        return s.startsWith("https://", ignoreCase = true) &&
+            com.nuvio.app.features.iptv.ProviderContacts.website(s) != null
+    }
+
+    /** [open], but only for a link [isSafeContactLink] accepts; anything else is ignored (never launched). */
+    fun openContact(url: String, launch: (String) -> Unit): Outcome =
+        if (isSafeContactLink(url)) open(url, launch) else Outcome.Ignored
+
     fun open(url: String, launch: (String) -> Unit): Outcome {
         val target = url.trim()
         if (target.isEmpty()) return Outcome.Ignored

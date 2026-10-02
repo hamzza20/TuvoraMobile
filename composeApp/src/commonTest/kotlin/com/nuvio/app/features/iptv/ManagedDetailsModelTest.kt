@@ -28,8 +28,9 @@ class ManagedDetailsModelTest {
         assertEquals("Managed by Acme TV", model.managedBy)
         assertEquals("Acme TV", model.providerName)
         assertEquals("2026-10-01T10:00:00Z", model.serviceUpdatedAt)
-        assertEquals(listOf(ContactKind.TELEGRAM, ContactKind.WHATSAPP, ContactKind.EMAIL), model.contacts.map { it.kind })
-        assertEquals(listOf("https://t.me/acme_tv", "https://wa.me/447700900123", "mailto:help@acme.example.com"), model.contacts.map { it.url })
+        // The contract's order (and the web's normalizeSupport): WhatsApp, Telegram, Email, Website — one order on every platform.
+        assertEquals(listOf(ContactKind.WHATSAPP, ContactKind.TELEGRAM, ContactKind.EMAIL), model.contacts.map { it.kind })
+        assertEquals(listOf("https://wa.me/447700900123", "https://t.me/acme_tv", "mailto:help@acme.example.com"), model.contacts.map { it.url })
         assertTrue(model.lockedServerLogin)
         assertTrue(model.isManaged)
     }
@@ -129,5 +130,27 @@ class ManagedDetailsModelTest {
         val ok = ProviderSupport(website = "https://acme.example.com/help", telegram = "https://t.me/acme_tv").links()
         assertEquals(listOf("https://t.me/acme_tv", "https://acme.example.com/help"), ok.map { it.url })
         assertEquals("acme.example.com", ok[1].text)
+    }
+
+    @Test
+    fun `a website contact is https and a public-looking host only`() {
+        fun site(v: String) = ProviderContacts.website(v)
+        assertEquals("https://acme.example.com/help?x=1", site("https://acme.example.com/help?x=1"))
+        assertEquals("https://acme.example.com:8443/", site("https://acme.example.com:8443/"))
+        assertNull(site("http://acme.example.com"), "plain http is not offered as a tappable contact")
+        assertNull(site("https://192.168.0.1/"), "an IP literal")
+        assertNull(site("https://10.0.0.1:8080/x"))
+        assertNull(site("https://[::1]/"), "an IPv6 literal")
+        assertNull(site("https://localhost/"), "a single-label host")
+        assertNull(site("https://intranet/"), "a single-label host")
+        assertNull(site("https://xn--e1afmkfd.example.com/"), "punycode (IDN) hosts are not shown as links here")
+        assertNull(site("https://аcme.example.com/"), "a non-ASCII host")
+        assertNull(site("https://user:pw@acme.example.com/"), "no userinfo")
+        assertNull(site("https://acme..example.com/"))
+        assertNull(site("https://-acme.example.com/"))
+        assertNull(site("https://.acme.example.com/"))
+        assertNull(site("https://acme.example.1/"), "a numeric TLD")
+        assertNull(site("javascript:alert(1)"))
+        assertNull(site("intent://scan/#Intent;scheme=zxing;end"))
     }
 }
