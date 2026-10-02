@@ -181,6 +181,15 @@ class TvPlaylistDetailsPolicyTest {
     }
 
     @Test
+    fun `a count of zero is not shown because the match index may simply not be built yet`() {
+        assertEquals(emptyList(), TvPlaylistDetailsPolicy.countLines(DetailsCounts(movies = 0, series = 0)))
+        assertEquals(
+            listOf(TvDetailsCount("Movies", "120")),
+            TvPlaylistDetailsPolicy.countLines(DetailsCounts(channels = 0, movies = 120, series = 0)),
+        )
+    }
+
+    @Test
     fun `counts list only what the catalog knows`() {
         assertEquals(emptyList(), TvPlaylistDetailsPolicy.countLines(DetailsCounts()))
         assertEquals(

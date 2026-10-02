@@ -171,6 +171,7 @@ struct MainShell: View {
         }
         .task { await theme.observe() }
         .task { TopShelfPublisher.start() }
+        .onReceive(DeepLinkCenter.shared.$openSetupCode) { open in if open { destination = .settings } }
         .onReceive(DeepLinkCenter.shared.$pending) { link in
             guard let link else { return }
             DeepLinkCenter.shared.pending = nil

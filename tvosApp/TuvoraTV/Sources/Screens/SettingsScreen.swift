@@ -123,6 +123,7 @@ struct SettingsScreen: View {
             // Land on the selected category's rail item (defaultFocus alone loses to the first item
             // when the screen appears under the shell).
             railFocus = selected
+            openRequestedSetupCode()
             smokeDialog()
         }
     }
@@ -199,6 +200,15 @@ struct SettingsScreen: View {
         case .tracking: TrackingSettingsDetail(model: integrations)
         case .about: AboutSettingsDetail()
         }
+    }
+
+    /// The IPTV hub's empty state ("I have a setup code") lands here: the IPTV page, with the code screen open.
+    private func openRequestedSetupCode() {
+        guard DeepLinkCenter.shared.openSetupCode else { return }
+        DeepLinkCenter.shared.openSetupCode = false
+        selected = .integrations
+        integrationsNav.section = .iptv
+        dialogs.push(.setupCode)
     }
 
     private func smokeDialog() {

@@ -189,4 +189,16 @@ final class ProviderSetupTests: XCTestCase {
         // Waiting happens while the test runner redeems out of band (see the lane notes); allow 4 minutes.
         XCTAssertTrue(app.descendants(matching: .any)["details.banner"].waitForExistence(timeout: 240), "the screen did not finish by itself")
     }
+
+    /// An empty IPTV hub (profile 2 has no playlists) offers "I have a setup code" and it opens the same code screen.
+    func testEmptyHubOffersSetupCode() {
+        app.launchArguments = ["-smokePickProfile", "2", "-smokeTab", "iptv"]
+        app.launch()
+        let button = app.buttons["iptv.empty.setupCode"]
+        XCTAssertTrue(button.waitForExistence(timeout: 40), "the empty IPTV hub has no setup-code button")
+        XCTAssertTrue(waitFocus(10) { $0 == "iptv.empty.setupCode" }, "the button is not focused; focus \(focusedId())")
+        press(.select, settle: 3)
+        XCTAssertTrue(waitFocus(15) { $0 == "setup.key.A" }, "the code screen did not open; focus \(focusedId())")
+        XCTAssertTrue(app.descendants(matching: .any)["setup.account"].exists)
+    }
 }

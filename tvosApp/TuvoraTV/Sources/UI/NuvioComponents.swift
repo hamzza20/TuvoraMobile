@@ -190,8 +190,13 @@ struct NuvioStateMessage: View {
     let title: String
     let message: String
     var retry: (() -> Void)? = nil
+    /// An outlined second action under the message ("I have a setup code" on the empty IPTV hub).
+    var actionTitle: String? = nil
+    var actionId: String = ""
+    var action: (() -> Void)? = nil
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
+    @FocusState private var actionFocused: Bool
 
     var body: some View {
         VStack(spacing: dp(12)) {
@@ -209,6 +214,21 @@ struct NuvioStateMessage: View {
                 .focused($focused)
         .reportsFocus(focused)
                 .padding(.top, dp(8))
+            }
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(ui: actionTitle).font(NuvioType.labelLargeSemi)
+                        .foregroundStyle(actionFocused ? colors.onSecondary : colors.textPrimary)
+                        .padding(.horizontal, dp(24)).padding(.vertical, dp(10))
+                        .background(Capsule().fill(actionFocused ? colors.secondary : Color.clear))
+                        .overlay(Capsule().stroke(actionFocused ? colors.secondary : colors.border, lineWidth: NuvioTokens.Stroke.focus))
+                }
+                .buttonStyle(PlainNoChromeButtonStyle())
+                .focused($actionFocused)
+                .reportsFocus(actionFocused)
+                .accessibilityIdentifier(actionId)
+                .padding(.top, dp(8))
+                .onAppear { DispatchQueue.main.async { actionFocused = true } }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

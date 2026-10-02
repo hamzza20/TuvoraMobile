@@ -106,11 +106,14 @@ object TvPlaylistDetailsPolicy {
         else -> "Couldn't reach the provider for account details."
     }
 
-    /** Channels / Movies / Series lines, only for the counts the local catalog knows. */
+    /**
+     * Channels / Movies / Series lines, only for the counts the local catalog knows. A count of zero is left
+     * out: the match index reports 0 until it has been built, and "Movies 0" would read as a fact.
+     */
     fun countLines(counts: DetailsCounts): List<TvDetailsCount> = buildList {
-        counts.channels?.let { add(TvDetailsCount("Channels", it.toString())) }
-        counts.movies?.let { add(TvDetailsCount("Movies", it.toString())) }
-        counts.series?.let { add(TvDetailsCount("Series", it.toString())) }
+        counts.channels?.takeIf { it > 0 }?.let { add(TvDetailsCount("Channels", it.toString())) }
+        counts.movies?.takeIf { it > 0 }?.let { add(TvDetailsCount("Movies", it.toString())) }
+        counts.series?.takeIf { it > 0 }?.let { add(TvDetailsCount("Series", it.toString())) }
     }
 }
 

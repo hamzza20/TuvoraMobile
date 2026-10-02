@@ -29,7 +29,10 @@ struct IptvHubScreen: View {
                 }
             } else if let hub, hub.accountsLoaded {
                 NuvioStateMessage(title: "No playlists yet",
-                                  message: "Add an IPTV playlist in Settings, or at tuvora.co on your phone or computer.")
+                                  message: "Add an IPTV playlist in Settings, or at tuvora.co on your phone or computer.",
+                                  actionTitle: "I have a setup code", actionId: "iptv.empty.setupCode") {
+                    DeepLinkCenter.shared.openSetupCode = true
+                }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }

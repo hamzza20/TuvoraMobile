@@ -61,4 +61,6 @@ struct DeepLink: Equatable {
 final class DeepLinkCenter: ObservableObject {
     static let shared = DeepLinkCenter()
     @Published var pending: DeepLink?
+    /// The IPTV hub's empty state asked for the setup-code screen: the shell switches to Settings, which opens it.
+    @Published var openSetupCode = false
 }
