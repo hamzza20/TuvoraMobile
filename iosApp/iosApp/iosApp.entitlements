@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Step 2: https://tuvora.co/s/<code> opens the app on the setup preview (Universal Links).
+	     NOT yet referenced by the Xcode project (CODE_SIGN_ENTITLEMENTS) on purpose: the manual App Store
+	     provisioning profiles for com.tuvora.media must first be regenerated with the Associated Domains
+	     capability, and https://tuvora.co/.well-known/apple-app-site-association must list /s/*. Wire it in
+	     with the next iOS build (see the Step 2 report). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:tuvora.co</string>
+	</array>
+</dict>
+</plist>

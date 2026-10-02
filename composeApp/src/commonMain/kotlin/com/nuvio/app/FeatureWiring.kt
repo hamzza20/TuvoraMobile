@@ -14,6 +14,8 @@ import com.nuvio.app.features.iptv.IptvSettingsSectionImpl
 import com.nuvio.app.core.contracts.HomeSportsSectionAccess
 import com.nuvio.app.features.radar.RadarHomeSportsSection
 import com.nuvio.app.core.contracts.IptvHubContentAccess
+import com.nuvio.app.core.contracts.SetupCodeEntryAccess
+import com.nuvio.app.features.iptv.SetupCodeEntryImpl
 import com.nuvio.app.features.iptv.XtreamHubContent
 import com.nuvio.app.core.contracts.SportsHubContentAccess
 import com.nuvio.app.features.radar.RadarHubContent
@@ -56,6 +58,7 @@ fun registerFeatureContributions() {
     IptvSettingsSectionAccess.register(IptvSettingsSectionImpl)
     HomeSportsSectionAccess.register(RadarHomeSportsSection)
     IptvHubContentAccess.register(XtreamHubContent)
+    SetupCodeEntryAccess.register(SetupCodeEntryImpl)
     SportsHubContentAccess.register(RadarHubContent)
     LiveTvContentAccess.register(LiveTvContentImpl)
     // In-app announcements card on Home (lazy: the repository touches storage on first refresh).

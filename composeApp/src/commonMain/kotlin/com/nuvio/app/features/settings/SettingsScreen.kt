@@ -839,7 +839,9 @@ private fun MobileSettingsScreen(
                 SettingsPage.Iptv,
                 SettingsPage.IptvAddPlaylist,
                 SettingsPage.IptvContent,
-                SettingsPage.IptvCategoryChecklist -> {
+                SettingsPage.IptvCategoryChecklist,
+                SettingsPage.IptvPlaylistDetails,
+                SettingsPage.IptvSetupPreview -> {
                     // IPTV settings pages live in the fork's IptvSettingsSection (firewall); this
                     // shared screen only forwards the page + its opaque state into the list.
                     val section = iptvSection
@@ -1290,7 +1292,9 @@ private fun TabletSettingsScreen(
                     SettingsPage.Iptv,
                     SettingsPage.IptvAddPlaylist,
                     SettingsPage.IptvContent,
-                    SettingsPage.IptvCategoryChecklist -> {
+                    SettingsPage.IptvCategoryChecklist,
+                SettingsPage.IptvPlaylistDetails,
+                SettingsPage.IptvSetupPreview -> {
                         // IPTV settings pages live in the fork's IptvSettingsSection (firewall); this
                         // shared screen only forwards the page + its opaque state into the list.
                         val section = iptvSection

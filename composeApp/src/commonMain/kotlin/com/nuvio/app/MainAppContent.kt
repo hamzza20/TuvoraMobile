@@ -66,6 +66,8 @@ import com.nuvio.app.navigation.posterNavigationEntry
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.core.auth.isLocalOnly
+import com.nuvio.app.core.contracts.SetupCodeEntryAccess
 import com.nuvio.app.core.deeplink.AppDeepLink
 import com.nuvio.app.core.deeplink.AppDeepLinkRepository
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
@@ -923,8 +925,36 @@ internal fun MainAppContent(
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
 
+                    is AppDeepLink.SetupCode -> {
+                        // The code is held in memory by the setup port (never in the route). Someone
+                        // without a real account is sent to sign in first; the effect below reopens the
+                        // preview once they are back.
+                        val entry = SetupCodeEntryAccess.current()
+                        if (entry != null && entry.acceptLinkedCode(deepLink.code)) {
+                            if (!AuthRepository.state.value.isLocalOnly) {
+                                SettingsPageRequest.request("IptvSetupPreview")
+                            } else {
+                                // A guest sees the code on the Add Playlist page, where they are asked
+                                // before being taken to sign-in.
+                                entry.prepareCodeEntryPage()
+                                SettingsPageRequest.request("IptvAddPlaylist")
+                            }
+                            activateTab(AppScreenTab.Settings)
+                        }
+                        AppDeepLinkRepository.markConsumed(deepLink)
+                    }
+
                     null -> Unit
                 }
+            }
+        }
+
+        // A person who went to sign in with a setup code held lands on the preview when they are back.
+        LaunchedEffect(authState) {
+            if (!ownsAppRuntime) return@LaunchedEffect
+            if (!authState.isLocalOnly && SetupCodeEntryAccess.current()?.takeResumeAfterSignIn() == true) {
+                SettingsPageRequest.request("IptvSetupPreview")
+                activateTab(AppScreenTab.Settings)
             }
         }
 
@@ -1486,6 +1516,11 @@ internal fun MainAppContent(
                                     // activateTab, not selectedTab: iOS has no Settings tab to
                                     // select, so only activateTab reaches its cover.
                                     SettingsPageRequest.request("Iptv")
+                                    activateTab(AppScreenTab.Settings)
+                                },
+                                onIptvEnterSetupCode = {
+                                    SetupCodeEntryAccess.current()?.prepareCodeEntryPage()
+                                    SettingsPageRequest.request("IptvAddPlaylist")
                                     activateTab(AppScreenTab.Settings)
                                 },
                                 onOpenSportsTab = { activateTab(AppScreenTab.Sports) },

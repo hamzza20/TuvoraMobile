@@ -44,6 +44,9 @@ val tvosExcludedCommon = listOf(
     "com/nuvio/app/features/livetv/LiveTvOrientation.kt",
     // Phone/desktop long-press channel menu (sheet + toast); Apple TV has its own SwiftUI context menu.
     "com/nuvio/app/features/iptv/IptvLiveChannelMenu.kt",
+    // Phone/desktop shell hook for setup links and the empty-screen button; it opens the Add Playlist page
+    // (a Compose page object). Apple TV has its own setup-code screen and no deep links.
+    "com/nuvio/app/features/iptv/SetupCodeEntryImpl.kt",
     // iOS-only SwiftUI tab bridge, and the announcements feature (not in Apple TV v1).
     "com/nuvio/app/features/announcements/internal/AnnouncementsRepository.kt", "com/nuvio/app/features/home/HomeEpisodeShuffle.kt",
     // In-app APK updater: App Store builds update through the store.
