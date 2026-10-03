@@ -220,7 +220,11 @@ final class PlaybackCoordinator: ObservableObject {
         if let current = self.session?.session, current !== session { current.close() }   // switching source/channel
         let box = TvPlayerSessionBox(session: session)
         self.session = box
+        // The identity is the session: swapping rootView to the same view type otherwise keeps the old
+        // screen's identity, so onAppear (attach), the state task and the engine host never moved to the
+        // new channel — a live zap showed the new title over a closed player (UITest LiveZapTests).
         let screen = TvPlayerScreen(session: session) { [weak self] in self?.stop() }
+            .id(ObjectIdentifier(session))
             .environment(\.nuvio, palette)
             .environmentObject(self)
         if let host = playerHost as? UIHostingController<AnyView> {
