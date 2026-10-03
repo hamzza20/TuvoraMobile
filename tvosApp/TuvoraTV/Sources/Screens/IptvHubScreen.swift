@@ -220,6 +220,8 @@ private struct LiveGuideView: View {
     @State private var focusedChannel: LiveGuideChannel?
     @State private var previewing: LiveGuideChannel?
     @State private var previewSession: TvPlayerSession?
+    /// Live TV display frame-rate matching: the guide keeps a matched mode while shown.
+    @State private var holdsLiveDisplay = false
     @State private var programmes: [String: [XtreamProgram]] = [:]
     @State private var now = TvLiveGuide.shared.nowMs()
     @FocusState private var channelsFocused: Bool
@@ -354,7 +356,15 @@ private struct LiveGuideView: View {
             cellDescription = try? await TvCatchUp.shared.description(contentId: channel.contentId, programme: cell)
         }
         .onChange(of: timelineChannel) { _, _ in syncEdgeOwnership() }
-        .onDisappear { previewSession?.close(); previewSession = nil; ContentFocusActivity.shared.leftEdgeOwned = false }
+        // The guide keeps a display mode the fullscreen player matched (it never switches one itself, as
+        // on Android TV): fullscreen <-> guide costs no HDMI blackout. Leaving the guide gives it back.
+        .onAppear {
+            if !holdsLiveDisplay { holdsLiveDisplay = true; LiveDisplayCriteriaController.shared.enter() }
+        }
+        .onDisappear {
+            previewSession?.close(); previewSession = nil; ContentFocusActivity.shared.leftEdgeOwned = false
+            if holdsLiveDisplay { holdsLiveDisplay = false; LiveDisplayCriteriaController.shared.exit() }
+        }
     }
 
     /// What re-asks the loader: the settled focus, the window, and the list being shown.
