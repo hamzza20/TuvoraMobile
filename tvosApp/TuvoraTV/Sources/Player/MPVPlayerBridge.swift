@@ -6,8 +6,10 @@ import TuvoraCore
 
 // MARK: - Player Bridge Implementation (Kotlin protocol conformance)
 
-final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge, TvAudioDelayControl {
+final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge, TvAudioDelayControl, TvVideoFormatSource {
     func setAudioDelayMs(delayMs: Int32) { playerVC?.setAudioDelayMs(Int(delayMs)) }
+    /// Live display frame-rate matching (LiveDisplayCriteriaPolicy): the cached format, no mpv read.
+    func videoFormat() -> TvVideoFormat? { playerVC?.liveVideoFormat }
 
 
     private var playerVC: MPVPlayerViewController?
@@ -321,6 +323,14 @@ final class MPVPlayerViewController: UIViewController {
     private var cachedPositionSeconds: Double = 0
     private var cachedPositionSampledAt: CFTimeInterval = 0
     private var cachedRenderFrameRate: Double = 30.0
+
+    /// Live only: the decoded picture's rate, size, codec and transfer, for display frame-rate matching
+    /// (LiveDisplayCriteriaController). Re-read on every 4th 250ms poll: a channel's format rarely
+    /// changes, and each read takes mpv's core lock.
+    private(set) var liveVideoFormat: TvVideoFormat?
+    private var liveVideoFormatPolls = 0
+    /// True while the TV switches display mode and this player's video output is idled for it.
+    var videoIdledForDisplaySwitch = false
 
     /// Playback position for PiP sample timestamps, interpolated from the last 250ms poll so the
     /// PiP window's timeline advances smoothly without a per-frame mpv property read.
@@ -1215,6 +1225,11 @@ final class MPVPlayerViewController: UIViewController {
             if container.isFinite && container > 1 { cachedRenderFrameRate = container }
         }
 
+        if isLiveStream {
+            if liveVideoFormatPolls % 4 == 0 { refreshLiveVideoFormat() }
+            liveVideoFormatPolls &+= 1
+        }
+
         // Live-freeze detection: the picture can stop while audio plays on, which leaves every
         // other field here looking healthy. `estimated-vf-fps` is the one signal that stops too.
         // Advanced at read time here (this poll), which is the correct pattern — a callback-driven
@@ -1230,6 +1245,23 @@ final class MPVPlayerViewController: UIViewController {
         if shouldPublishNowPlayingState {
             syncNowPlayingPlaybackState(isPlaying: isPlayerPlaying)
         }
+    }
+
+    private func refreshLiveVideoFormat() {
+        // While video is idled (display switch, background) video-params is empty: keep the last format.
+        guard !videoIdledForDisplaySwitch else { return }
+        let width = getInt("video-params/w")
+        let height = getInt("video-params/h")
+        guard width > 0, height > 0 else { return }
+        let format = TvVideoFormat(
+            containerFps: getDouble("container-fps"),
+            estimatedFps: getDouble("estimated-vf-fps"),
+            width: Int32(width),
+            height: Int32(height),
+            codec: (getString("current-tracks/video/codec") ?? "").lowercased(),
+            gamma: (getString("video-params/gamma") ?? "").lowercased()
+        )
+        if format != liveVideoFormat { liveVideoFormat = format }
     }
 
     private func syncNowPlayingPlaybackState(isPlaying: Bool) {

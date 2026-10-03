@@ -39,6 +39,8 @@ struct TvPlayerScreen: View {
     @FocusState private var rootFocused: Bool
     @FocusState private var skipFocused: Bool
     @FocusState private var startOverFocused: Bool
+    /// This screen holds Live TV for display frame-rate matching (LiveDisplayCriteriaController).
+    @State private var holdsLiveDisplay = false
 
     /// The Skip button is up: a segment is playing and it hasn't auto-hidden (or the controls are showing).
     private var skipVisible: Bool {
@@ -135,6 +137,10 @@ struct TvPlayerScreen: View {
         .onAppear {
             session.attach()
             bumpControls()
+            if session.state.value.isLive && !holdsLiveDisplay {
+                holdsLiveDisplay = true
+                LiveDisplayCriteriaController.shared.enter()
+            }
             // Simulator smoke hooks: `-smokePanel subtitles|audio|aspect` opens the track panel after 5 s;
             // `-smokeOverlay speed|info` a player dialog; `-smokeSkip <start>,<end>,<type>` adds a segment.
             let args = AppArguments.list
@@ -181,7 +187,25 @@ struct TvPlayerScreen: View {
                 }
             }
         }
-        .onDisappear { session.detach() }
+        .onDisappear {
+            session.detach()
+            if holdsLiveDisplay {
+                holdsLiveDisplay = false
+                LiveDisplayCriteriaController.shared.exit()
+            }
+        }
+        // Live display frame-rate matching. Keyed by the session: a zap swaps the session in place.
+        .task(id: ObjectIdentifier(session)) {
+            for await next in session.state where next.isLive {
+                LiveDisplayCriteriaController.shared.offer(next.displayCriteria)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: LiveDisplayCriteriaController.switchWillBegin)) { _ in
+            session.displayModeSwitch(inProgress: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: LiveDisplayCriteriaController.switchDidSettle)) { _ in
+            session.displayModeSwitch(inProgress: false)
+        }
         .onPlayPauseCommand { commitScrubOrToggle() }
         .onTapGesture { commitScrubOrToggle() }
         .onMoveCommand { direction in

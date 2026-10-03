@@ -13,6 +13,30 @@ extension MPVPlayerViewController {
                                                name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(enterForeground),
                                                name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(displaySwitchWillBegin),
+                                               name: LiveDisplayCriteriaController.switchWillBegin, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(displaySwitchDidSettle),
+                                               name: LiveDisplayCriteriaController.switchDidSettle, object: nil)
+    }
+
+    /// The TV is about to change display mode (live frame-rate matching): stop presenting video until
+    /// it settles — MoltenVK crashes presenting into the CAMetalLayer mid-switch (NuvioTVOS, device).
+    /// Audio plays on; `vid=auto` brings the picture back at the next keyframe.
+    @objc func displaySwitchWillBegin() {
+        guard mpv != nil, !videoIdledForDisplaySwitch else { return }
+        videoIdledForDisplaySwitch = true
+        metalLayer.releasePendingDrawable()
+        setStringProperty("vid", "no")
+        InAppLogBridge.shared.info(tag: "MPV/tvOS", message: "Video idled for display mode switch")
+    }
+
+    @objc func displaySwitchDidSettle() {
+        guard videoIdledForDisplaySwitch else { return }
+        videoIdledForDisplaySwitch = false
+        // Backgrounded meanwhile: enterForeground restores the video.
+        guard mpv != nil, UIApplication.shared.applicationState != .background else { return }
+        setStringProperty("vid", "auto")
+        InAppLogBridge.shared.info(tag: "MPV/tvOS", message: "Video restored after display mode switch")
     }
 
     @objc func enterBackground() {
@@ -24,6 +48,7 @@ extension MPVPlayerViewController {
     }
 
     @objc func enterForeground() {
+        videoIdledForDisplaySwitch = false
         retryDeviceLossRecoveryNow()
         if !isAwaitingDeviceLossRecovery {
             metalLayer.setRenderingSuspended(false, reason: "enter-foreground")
