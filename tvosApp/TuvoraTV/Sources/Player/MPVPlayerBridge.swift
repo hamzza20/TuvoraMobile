@@ -238,6 +238,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge, TvAudioDelayContro
     func destroy() {
         playerVC?.destroyPlayer()
         playerVC = nil
+        EngineLedger.released(self)
     }
 
     private func parseRequestHeaders(_ headersJson: String?) -> [String: String] {

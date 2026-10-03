@@ -220,6 +220,9 @@ private struct LiveGuideView: View {
     @State private var focusedChannel: LiveGuideChannel?
     @State private var previewing: LiveGuideChannel?
     @State private var previewSession: TvPlayerSession?
+    /// Latest preview request wins: one that resolves after another channel was chosen or the guide
+    /// closed would otherwise play on with no screen (B112).
+    @State private var previewRequests = TvPlaybackRequestGate()
     /// Live TV display frame-rate matching: the guide keeps a matched mode while shown.
     @State private var holdsLiveDisplay = false
     @State private var programmes: [String: [XtreamProgram]] = [:]
@@ -362,6 +365,7 @@ private struct LiveGuideView: View {
             if !holdsLiveDisplay { holdsLiveDisplay = true; LiveDisplayCriteriaController.shared.enter() }
         }
         .onDisappear {
+            previewRequests.cancel()
             previewSession?.close(); previewSession = nil; ContentFocusActivity.shared.leftEdgeOwned = false
             if holdsLiveDisplay { holdsLiveDisplay = false; LiveDisplayCriteriaController.shared.exit() }
         }
@@ -629,6 +633,7 @@ private struct LiveGuideView: View {
     /// and a programme nothing plays comes back to the guide as NuvioTV's notice.
     private func startReplay(_ channel: LiveGuideChannel, _ programme: XtreamProgram) {
         notice = nil
+        previewRequests.cancel()
         previewSession?.close(); previewSession = nil; previewing = nil
         NSLog("SMOKE guide replay channel=%@ programme=%@", channel.name, programme.title)
         Task {
@@ -642,7 +647,8 @@ private struct LiveGuideView: View {
             while let step = try? await pair.replay.supervise(session: current) {
                 if let next = step.session {
                     NSLog("SMOKE guide replay next dialect")
-                    playback.play(next)
+                    guard playback.session?.session === current else { next.close(); return }   // viewer left
+                    playback.continuePlaying(next, from: current)
                     current = next
                 } else {
                     notice = step.notice
@@ -664,6 +670,7 @@ private struct LiveGuideView: View {
     private func select(_ channel: LiveGuideChannel) {
         notice = nil
         if previewing?.contentId == channel.contentId, let previewSession {
+            previewRequests.cancel()
             self.previewSession = nil
             previewing = nil
             let list = visible
@@ -679,8 +686,11 @@ private struct LiveGuideView: View {
         previewSession?.close()
         previewSession = nil
         previewing = channel
+        let request = previewRequests.begin()
         Task {
-            if let session = try? await TvIptvBrowse.shared.playChannel(contentId: channel.contentId, name: channel.name, logo: channel.logo) {
+            let resolved = try? await TvIptvBrowse.shared.playChannel(contentId: channel.contentId, name: channel.name, logo: channel.logo)
+            guard previewRequests.isCurrent(token: request) else { resolved?.close(); return }
+            if let session = resolved {
                 session.attach()
                 previewSession = session
             } else {

@@ -141,6 +141,8 @@ class TvPlayerSession(
     private val clock = TimeSource.Monotonic.markNow()
 
     private var bridge: NuvioPlayerBridge? = null
+    /** Final: once closed no engine is ever opened again (a late attach / re-embed / zap would play with no screen). */
+    private var closed = false
     private var escalated = false
     private var audioLanguagesApplied = false
     private var subtitleLanguageApplied = false
@@ -214,7 +216,13 @@ class TvPlayerSession(
     val subtitle: String? get() = launch.episodeTitle ?: launch.streamTitle.takeIf { it != launch.title }
 
     /** The current engine's view controller. Changes when the session escalates; see [TvPlayerState.engineGeneration]. */
-    fun viewController(): UIViewController? = (bridge ?: open(_state.value.lane, launch.initialPositionMs))?.createPlayerViewController()
+    fun viewController(): UIViewController? {
+        if (closed) return null
+        return (bridge ?: open(_state.value.lane, launch.initialPositionMs))?.createPlayerViewController()
+    }
+
+    /** True once [close] ran: the engine is gone and the session can't play again. */
+    val isClosed: Boolean get() = closed
 
     /** The series this episode belongs to (loaded on attach), for the Episodes panel and Next Episode. */
     var seriesMeta: com.nuvio.app.features.details.MetaDetails? = null
@@ -239,6 +247,7 @@ class TvPlayerSession(
     }
 
     fun attach() {
+        if (closed) return
         loadSeries()
         loadSkipIntervals()
         fetchAddonSubtitles()
@@ -259,6 +268,8 @@ class TvPlayerSession(
     }
 
     fun close() {
+        if (closed) return
+        closed = true
         detach()
         seekSaveJob?.cancel()
         bridge?.clearNowPlayingInfo()
@@ -280,7 +291,7 @@ class TvPlayerSession(
     }
 
     fun togglePlayPause() = if (_state.value.isPlaying) pause() else play()
-    fun play() { wantsToPlay = true; bridge?.play() }
+    fun play() { if (!closed) { wantsToPlay = true; bridge?.play() } }
     fun pause() { wantsToPlay = false; bridge?.pause() }
 
     fun seekBy(offsetMs: Long) {
@@ -572,6 +583,7 @@ class TvPlayerSession(
     }
 
     private fun open(lane: PlaybackLane, startMs: Long): NuvioPlayerBridge? {
+        if (closed) return null
         val created = TvPlayerEngines.create(lane) ?: TvPlayerEngines.create(PlaybackLane.Libmpv) ?: run {
             log.e { "no player engine registered for $lane" }
             _state.value = _state.value.copy(errorMessage = "No player available")
@@ -748,6 +760,8 @@ class TvPlayerSession(
 
     private fun save(flush: Boolean, syncRemote: Boolean = flush) {
         if (liveChannel) return
+        // A bare address (simulator smoke / UI tests) is no title: never into Continue Watching or sync.
+        if (launch.parentMetaId.startsWith(TvPlayerLaunches.DIRECT_PREFIX)) return
         if (snapshot.durationMs <= 0L && !snapshot.isEnded) return
         if (!gate.admit(playbackSession.videoId, snapshot)) return
         runCatching {
@@ -772,6 +786,9 @@ data class TvResolvedSource(val url: String, val headers: Map<String, String>)
 
 /** Swift-friendly launch builders (Kotlin default arguments don't cross into Swift). */
 object TvPlayerLaunches {
+    /** parentMetaId prefix of a [direct] launch; such sessions record no watch progress. */
+    const val DIRECT_PREFIX = "direct:"
+
     /** A stream with no catalog identity — the simulator smoke test and direct URLs. */
     fun direct(url: String, title: String, isLive: Boolean, startPositionMs: Long): PlayerLaunch = PlayerLaunch(
         profileId = com.nuvio.app.features.profiles.ProfileRepository.activeProfileId,
@@ -780,7 +797,7 @@ object TvPlayerLaunches {
         streamType = if (isLive) "live" else null,
         streamTitle = title,
         providerName = "Direct",
-        parentMetaId = "direct:$url",
+        parentMetaId = "$DIRECT_PREFIX$url",
         parentMetaType = if (isLive) "tv" else "movie",
         initialPositionMs = startPositionMs,
     )
