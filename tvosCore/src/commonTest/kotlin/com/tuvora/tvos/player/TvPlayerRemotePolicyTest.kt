@@ -1,0 +1,142 @@
+package com.tuvora.tvos.player
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class TvPlayerRemotePolicyTest {
+    private val bare = TvPlayerRemoteContext(
+        controlsVisible = false, panelOpen = false, overlayOpen = false,
+        isLive = false, isPlaying = true, hasError = false, scrubbing = false,
+    )
+    private val controls = bare.copy(controlsVisible = true)
+
+    private fun decide(input: TvRemoteInput, ctx: TvPlayerRemoteContext) = TvPlayerRemotePolicy.decide(input, ctx)
+
+    // B112: Play/Pause was swallowed while the controls showed (it only re-armed the hide timer).
+    @Test
+    fun `play pause toggles even while the controls show`() {
+        assertEquals(TvRemoteAction.TogglePlayPause, decide(TvRemoteInput.PlayPause, controls))
+        assertEquals(TvRemoteAction.TogglePlayPause, decide(TvRemoteInput.PlayPause, bare))
+        assertEquals(TvRemoteAction.TogglePlayPause, decide(TvRemoteInput.PlayPause, controls.copy(panelOpen = true)))
+    }
+
+    @Test
+    fun `play pause commits a scrub and retries a failure`() {
+        assertEquals(TvRemoteAction.CommitScrub, decide(TvRemoteInput.PlayPause, controls.copy(scrubbing = true)))
+        assertEquals(TvRemoteAction.Retry, decide(TvRemoteInput.PlayPause, controls.copy(hasError = true)))
+    }
+
+    // B112: Back must end in Leave (session closed) once nothing is left to close.
+    @Test
+    fun `back closes the innermost layer first then hides the controls then leaves`() {
+        assertEquals(TvRemoteAction.ClosePanel, decide(TvRemoteInput.Back, controls.copy(panelOpen = true)))
+        assertEquals(TvRemoteAction.CloseOverlay, decide(TvRemoteInput.Back, controls.copy(overlayOpen = true)))
+        assertEquals(TvRemoteAction.CancelScrub, decide(TvRemoteInput.Back, controls.copy(scrubbing = true)))
+        assertEquals(TvRemoteAction.HideControls, decide(TvRemoteInput.Back, controls))
+        assertEquals(TvRemoteAction.Leave, decide(TvRemoteInput.Back, bare))
+    }
+
+    @Test
+    fun `back leaves a paused or failed or loading player even with the controls showing`() {
+        assertEquals(TvRemoteAction.Leave, decide(TvRemoteInput.Back, controls.copy(isPlaying = false)))
+        assertEquals(TvRemoteAction.Leave, decide(TvRemoteInput.Back, controls.copy(isPlaying = false, hasError = true)))
+    }
+
+    @Test
+    fun `clickpad edges skip ten seconds over bare video only`() {
+        assertEquals(TvRemoteAction.SkipBack, decide(TvRemoteInput.Left, bare))
+        assertEquals(TvRemoteAction.SkipForward, decide(TvRemoteInput.Right, bare))
+        // With the controls up the arrows move focus between buttons (the seek bar skips by itself).
+        assertEquals(TvRemoteAction.PassThrough, decide(TvRemoteInput.Left, controls))
+        assertEquals(TvRemoteAction.PassThrough, decide(TvRemoteInput.Right, bare.copy(panelOpen = true)))
+        assertEquals(TvRemoteAction.PassThrough, decide(TvRemoteInput.Right, bare.copy(overlayOpen = true)))
+    }
+
+    @Test
+    fun `a skip button over hidden controls still lets the edges skip but takes select`() {
+        val skipUp = bare.copy(actionButtonUp = true)
+        assertEquals(TvRemoteAction.SkipForward, decide(TvRemoteInput.Right, skipUp))
+        assertEquals(TvRemoteAction.PassThrough, decide(TvRemoteInput.Select, skipUp))
+        assertFalse(TvPlayerRemotePolicy.ownsSelect(skipUp))
+        assertTrue(TvPlayerRemotePolicy.ownsSelect(bare))
+    }
+
+    @Test
+    fun `live has no seeking - edges show the controls and up down zap when a list exists`() {
+        val live = bare.copy(isLive = true)
+        assertEquals(TvRemoteAction.ShowControls, decide(TvRemoteInput.Left, live))
+        assertEquals(TvRemoteAction.ShowControls, decide(TvRemoteInput.Up, live))
+        assertEquals(TvRemoteAction.OpenTracks, decide(TvRemoteInput.Down, live))
+        assertEquals(TvRemoteAction.ZapPrevious, decide(TvRemoteInput.Up, live.copy(canZap = true)))
+        assertEquals(TvRemoteAction.ZapNext, decide(TvRemoteInput.Down, live.copy(canZap = true)))
+    }
+
+    @Test
+    fun `select toggles over bare video and is left to the focused button otherwise`() {
+        assertEquals(TvRemoteAction.TogglePlayPause, decide(TvRemoteInput.Select, bare))
+        assertEquals(TvRemoteAction.PassThrough, decide(TvRemoteInput.Select, controls))
+        assertEquals(TvRemoteAction.CommitScrub, decide(TvRemoteInput.Select, controls.copy(scrubbing = true)))
+        assertEquals(TvRemoteAction.Retry, decide(TvRemoteInput.Select, bare.copy(hasError = true)))
+    }
+
+    // B112: a swipe across the control buttons started a paused scrub.
+    @Test
+    fun `swipes scrub over bare video or a focused seek bar but not across the buttons`() {
+        assertTrue(TvPlayerRemotePolicy.scrubAllowed(bare, seekBarFocused = false))
+        assertTrue(TvPlayerRemotePolicy.scrubAllowed(controls, seekBarFocused = true))
+        assertFalse(TvPlayerRemotePolicy.scrubAllowed(controls, seekBarFocused = false))
+        assertFalse(TvPlayerRemotePolicy.scrubAllowed(bare.copy(overlayOpen = true), seekBarFocused = false))
+        assertFalse(TvPlayerRemotePolicy.scrubAllowed(bare.copy(panelOpen = true), seekBarFocused = false))
+        assertFalse(TvPlayerRemotePolicy.scrubAllowed(bare.copy(isLive = true), seekBarFocused = false))
+    }
+
+    // B112: a thumb resting on the clickpad (a few points of drift) paused playback into a scrub.
+    @Test
+    fun `a small or vertical pan is not a scrub`() {
+        assertNull(TvPlayerRemotePolicy.scrubTarget(600_000, dx = 20.0, dy = 3.0, durationMs = 7_200_000, scrubbing = false))
+        assertNull(TvPlayerRemotePolicy.scrubTarget(600_000, dx = 80.0, dy = 200.0, durationMs = 7_200_000, scrubbing = false))
+        assertNull(TvPlayerRemotePolicy.scrubTarget(600_000, dx = 500.0, dy = 0.0, durationMs = 0, scrubbing = false))
+    }
+
+    @Test
+    fun `a swipe past the dead zone scrubs from where it began without a jump`() {
+        val duration = 7_680_000L                       // 1 s per remote point
+        val dz = TvPlayerRemotePolicy.SCRUB_DEAD_ZONE
+        assertEquals(600_000L, TvPlayerRemotePolicy.scrubTarget(600_000, dz + 0.0, 0.0, duration, scrubbing = false))
+        assertEquals(700_000L, TvPlayerRemotePolicy.scrubTarget(600_000, dz + 100.0, 0.0, duration, scrubbing = false))
+        assertEquals(500_000L, TvPlayerRemotePolicy.scrubTarget(600_000, -(dz + 100.0), 0.0, duration, scrubbing = true))
+        // Once scrubbing, coming back inside the dead zone returns to the origin rather than dropping out.
+        assertEquals(600_000L, TvPlayerRemotePolicy.scrubTarget(600_000, 10.0, 0.0, duration, scrubbing = true))
+        assertEquals(duration, TvPlayerRemotePolicy.scrubTarget(7_600_000, 5_000.0, 0.0, duration, scrubbing = true))
+        assertEquals(0L, TvPlayerRemotePolicy.scrubTarget(10_000, -5_000.0, 0.0, duration, scrubbing = true))
+    }
+
+    @Test
+    fun `a short title still moves at least fifty ms per point`() {
+        assertEquals(10_000L + 100 * 50, TvPlayerRemotePolicy.scrubTarget(10_000, TvPlayerRemotePolicy.SCRUB_DEAD_ZONE + 100, 0.0, 60_000, scrubbing = false))
+    }
+}
+
+class TvPlaybackRequestGateTest {
+    // B112: a guide preview / zap that resolved after the viewer moved on kept playing with no screen.
+    @Test
+    fun `a newer request makes the earlier one stale`() {
+        val gate = TvPlaybackRequestGate()
+        val first = gate.begin()
+        val second = gate.begin()
+        assertFalse(gate.isCurrent(first))
+        assertTrue(gate.isCurrent(second))
+    }
+
+    @Test
+    fun `leaving makes every outstanding request stale`() {
+        val gate = TvPlaybackRequestGate()
+        val token = gate.begin()
+        gate.cancel()
+        assertFalse(gate.isCurrent(token))
+        assertTrue(gate.isCurrent(gate.begin()))
+    }
+}
