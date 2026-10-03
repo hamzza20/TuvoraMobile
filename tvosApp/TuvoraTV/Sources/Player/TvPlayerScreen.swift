@@ -12,7 +12,11 @@ enum PlayerEngines {
     private final class Creator: NSObject, NuvioPlayerBridgeCreator {
         let make: () -> NuvioPlayerBridge
         init(_ make: @escaping () -> NuvioPlayerBridge) { self.make = make }
-        func createBridge() -> NuvioPlayerBridge { make() }
+        func createBridge() -> NuvioPlayerBridge {
+            let bridge = make()
+            EngineLedger.opened(bridge)
+            return bridge
+        }
     }
 }
 
@@ -22,6 +26,9 @@ enum PlayerEngines {
 /// audio/subtitle panel, Menu hides the controls or leaves.
 struct TvPlayerScreen: View {
     let session: TvPlayerSession
+    /// The UIKit host's press relay (PlaybackCoordinator). Nil when the screen is embedded directly
+    /// (simulator smoke path): SwiftUI's remote commands then feed the same policy.
+    var relay: PlayerRemoteRelay? = nil
     let onClose: () -> Void
 
     @EnvironmentObject private var playback: PlaybackCoordinator
@@ -31,6 +38,9 @@ struct TvPlayerScreen: View {
     @State private var hideTask: Task<Void, Never>?
     @State private var scrubMs: Int64?          // non-nil while scrubbing: the previewed position
     @State private var scrubOriginMs: Int64 = 0
+    /// Whether playback was running when the scrub began (Back resumes it, AVPlayerViewController-style).
+    @State private var resumeAfterScrub = false
+    @State private var seekBarFocused = false
     @State private var panel: PlayerPanel?
     @State private var skipFlash: String?
     @State private var overlay: PlayerOverlay?
@@ -51,6 +61,11 @@ struct TvPlayerScreen: View {
 
     private var isLive: Bool { state?.isLive ?? false }
 
+    /// Bare video: nothing over it that takes focus.
+    private var bareVideoFocusable: Bool {
+        panel == nil && overlay == nil && !controlsVisible && !skipVisible && !startOverVisible
+    }
+
     /// UI-test marker: the session this screen drives and whether *that* session is playing.
     private var nowMarker: some View {
         Text("\(session.title)|\(session.state.value.isPlaying ? "playing" : "waiting")")
@@ -60,17 +75,42 @@ struct TvPlayerScreen: View {
             .accessibilityIdentifier("player.now")
     }
 
+    /// UI-test marker: whole seconds played, and whether a scrub preview is up ("12|scrub").
+    private var positionMarker: some View {
+        Text("\((state?.positionMs ?? 0) / 1000)|\(scrubMs == nil ? "play" : "scrub")")
+            .font(.system(size: 1))
+            .opacity(0.01)
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("player.pos")
+    }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             EngineHost(session: session, generation: Int(state?.engineGeneration ?? 0)).ignoresSafeArea()
+            // The focus target over bare video (Apple DTS: with nothing focused tvOS drops the arrows and
+            // Back falls through to UIKit). A real Button, not a `.focusable()` container: the focus engine
+            // never settled on the container once it had no tap gesture, so the clickpad edges did nothing.
+            Button { handle(.select) } label: {
+                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity).contentShape(Rectangle())
+            }
+            .buttonStyle(PlainNoChromeButtonStyle())
+            .ignoresSafeArea()
+            .focused($rootFocused)
+            .disabled(!bareVideoFocusable)
+            .accessibilityIdentifier("player.video")
             nowMarker
+            positionMarker
+            #if DEBUG
+            RemoteTrailMarker()
+            #endif
 
             if let state {
                 PlayerChrome(session: session, state: state, scrubMs: scrubMs, visible: controlsVisible || scrubMs != nil,
                              skipFlash: skipFlash,
                              onShowPanel: { panel = $0 }, onShowOverlay: { overlay = $0 }, onActivity: bumpControls,
-                             onReport: { report(trigger: state.errorMessage != nil ? "error" : "player") })
+                             onReport: { report(trigger: state.errorMessage != nil ? "error" : "player") },
+                             onSeekBarFocus: { seekBarFocused = $0 })
                     // Nothing under a dialog or panel may take focus from it.
                     .disabled(panel != nil || overlay != nil)
                 if state.showNextEpisode, let next = state.nextEpisode, panel == nil, let meta = session.seriesMeta {
@@ -124,17 +164,19 @@ struct TvPlayerScreen: View {
                     }
                 }
             }
+            // A swipe scrubs only over bare video or the focused seek bar, past a dead zone (B112: a resting
+            // thumb, or a swipe across the control buttons, paused playback into a scrub).
             RemoteTouchCatcher(
-                isActive: { panel == nil && !isLive },
+                isActive: { TvPlayerRemotePolicy.shared.scrubAllowed(ctx: remoteContext, seekBarFocused: seekBarFocused) },
                 onBegan: { scrubOriginMs = scrubMs ?? state?.positionMs ?? 0 },
-                onMoved: { dx, _ in scrub(dx: dx) },
+                onMoved: { dx, dy in scrub(dx: dx, dy: dy) },
                 onEnded: { _, _ in }
             )
             .allowsHitTesting(false)
         }
-        .focusable(panel == nil && overlay == nil && !controlsVisible && !skipVisible && !startOverVisible)
-        .focused($rootFocused)
         .onAppear {
+            relay?.action = { remoteAction($0) }
+            relay?.handler = { handle($0) }
             session.attach()
             bumpControls()
             if session.state.value.isLive && !holdsLiveDisplay {
@@ -206,27 +248,21 @@ struct TvPlayerScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: LiveDisplayCriteriaController.switchDidSettle)) { _ in
             session.displayModeSwitch(inProgress: false)
         }
-        .onPlayPauseCommand { commitScrubOrToggle() }
-        .onTapGesture { commitScrubOrToggle() }
+        // Hosted by PlaybackCoordinator, the host's UIKit recognizers deliver the presses the policy acts on
+        // (PlayerHostController); SwiftUI's commands below cover the embedded smoke path and the presses
+        // left to the focus engine.
+        .modifier(EmbeddedRemoteCommands(enabled: relay == nil, handle: handle))
         .onMoveCommand { direction in
-            guard panel == nil else { return }
+            let input: TvRemoteInput
             switch direction {
-            case .left where !controlsVisible: skip(-10_000)
-            case .right where !controlsVisible: skip(10_000)
-            case .up where !controlsVisible && isLive && playback.zapper != nil: zap(-1)
-            case .down where !controlsVisible && isLive && playback.zapper != nil: zap(1)
-            case .down where !controlsVisible: withAnimation(NuvioTokens.Motion.overlay) { panel = .subtitles }
-            case .up where !controlsVisible: bumpControls()
-            default: bumpControls()
+            case .left: input = .left
+            case .right: input = .right
+            case .up: input = .up
+            case .down: input = .down
+            @unknown default: return
             }
-        }
-        .onExitCommand {
-            if panel != nil { withAnimation { panel = nil }; return }
-            if overlay != nil { withAnimation { overlay = nil }; bumpControls(); return }
-            if scrubMs != nil { scrubMs = nil; return }                 // Menu cancels a scrub
-            if controlsVisible && state?.isPlaying == true { withAnimation(NuvioTokens.Motion.overlay) { controlsVisible = false }; rootFocused = true; return }
-            session.close()
-            onClose()
+            if relay != nil && remoteAction(input) != .passThrough { return }   // the host's recognizer took it
+            handle(input)
         }
         .animation(NuvioTokens.Motion.overlay, value: controlsVisible)
         .animation(NuvioTokens.Motion.overlay, value: panel)
@@ -259,32 +295,89 @@ struct TvPlayerScreen: View {
     /// Live zapping: the next/previous channel of the list the viewer started from.
     private func zap(_ offset: Int) {
         guard let zapper = playback.zapper else { return }
+        let from = session
         Task {
             if let next = await zapper(offset) {
-                playback.play(next, zapper: zapper)
+                playback.continuePlaying(next, from: from, zapper: zapper)
             }
         }
     }
 
-    private func commitScrubOrToggle() {
-        if let target = scrubMs {
-            session.seekTo(positionMs: target)
-            scrubMs = nil
-            session.play()
-        } else if state?.errorMessage != nil {
-            session.retry()
-        } else if !controlsVisible {
-            session.togglePlayPause()
+    /// The screen as TvPlayerRemotePolicy sees it.
+    private var remoteContext: TvPlayerRemoteContext {
+        TvPlayerRemoteContext(
+            controlsVisible: controlsVisible || scrubMs != nil, panelOpen: panel != nil, overlayOpen: overlay != nil,
+            isLive: isLive, isPlaying: state?.isPlaying ?? false, hasError: state?.errorMessage != nil,
+            scrubbing: scrubMs != nil, canZap: playback.zapper != nil, actionButtonUp: skipVisible || startOverVisible
+        )
+    }
+
+    private func remoteAction(_ input: TvRemoteInput) -> TvRemoteAction {
+        TvPlayerRemotePolicy.shared.decide(input: input, ctx: remoteContext)
+    }
+
+    /// One remote press, as TvPlayerRemotePolicy decides it.
+    private func handle(_ input: TvRemoteInput) {
+        let action = remoteAction(input)
+        NSLog("SMOKE remote %@ -> %@", "\(input)", "\(action)")
+        RemoteTrail.add("\(input)>\(action)")
+        switch action {
+        case .passThrough:
+            // Focus moving between the controls keeps them up.
+            if input != .back && panel == nil && overlay == nil { bumpControls() }
+        case .togglePlayPause: session.togglePlayPause(); bumpControls()
+        case .commitScrub: commitScrub()
+        case .cancelScrub: cancelScrub()
+        case .retry: session.retry(); bumpControls()
+        case .skipBack: skip(-TvPlayerRemotePolicy.shared.SKIP_MS)
+        case .skipForward: skip(TvPlayerRemotePolicy.shared.SKIP_MS)
+        case .showControls: bumpControls()
+        case .hideControls: hideControls()
+        case .zapPrevious: zap(-1)
+        case .zapNext: zap(1)
+        case .openTracks: withAnimation(NuvioTokens.Motion.overlay) { panel = .subtitles }
+        case .closePanel: withAnimation { panel = nil }; bumpControls()
+        case .closeOverlay: withAnimation { overlay = nil }; bumpControls()
+        case .leave:
+            // B112: leaving always closes the session (engine destroyed) before the screen goes.
+            session.close()
+            onClose()
         }
+    }
+
+    private func commitScrub() {
+        guard let target = scrubMs else { return }
+        session.seekTo(positionMs: target)
+        scrubMs = nil
+        session.play()
         bumpControls()
     }
 
-    /// Touch-surface scrub: one full swipe moves about 1/4 of the title (minimum 0.05 s per point).
-    private func scrub(dx: CGFloat) {
-        guard let state, state.durationMs > 0 else { return }
-        if scrubMs == nil { session.pause() }
-        let msPerPoint = max(50.0, Double(state.durationMs) / (1920.0 * 4))
-        scrubMs = min(state.durationMs, max(0, scrubOriginMs + Int64(Double(dx) * msPerPoint)))
+    /// Back during a scrub: back to where it was, playing again if it was playing.
+    private func cancelScrub() {
+        scrubMs = nil
+        if resumeAfterScrub { session.play() }
+        bumpControls()
+    }
+
+    private func hideControls() {
+        hideTask?.cancel()
+        withAnimation(NuvioTokens.Motion.overlay) { controlsVisible = false }
+        DispatchQueue.main.async { if skipVisible { skipFocused = true } else if startOverVisible { startOverFocused = true } else { rootFocused = true } }
+    }
+
+    /// Touch-surface scrub (TvPlayerRemotePolicy.scrubTarget): past a dead zone, about 1/4 of the title
+    /// per full swipe. Playback pauses only once the swipe really is a scrub.
+    private func scrub(dx: CGFloat, dy: CGFloat) {
+        guard let state,
+              let target = TvPlayerRemotePolicy.shared.scrubTarget(
+                originMs: scrubOriginMs, dx: Double(dx), dy: Double(dy), durationMs: state.durationMs, scrubbing: scrubMs != nil
+              ) else { return }
+        if scrubMs == nil {
+            resumeAfterScrub = state.isPlaying
+            session.pause()
+        }
+        scrubMs = target.int64Value
         bumpControls()
     }
 
@@ -304,8 +397,26 @@ struct TvPlayerScreen: View {
             if !Task.isCancelled, state?.isPlaying == true, panel == nil, overlay == nil, scrubMs == nil {
                 controlsVisible = false
                 // The Skip / Start over controls take focus when the chrome hides (NuvioTV), else the video.
-                if skipVisible { skipFocused = true } else if startOverVisible { startOverFocused = true } else { rootFocused = true }
+                DispatchQueue.main.async { if skipVisible { skipFocused = true } else if startOverVisible { startOverFocused = true } else { rootFocused = true } }
             }
+        }
+    }
+}
+
+/// SwiftUI's own remote commands, only for a screen embedded without PlaybackCoordinator's host. Under the
+/// host they must not exist at all: a focused view's `onPlayPauseCommand` swallows the
+/// press before the host's recognizer sees it (simulator: Play/Pause over bare video did nothing).
+private struct EmbeddedRemoteCommands: ViewModifier {
+    let enabled: Bool
+    let handle: (TvRemoteInput) -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .onPlayPauseCommand { handle(.playPause) }
+                .onExitCommand { handle(.back) }
+        } else {
+            content
         }
     }
 }
@@ -365,6 +476,7 @@ private struct PlayerChrome: View {
     let onShowOverlay: (PlayerOverlay) -> Void
     let onActivity: () -> Void
     let onReport: () -> Void
+    var onSeekBarFocus: (Bool) -> Void = { _ in }
     @State private var reported = false
     @Environment(\.nuvio) private var colors
 
@@ -417,7 +529,8 @@ private struct PlayerChrome: View {
                 .foregroundStyle(colors.primary)
             } else {
                 SeekBar(positionMs: scrubMs ?? state.positionMs, bufferedMs: state.bufferedMs, durationMs: state.durationMs,
-                        scrubbing: scrubMs != nil, onSeek: { session.seekBy(offsetMs: $0); onActivity() })
+                        scrubbing: scrubMs != nil, onSeek: { session.seekBy(offsetMs: $0); onActivity() },
+                        onFocusChange: onSeekBarFocus)
             }
             HStack(spacing: dp(4)) {
                 PlayerButton(icon: state.isPlaying ? "ic_player_pause" : "ic_player_play") { session.togglePlayPause(); onActivity() }
@@ -445,6 +558,7 @@ private struct SeekBar: View {
     let durationMs: Int64
     let scrubbing: Bool
     let onSeek: (Int64) -> Void
+    var onFocusChange: (Bool) -> Void = { _ in }
     @Environment(\.nuvio) private var colors
     @FocusState private var focused: Bool
 
@@ -482,6 +596,7 @@ private struct SeekBar: View {
         .onMoveCommand { direction in
             if direction == .left { onSeek(-10_000) } else if direction == .right { onSeek(10_000) }
         }
+        .onChange(of: focused) { _, isFocused in onFocusChange(isFocused) }
         .animation(NuvioTokens.Motion.fast, value: focused)
     }
 
@@ -591,7 +706,8 @@ private struct TrackPanel: View {
             // Focus lands in the panel (on its tab), never left behind on the video.
             DispatchQueue.main.async { tabFocus = kind }
         }
-        .onExitCommand(perform: onClose)
+        // Back is the player's (TvPlayerRemotePolicy: ClosePanel); a panel-level onExitCommand fired first
+        // and the same press then also hid the controls.
         .task {
             for await next in session.addonSubtitles {
                 addonSubtitles = next
@@ -727,7 +843,8 @@ private struct ContentPanel: View {
             .navigationGlass(in: UnevenRoundedRectangle(topLeadingRadius: dp(16), bottomLeadingRadius: dp(16)))
         }
         .ignoresSafeArea()
-        .onExitCommand(perform: onClose)
+        // Back is the player's (TvPlayerRemotePolicy: ClosePanel); a panel-level onExitCommand fired first
+        // and the same press then also hid the controls.
         .task { for await next in TvTitle.shared.streams { streams = next } }
     }
 

@@ -36,6 +36,10 @@ struct RootView: View {
             #endif
         }
         .task { await startSmokeZap() }
+        .task { await startSmokePresent() }
+        #if DEBUG
+        .overlay(alignment: .topLeading) { EngineLedgerMarker() }
+        #endif
         // Top Shelf items open here (tuvora://title?…); MainShell opens them once the gate reaches Main.
         .onOpenURL { url in if let link = DeepLink(url: url) { DeepLinkCenter.shared.pending = link } }
     }
@@ -43,7 +47,7 @@ struct RootView: View {
     private static func smokeSessionFromArguments() -> TvPlayerSession? {
         let args = AppArguments.list
         guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count, !args.contains("-smokeAs"),
-              !args.contains("-smokeZapTo") else { return nil }
+              !args.contains("-smokeZapTo"), !args.contains("-smokePresent") else { return nil }
         let launch = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: args.contains("-smokeLive"), startPositionMs: 0)
         return TvPlayerSession(launch: launch, liveReresolve: nil)
     }
@@ -59,6 +63,20 @@ struct RootView: View {
             let next = TvPlayerLaunches.shared.direct(url: zapTo, title: "Smoke zap \(offset)", isLive: true, startPositionMs: 0)
             return TvPlayerSession(launch: next, liveReresolve: nil)
         }
+    }
+
+    private static var smokePresented = false
+
+    /// `-smokePlay <url> -smokePresent`: opens the VOD player through PlaybackCoordinator (the real
+    /// presented path every screen uses), so a UI test can leave it with the remote (B112).
+    private func startSmokePresent() async {
+        let args = AppArguments.list
+        // Once per launch: `.task` runs again whenever the root reappears (after the player closes).
+        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count, args.contains("-smokePresent"), !Self.smokePresented else { return }
+        Self.smokePresented = true
+        try? await Task.sleep(nanoseconds: 1_500_000_000)   // the window must be up before presenting
+        let launch = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: args.contains("-smokeLive"), startPositionMs: 0)
+        smokeZapCoordinator.play(TvPlayerSession(launch: launch, liveReresolve: nil))
     }
 
     /// `-smokeAs`: the smoke session as a catalog title, built once the profile is loaded.

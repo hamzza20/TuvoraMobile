@@ -205,5 +205,10 @@ final class WalkthroughTests: XCTestCase {
         XCTAssertTrue(app.buttons["hubchip.Live TV"].isHittable, "Menu did not close the player; steps \(steps)")
         XCTAssertTrue(inContent(focusedId()), "after closing the player focus is \(focusedId()); steps \(steps)")
         XCTAssertEqual(app.state, .runningForeground, "Menu from the player left the app")
+        // B112: the closed player's engine must be gone too (it kept playing sound on Apple TV build 4).
+        let engines = app.descendants(matching: .any)["engines.live"]
+        let end = Date().addingTimeInterval(10)
+        while Date() < end && !(engines.exists && engines.label == "engines=0") { Thread.sleep(forTimeInterval: 1) }
+        XCTAssertEqual(engines.exists ? engines.label : "<missing>", "engines=0", "an engine outlived the player; steps \(steps)")
     }
 }

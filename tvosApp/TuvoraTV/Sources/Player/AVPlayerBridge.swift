@@ -242,6 +242,7 @@ final class AVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         if let failedObserver { NotificationCenter.default.removeObserver(failedObserver) }
         itemObservation = nil
+        EngineLedger.released(self)
     }
 }
 

@@ -212,7 +212,7 @@ final class PlaybackCoordinator: ObservableObject {
     /// [offset] away in the list the viewer started from, or nil when there is none.
     var zapper: ((Int) async -> TvPlayerSession?)?
 
-    private weak var playerHost: UIViewController?
+    private weak var playerHost: PlayerHostController?
     private weak var pickerHost: UIViewController?
 
     func play(_ session: TvPlayerSession, zapper: ((Int) async -> TvPlayerSession?)? = nil) {
@@ -220,25 +220,52 @@ final class PlaybackCoordinator: ObservableObject {
         if let current = self.session?.session, current !== session { current.close() }   // switching source/channel
         let box = TvPlayerSessionBox(session: session)
         self.session = box
+        let relay = PlayerRemoteRelay()
         // The identity is the session: swapping rootView to the same view type otherwise keeps the old
         // screen's identity, so onAppear (attach), the state task and the engine host never moved to the
         // new channel — a live zap showed the new title over a closed player (UITest LiveZapTests).
-        let screen = TvPlayerScreen(session: session) { [weak self] in self?.stop() }
+        let screen = TvPlayerScreen(session: session, relay: relay) { [weak self] in self?.stop() }
             .id(ObjectIdentifier(session))
             .environment(\.nuvio, palette)
             .environmentObject(self)
-        if let host = playerHost as? UIHostingController<AnyView> {
+        if let host = playerHost {
+            host.relay = relay
             host.rootView = AnyView(screen)          // already on screen: swap the session in place
             return
         }
-        present(AnyView(screen)) { [weak self] in self?.playerHost = $0 }
+        guard let top = Self.topViewController() else { session.close(); self.session = nil; return }
+        let host = PlayerHostController(rootView: AnyView(screen), relay: relay)
+        host.modalPresentationStyle = .fullScreen
+        host.view.backgroundColor = .black
+        host.onGone = { [weak self] in self?.playerHostGone($0) }
+        top.present(host, animated: true)
+        playerHost = host
     }
 
+    /// Leaves the player: the session is closed (engine destroyed) before the screen goes (B112).
     func stop() {
+        session?.session.close()
         session = nil
         zapper = nil
         playerHost?.dismiss(animated: true)
         playerHost = nil
+    }
+
+    /// The player screen went away by a route that didn't come through [stop] (UIKit dismissed it):
+    /// nothing may keep playing without a screen (B112: sound after leaving the player).
+    private func playerHostGone(_ host: PlayerHostController) {
+        if let current = playerHost, current !== host { return }   // an older host; a new player is up
+        playerHost = nil
+        session?.session.close()
+        session = nil
+        zapper = nil
+    }
+
+    /// Plays [next] only while the player that asked for it (showing [from]) is still up; a session that
+    /// resolves after the viewer left is closed instead of re-opening the player (live zap, replay walk).
+    func continuePlaying(_ next: TvPlayerSession, from: TvPlayerSession, zapper: ((Int) async -> TvPlayerSession?)? = nil) {
+        guard session?.session === from, !from.isClosed else { next.close(); return }
+        play(next, zapper: zapper)
     }
 
     /// Leave the player and open the source picker for [video] (next episode, or one chosen in the Episodes panel).
