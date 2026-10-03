@@ -87,6 +87,11 @@ data class TvPlayerState(
     val audioDelaySupported: Boolean = false,
     /** Whether the current engine draws the subtitle style (libmpv yes, AVPlayer uses the system style). */
     val subtitleStyleSupported: Boolean = false,
+    /**
+     * Live only: the display mode this channel wants (LiveDisplayCriteriaPolicy), once the engine knows
+     * its frame rate. The fullscreen player hands it to LiveDisplayCriteriaController (Swift).
+     */
+    val displayCriteria: TvDisplayCriteria? = null,
 )
 
 /**
@@ -95,6 +100,15 @@ data class TvPlayerState(
  */
 interface TvAudioDelayControl {
     fun setAudioDelayMs(delayMs: Int)
+}
+
+/**
+ * The decoded picture's format, for live display frame-rate matching. Apple TV's libmpv bridge
+ * implements this from values it caches on its own poll (no mpv read here); AVPlayer does not, as
+ * it plays VOD only.
+ */
+interface TvVideoFormatSource {
+    fun videoFormat(): TvVideoFormat?
 }
 
 /**
@@ -121,7 +135,9 @@ class TvPlayerSession(
     private val progressKey = launch.videoId ?: launch.parentMetaId
     private val playbackSession = launch.externalPlaybackSession()
     private val gate = TvProgressGate()
-    private val monitor = TvLiveMonitor()
+    private var monitor = TvLiveMonitor()
+    /** True while the TV changes display mode for this channel: the picture is deliberately off. */
+    private var displayModeSwitching = false
     private val clock = TimeSource.Monotonic.markNow()
 
     private var bridge: NuvioPlayerBridge? = null
@@ -249,6 +265,18 @@ class TvPlayerSession(
         bridge?.destroy()
         bridge = null
         scope.cancel()
+    }
+
+    /**
+     * The TV is switching display mode (live frame-rate matching): the libmpv video output is idled
+     * for it, so the freeze watch must not read the missing frames as a frozen channel. When the
+     * switch settles the watch starts over, with the startup grace, as for a fresh channel.
+     */
+    fun displayModeSwitch(inProgress: Boolean) {
+        if (displayModeSwitching == inProgress) return
+        displayModeSwitching = inProgress
+        if (!inProgress) monitor = TvLiveMonitor()
+        log.i { "display mode switch ${if (inProgress) "started" else "settled"}" }
     }
 
     fun togglePlayPause() = if (_state.value.isPlaying) pause() else play()
@@ -644,9 +672,11 @@ class TvPlayerSession(
             positionMs = snapshot.positionMs,
             durationMs = snapshot.durationMs,
             bufferedMs = snapshot.bufferedPositionMs,
+            displayCriteria = if (isLive) LiveDisplayCriteriaPolicy.criteria((b as? TvVideoFormatSource)?.videoFormat()) else null,
         )
         if (isLive) {
-            when (monitor.sample(clock.elapsedNow().inWholeMilliseconds, snapshot, wantsToPlay)) {
+            // While the TV switches display mode the video is idled on purpose (displayModeSwitch).
+            if (!displayModeSwitching) when (monitor.sample(clock.elapsedNow().inWholeMilliseconds, snapshot, wantsToPlay)) {
                 TvLiveAction.None -> Unit
                 TvLiveAction.Reconnect -> { log.i { "live freeze: reconnecting" }; reconnectLive() }
                 TvLiveAction.GiveUp -> _state.value = _state.value.copy(errorMessage = "The channel stopped responding")
