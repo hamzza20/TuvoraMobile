@@ -51,10 +51,20 @@ struct TvPlayerScreen: View {
 
     private var isLive: Bool { state?.isLive ?? false }
 
+    /// UI-test marker: the session this screen drives and whether *that* session is playing.
+    private var nowMarker: some View {
+        Text("\(session.title)|\(session.state.value.isPlaying ? "playing" : "waiting")")
+            .font(.system(size: 1))
+            .opacity(0.01)
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("player.now")
+    }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             EngineHost(session: session, generation: Int(state?.engineGeneration ?? 0)).ignoresSafeArea()
+            nowMarker
 
             if let state {
                 PlayerChrome(session: session, state: state, scrubMs: scrubMs, visible: controlsVisible || scrubMs != nil,

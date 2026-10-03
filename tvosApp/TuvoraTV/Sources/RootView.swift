@@ -10,6 +10,9 @@ struct RootView: View {
     /// and plays the URL as that title, so its skip segments and add-on subtitles load;
     /// `-smokeStartMs <ms>` resumes from there.
     @State private var smokeSession: TvPlayerSession? = RootView.smokeSessionFromArguments()
+    /// `-smokePlay <url> -smokeZapTo <url>`: opens the live player through PlaybackCoordinator (the real
+    /// presented path) with a zapper to the second URL, so a UI test can zap with the remote.
+    @StateObject private var smokeZapCoordinator = PlaybackCoordinator()
 
     var body: some View {
         Group {
@@ -32,15 +35,30 @@ struct RootView: View {
             }
             #endif
         }
+        .task { await startSmokeZap() }
         // Top Shelf items open here (tuvora://title?…); MainShell opens them once the gate reaches Main.
         .onOpenURL { url in if let link = DeepLink(url: url) { DeepLinkCenter.shared.pending = link } }
     }
 
     private static func smokeSessionFromArguments() -> TvPlayerSession? {
         let args = AppArguments.list
-        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count, !args.contains("-smokeAs") else { return nil }
+        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count, !args.contains("-smokeAs"),
+              !args.contains("-smokeZapTo") else { return nil }
         let launch = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: args.contains("-smokeLive"), startPositionMs: 0)
         return TvPlayerSession(launch: launch, liveReresolve: nil)
+    }
+
+    private func startSmokeZap() async {
+        let args = AppArguments.list
+        guard let i = args.firstIndex(of: "-smokePlay"), i + 1 < args.count,
+              let z = args.firstIndex(of: "-smokeZapTo"), z + 1 < args.count else { return }
+        try? await Task.sleep(nanoseconds: 1_500_000_000)   // the window must be up before presenting
+        let first = TvPlayerLaunches.shared.direct(url: args[i + 1], title: "Smoke test", isLive: true, startPositionMs: 0)
+        let zapTo = args[z + 1]
+        smokeZapCoordinator.play(TvPlayerSession(launch: first, liveReresolve: nil)) { offset in
+            let next = TvPlayerLaunches.shared.direct(url: zapTo, title: "Smoke zap \(offset)", isLive: true, startPositionMs: 0)
+            return TvPlayerSession(launch: next, liveReresolve: nil)
+        }
     }
 
     /// `-smokeAs`: the smoke session as a catalog title, built once the profile is loaded.
