@@ -331,6 +331,58 @@ class PlayerScreenRuntimeStateTest {
         assertEquals(SourceSwapStart(positionMs = 10_000L, progressFraction = null), runtime.sourceSwapStart())
     }
 
+    // Sync-12 device pass (2026-10-04): Switch player while the current engine was still seeking to
+    // the resume point copied the snapshot's 0 as the new start — the other engine restarted at 0:00.
+    @Test
+    fun engineSwitchBeforeFirstFrameKeepsTheSavedResumePosition() = runTest {
+        val runtime = PlayerScreenRuntime(testPlayerScreenArgs())
+        runtime.scope = backgroundScope
+        runtime.playerController = EngineOnlyController(AndroidPlaybackEngine.Libmpv)
+        runtime.activeInitialPositionMs = 93_000L
+        runtime.resumePlaybackStarted = false
+        runtime.initialSeekApplied = true // set as soon as the load request carried the position
+        runtime.playbackSnapshot = PlayerPlaybackSnapshot(isLoading = true, positionMs = 0L)
+
+        runtime.switchPlaybackEngine()
+
+        assertEquals(AndroidPlaybackEngine.ExoPlayer, runtime.playbackEngineOverride)
+        assertEquals(93_000L, runtime.activeInitialPositionMs)
+    }
+
+    @Test
+    fun engineSwitchAfterFirstFrameResumesFromTheCurrentPosition() = runTest {
+        val runtime = PlayerScreenRuntime(testPlayerScreenArgs())
+        runtime.scope = backgroundScope
+        runtime.playerController = EngineOnlyController(AndroidPlaybackEngine.ExoPlayer)
+        runtime.activeInitialPositionMs = 0L
+        runtime.resumePlaybackStarted = true
+        runtime.initialSeekApplied = true
+        runtime.playbackSnapshot = PlayerPlaybackSnapshot(positionMs = 88_000L, durationMs = 2_000_000L)
+
+        runtime.switchPlaybackEngine()
+
+        assertEquals(AndroidPlaybackEngine.Libmpv, runtime.playbackEngineOverride)
+        assertEquals(88_000L, runtime.activeInitialPositionMs)
+        assertNull(runtime.activeInitialProgressFraction)
+    }
+
+    private class EngineOnlyController(override val playbackEngine: AndroidPlaybackEngine) : PlayerEngineController {
+        override fun play() = Unit
+        override fun pause() = Unit
+        override fun seekTo(positionMs: Long) = Unit
+        override fun seekBy(offsetMs: Long) = Unit
+        override fun retry() = Unit
+        override fun setPlaybackSpeed(speed: Float) = Unit
+        override fun getAudioTracks(): List<AudioTrack> = emptyList()
+        override fun getSubtitleTracks(): List<SubtitleTrack> = emptyList()
+        override fun applyAudioLanguagePreferences(languages: List<String>) = Unit
+        override fun selectAudioTrack(index: Int) = Unit
+        override fun selectSubtitleTrack(index: Int) = Unit
+        override fun setSubtitleUri(url: String) = Unit
+        override fun clearExternalSubtitle() = Unit
+        override fun clearExternalSubtitleAndSelect(trackIndex: Int) = Unit
+    }
+
     private fun testPlayerScreenArgs() = PlayerScreenArgs(
         profileId = 1,
         title = "Title",

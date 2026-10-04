@@ -477,11 +477,12 @@ internal fun PlayerScreenRuntime.startOverFromBeginning() {
 internal fun PlayerScreenRuntime.switchPlaybackEngine() {
     val engine = playerController?.playbackEngine ?: return
     val target = if (engine == AndroidPlaybackEngine.Libmpv) AndroidPlaybackEngine.ExoPlayer else AndroidPlaybackEngine.Libmpv
+    // Same rule as a source swap (B59-H1): until the first frame the snapshot can still read 0 while
+    // the engine seeks to the resume point, so keep the requested target; afterwards, where the viewer is.
+    val swapStart = sourceSwapStart()
     flushWatchProgress()
-    if (initialSeekApplied) {
-        activeInitialPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
-        activeInitialProgressFraction = null
-    }
+    activeInitialPositionMs = swapStart.positionMs
+    activeInitialProgressFraction = swapStart.progressFraction
     playbackEngineOverride = target
     showGestureFeedback(
         GestureFeedbackState(
