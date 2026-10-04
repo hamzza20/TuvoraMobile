@@ -193,6 +193,8 @@ internal class PlayerScreenRuntime(
     var nextEpisodeAutoPlayCountdown by mutableStateOf<Int?>(null)
     var nextEpisodeAutoPlayJob by mutableStateOf<Job?>(null)
     var nextEpisodeAutoPlayAutomatic by mutableStateOf(false)
+    var nextEpisodePreloadJob by mutableStateOf<Job?>(null)
+    var nextEpisodePreloadTriggered by mutableStateOf(false)
     var pendingP2pSwitch by mutableStateOf<PendingPlayerP2pSwitch?>(null)
     var credentialRefreshJob by mutableStateOf<Job?>(null)
     // Bounded, URL-INDEPENDENT credential-refresh guard (see PlayerCredentialRefreshPolicy). A Stalker
@@ -209,6 +211,9 @@ internal class PlayerScreenRuntime(
     var showVideoSettingsModal by mutableStateOf(false)
     var showStreamInfoOverlay by mutableStateOf(false)
     var streamInfo by mutableStateOf(PlayerStreamInfo())
+    var showStreamInfo by mutableStateOf(false)
+    var streamMediaInfo by mutableStateOf(PlayerMediaInfo())
+    var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var subtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
     var selectedAudioIndex by mutableStateOf(-1)

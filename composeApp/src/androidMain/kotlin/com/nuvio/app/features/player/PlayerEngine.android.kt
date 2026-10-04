@@ -135,6 +135,7 @@ actual fun PlatformPlayerSurface(
     initialPositionMs: Long?,
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
+    playbackEngine: AndroidPlaybackEngine?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
@@ -169,8 +170,10 @@ actual fun PlatformPlayerSurface(
     // (Auto -> ExoPlayer); the startup failover below still switches a stream to libmpv if it
     // genuinely cannot sustain on ExoPlayer.
     // ponytail: if a codec class regresses on ExoPlayer, narrow the force back BY CODEC, not by "live".
-    var activeEngine by remember(playerSourceKey, playerSettings.androidPlaybackEngine) {
-        val base = playerSettings.androidPlaybackEngine.initialAndroidEngine()
+    // Upstream "switch player": a per-session override from the player's action row wins over the setting.
+    val requestedEngine = playbackEngine ?: playerSettings.androidPlaybackEngine
+    var activeEngine by remember(playerSourceKey, requestedEngine) {
+        val base = requestedEngine.initialAndroidEngine()
         // Fix 2 (telemetry-derived, 2026-08-25): open live on libmpv on the hardware decoders that
         // video-stall on live TS far above the fleet baseline (MediaTek MT8696, Amlogic Onn 4K
         // Streaming Box), even when the resolved engine is ExoPlayer. Live only; device-gated
@@ -212,7 +215,7 @@ actual fun PlatformPlayerSurface(
                 // message), so an IPTV token/stream-id failure could never self-heal on Android.
                 // Pass those straight through; keep the engine failover for real playback failures.
                 if (message != null && !linkAuthFailure &&
-                    playerSettings.androidPlaybackEngine == AndroidPlaybackEngine.Auto
+                    requestedEngine == AndroidPlaybackEngine.Auto
                 ) {
                     Log.w(TAG, "ExoPlayer failed; falling back to libmpv: $message")
                     initialPositionRequestKey?.let { key ->
@@ -436,13 +439,31 @@ private fun ExoPlayerSurface(
             .setMapDV7ToHevc(playerSettings.mapDV7ToHevc)
 
         val trackSelector = DefaultTrackSelector(context).apply {
-            setParameters(
-                buildUponParameters()
-                    .setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true)
-            )
+            var parameters = buildUponParameters()
+                .setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true)
             if (playerSettings.tunnelingEnabled) {
-                setParameters(buildUponParameters().setTunnelingEnabled(true))
+                parameters = parameters.setTunnelingEnabled(true)
             }
+            val captioningManager = context.getSystemService(Context.CAPTIONING_SERVICE)
+                as? android.view.accessibility.CaptioningManager
+            if (captioningManager != null) {
+                if (!captioningManager.isEnabled) {
+                    parameters = parameters.setIgnoredTextSelectionFlags(
+                        parameters.build().ignoredTextSelectionFlags or C.SELECTION_FLAG_DEFAULT
+                    )
+                }
+                captioningManager.locale?.let { locale ->
+                    parameters = parameters.setPreferredTextLanguage(locale.isO3Language)
+                }
+            }
+            if (playerSettings.subtitleStyle.useForcedSubtitles) {
+                parameters = parameters.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            } else {
+                parameters = parameters.setIgnoredTextSelectionFlags(
+                    parameters.build().ignoredTextSelectionFlags or C.SELECTION_FLAG_FORCED
+                )
+            }
+            setParameters(parameters)
         }
 
         val minBufferMs = 15_000
@@ -806,6 +827,8 @@ private fun ExoPlayerSurface(
     LaunchedEffect(exoPlayer) {
         onControllerReady(
             object : PlayerEngineController {
+                override val playbackEngine = AndroidPlaybackEngine.ExoPlayer
+
                 override fun play() {
                     exoPlayer.playWhenReady = true
                     exoPlayer.play()
@@ -1995,6 +2018,8 @@ private class NuvioLibmpvView(
         nowPlayingController: AndroidPlayerNowPlayingController?,
     ): PlayerEngineController =
         object : PlayerEngineController {
+            override val playbackEngine = AndroidPlaybackEngine.Libmpv
+
             override fun play() = setPaused(false)
 
             override fun pause() = setPaused(true)

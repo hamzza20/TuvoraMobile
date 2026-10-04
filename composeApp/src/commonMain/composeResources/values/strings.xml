@@ -370,9 +370,6 @@
     <string name="compose_auth_tagline">Watch your library, anywhere</string>
     <string name="compose_auth_terms_prefix">By signing up, I agree to the</string>
     <string name="compose_auth_terms_link">Terms</string>
-    <string name="compose_auth_signup_email_notice">We'll email you about your account, plus occasional tips and updates. You can unsubscribe anytime.</string>
-    <string name="compose_auth_email_typo_suggestion">Did you mean %1$s?</string>
-    <string name="compose_auth_privacy_link">Privacy Policy</string>
     <string name="compose_auth_welcome_back">Welcome Back</string>
     <string name="server_menu_content_description">Server options</string>
     <string name="server_menu_official">Use official server</string>
@@ -679,6 +676,8 @@
     <string name="settings_appearance_app_language">App Language</string>
     <string name="settings_appearance_app_language_device">Device language</string>
     <string name="settings_appearance_app_language_sheet_title">Choose Language</string>
+    <string name="settings_appearance_app_language_restart_title">Restart required</string>
+    <string name="settings_appearance_app_language_restart_message">Close and reopen the app to update the layout for this language.</string>
     <string name="settings_appearance_nav_bar_style">Navigation Bar</string>
     <string name="settings_appearance_nav_bar_style_sheet_title">Navigation Bar Style</string>
     <string name="settings_nav_bar_glow">Glass glow</string>
@@ -768,6 +767,7 @@
     <string name="settings_poster_custom">Custom</string>
     <string name="settings_poster_description">Tune card width and corner radius.</string>
     <string name="settings_poster_hide_labels">Hide labels</string>
+    <string name="settings_poster_always_show_landscape_clearlogo">Always backdrop with logo for landscape posters</string>
     <string name="settings_poster_landscape_mode">Landscape Posters</string>
     <string name="settings_poster_live_preview">Live Preview</string>
     <string name="settings_poster_option_with_value">%1$s (%2$s)</string>
@@ -806,8 +806,6 @@
     <string name="settings_continue_watching_resume_prompt_title">Resume prompt on launch</string>
     <string name="settings_continue_watching_blur_next_up_description">Blur unwatched episode thumbnails in Continue Watching to avoid spoilers.</string>
     <string name="settings_continue_watching_blur_next_up_title">Blur Unwatched in Continue Watching</string>
-    <string name="settings_continue_watching_split_by_type_title">Separate Movies and Series</string>
-    <string name="settings_continue_watching_split_by_type_description">Show Movies and Series as two rows instead of one Continue Watching row.</string>
     <string name="settings_continue_watching_show_unaired_next_up_description">Include upcoming episodes in Continue Watching before they air.</string>
     <string name="settings_continue_watching_show_unaired_next_up_title">Show Unaired Next Up Episodes</string>
     <string name="settings_continue_watching_section_sort_order">SORT ORDER</string>
@@ -1121,6 +1119,8 @@
     <string name="settings_playback_prefer_binge_group_description">Try the same source profile first (same addon/quality group) before normal auto-play rules.</string>
     <string name="settings_playback_reuse_binge_group">Reuse Binge Group</string>
     <string name="settings_playback_reuse_binge_group_description">Remember and reuse the last binge group across sessions (Continue Watching, Details, etc.).</string>
+    <string name="settings_playback_preload_next_episode">Preload Next Episode Sources</string>
+    <string name="settings_playback_preload_next_episode_description">Start searching for sources in the background before the next episode button appears.</string>
     <string name="settings_playback_preferred_audio_language">Preferred Audio Language</string>
     <string name="settings_playback_preferred_subtitle_language">Preferred Language</string>
     <string name="settings_playback_presets">Presets</string>
@@ -1405,6 +1405,10 @@
     <string name="player_skip_intro">Skip Intro</string>
     <string name="player_skip_outro">Skip Outro</string>
     <string name="player_skip_recap">Skip Recap</string>
+    <string name="player_auto_skip_intro_notification">Intro skipped to %1$s</string>
+    <string name="player_auto_skip_recap_notification">Recap skipped to %1$s</string>
+    <string name="player_auto_skip_outro_notification">Outro skipped to %1$s</string>
+    <string name="player_auto_skip_movie_credits_notification">Credits skipped to %1$s</string>
     <string name="compose_player_no_subtitles_found">No subtitles found</string>
     <string name="lang_afrikaans">Afrikaans</string>
     <string name="lang_albanian">Albanian</string>
@@ -1506,6 +1510,10 @@
     <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
     <string name="detail_more_like_this_powered_by_simkl">Powered by Simkl</string>
     <string name="details_seasons">Seasons</string>
+    <plurals name="details_season_count">
+        <item quantity="one">%1$d Season</item>
+        <item quantity="other">%1$d Seasons</item>
+    </plurals>
     <string name="details_series_missing_numbers">This addon returned videos for the series, but none included season or episode numbers.</string>
     <string name="details_series_no_metadata">This addon did not provide episode metadata for this series.</string>
     <string name="details_series_unpublished">Episodes have not been published by this addon yet.</string>
@@ -1640,9 +1648,6 @@
     <string name="playback_show_loading_status">Show loading status</string>
     <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
     <string name="player_loading_preparing">Preparing stream…</string>
-    <string name="player_loading_resuming">Resuming at %1$s…</string>
-    <string name="player_loading_resuming_slow">Resuming at %1$s — the provider is slow to jump there</string>
-    <string name="player_start_from_beginning">Start from beginning</string>
     <string name="player_loading_subtitles">Fetching subtitles…</string>
     <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
     <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
@@ -2402,6 +2407,33 @@
     <string name="movie_status_rumored">Rumored</string>
     <string name="movie_status_in_production">In Production</string>
     <string name="movie_status_post_production">Post Production</string>
+    <string name="cd_switch_player_engine">Switch player engine</string>
+    <string name="cd_stream_info">Stream info</string>
+    <string name="player_engine_switching_manual_message">Switching to %1$s...</string>
+    <string name="stream_info_section_source">SOURCE</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SUBTITLE</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Resolution</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Channels</string>
+    <string name="stream_info_sample_rate">Sample Rate</string>
+    <string name="stream_info_language">Language</string>
+    <string name="stream_info_name">Name</string>
+    <string name="stream_info_source">Source</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Embedded</string>
+    <string name="stream_info_player_engine">Player Engine</string>
+    <string name="compose_auth_signup_email_notice">We'll email you about your account, plus occasional tips and updates. You can unsubscribe anytime.</string>
+    <string name="compose_auth_email_typo_suggestion">Did you mean %1$s?</string>
+    <string name="compose_auth_privacy_link">Privacy Policy</string>
+    <string name="settings_continue_watching_split_by_type_title">Separate Movies and Series</string>
+    <string name="settings_continue_watching_split_by_type_description">Show Movies and Series as two rows instead of one Continue Watching row.</string>
+    <string name="player_loading_resuming">Resuming at %1$s…</string>
+    <string name="player_loading_resuming_slow">Resuming at %1$s — the provider is slow to jump there</string>
+    <string name="player_start_from_beginning">Start from beginning</string>
     <string name="layout_show_live_on_home">Show Live TV on Home</string>
     <string name="layout_show_live_on_home_sub">Show recently-watched live channels in the Continue Watching area on the home screen.</string>
     <string name="account_session_lost_title">You were signed out</string>
@@ -2501,7 +2533,6 @@
     <string name="settings_donate_description">Support the development of Tuvora</string>
     <string name="announcement_dismiss">Dismiss announcement</string>
     <string name="external_link_open_failed_copied">Couldn't open a browser. Link copied: %1$s</string>
-    <!-- wave1 k1 -->
     <string name="iptv_playlist_error_missing_xtream_fields">Enter a server URL, username and password</string>
     <string name="iptv_playlist_error_missing_m3u_url">Enter an M3U playlist URL</string>
     <string name="iptv_playlist_error_missing_stalker_fields">Enter a portal URL and MAC address</string>
@@ -2512,21 +2543,14 @@
     <string name="iptv_playlist_error_secure_connection">Secure connection failed — try http:// or check the certificate</string>
     <string name="iptv_playlist_error_file_unreadable">Could not read that playlist file</string>
     <string name="iptv_playlist_saved_unverified">Saved, but the provider couldn&apos;t be checked: %1$s</string>
-    <!-- /wave1 k1 -->
-    <!-- wave1 k2 -->
     <string name="details_cast_tmdb_off_hint">Turn on TMDB enrichment to see people</string>
-    <!-- wave1 x1 -->
     <string name="addons_not_synced_yet">Not synced yet</string>
     <string name="addons_not_synced_retry_description">Retry syncing add-ons to your account</string>
-    <!-- wave2 k6 -->
     <string name="iptv_channel_action_add_favorite">Add to Favorites</string>
     <string name="iptv_channel_action_remove_favorite">Remove from Favorites</string>
     <string name="iptv_channel_action_hide">Hide channel</string>
     <string name="iptv_channel_hidden_toast">“%1$s” hidden. Unhide it in Settings → Integrations → IPTV playlists → %2$s.</string>
     <string name="iptv_channel_hidden_toast_generic">“%1$s” hidden. Unhide it in Settings → Integrations → IPTV playlists.</string>
     <string name="iptv_toast_undo">Undo</string>
-    <!-- /wave2 k6 -->
-    <!-- wave2 k9 -->
     <string name="iptv_group_hidden_toast">“%1$s” hidden. Unhide it in Settings → Integrations → IPTV playlists → %2$s.</string>
-    <!-- /wave2 k9 -->
 </resources>
