@@ -1,5 +1,6 @@
 package com.nuvio.app.core.diagnostics
 
+import com.nuvio.app.core.diag.LogRedaction
 import io.sentry.Breadcrumb
 import io.sentry.Sentry
 import io.sentry.SentryLevel
@@ -60,11 +61,11 @@ class SentryNetworkBreadcrumbInterceptor : Interceptor {
         breadcrumb.setCategory("http.client")
         breadcrumb.setLevel(levelFor(statusCode, error))
         breadcrumb.setData("host", url.host)
-        breadcrumb.setData("path", url.encodedPath)
+        breadcrumb.setData("path", LogRedaction.url("http://h${url.encodedPath}").removePrefix("http://h"))
         breadcrumb.setData("elapsed_ms", elapsedMs)
         if (error != null) {
             breadcrumb.setData("error_type", error.javaClass.name)
-            error.message?.let { breadcrumb.setData("error_message", it.take(240)) }
+            error.message?.let { breadcrumb.setData("error_message", LogRedaction.text(it).take(240)) }
         }
         Sentry.addBreadcrumb(breadcrumb)
     }
@@ -79,12 +80,17 @@ class SentryNetworkBreadcrumbInterceptor : Interceptor {
         }
     }
 
+    /** No query/fragment/userinfo, and credential path segments masked (B116 — Xtream `/live/<user>/<pass>/`). */
     private fun scrubbedUrl(url: HttpUrl): String =
-        url.newBuilder()
-            .query(null)
-            .fragment(null)
-            .build()
-            .toString()
+        LogRedaction.url(
+            url.newBuilder()
+                .username("")
+                .password("")
+                .query(null)
+                .fragment(null)
+                .build()
+                .toString(),
+        )
 
     private fun elapsedMs(startedAtNs: Long): Long =
         (System.nanoTime() - startedAtNs) / 1_000_000L
