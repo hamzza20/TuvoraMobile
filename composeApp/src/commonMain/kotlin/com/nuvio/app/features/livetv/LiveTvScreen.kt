@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -575,7 +580,11 @@ fun LiveTvScreen(
 
         Column(
             modifier = Modifier.fillMaxSize().then(
-                if (fullscreen) Modifier else Modifier.statusBarsPadding(),
+                // safeDrawing, not statusBars: on iOS the status-bar inset reads 0 while the bar is
+                // hidden (landscape, and briefly after leaving fullscreen), which slid the docked
+                // video and its back/LIVE buttons under the Dynamic Island. safeDrawing keeps the
+                // cutout; on Android it equals the status-bar inset.
+                if (fullscreen) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)),
             ),
         ) {
             // The player box keeps a STABLE position (always the Column's first child); only its size
