@@ -67,6 +67,9 @@ final class OrientationLockCoordinator {
     /// How the interface faced before a player lock took over; restored on release when the
     /// device can't say how it is held (flat, unknown). Nil while no lock is active.
     private var interfacePostureBeforeLock: OrientationPosture?
+    /// Where the last release is rotating the interface to, for a lock posted in the same main-queue
+    /// turn (Live TV mode switch = unlock + lock). Cleared on the next turn so it never goes stale.
+    private var releaseSettlingPosture: OrientationPosture?
 
     private init() {}
 
@@ -106,7 +109,10 @@ final class OrientationLockCoordinator {
     private func rememberPreLockPosture() {
         // Only the first lock in a chain counts (landscape -> portrait switches inside Live TV).
         guard interfacePostureBeforeLock == nil else { return }
-        interfacePostureBeforeLock = posture(of: currentInterfaceOrientation)
+        interfacePostureBeforeLock = OrientationReleasePolicy.shared.preLockPosture(
+            interfaceNow: posture(of: currentInterfaceOrientation),
+            settlingTo: releaseSettlingPosture
+        )
     }
 
     /// B107: widening the mask alone never rotates back — iOS waits for the device to move, so an
@@ -116,11 +122,14 @@ final class OrientationLockCoordinator {
         interfacePostureBeforeLock = nil
         supportedOrientations = .allButUpsideDown
 
+        let interfaceNow = posture(of: currentInterfaceOrientation)
         let target = OrientationReleasePolicy.shared.target(
             device: posture(of: UIDevice.current.orientation),
-            interfaceNow: posture(of: currentInterfaceOrientation),
+            interfaceNow: interfaceNow,
             interfaceBeforeLock: before
         )
+        releaseSettlingPosture = OrientationReleasePolicy.shared.settledPosture(target: target, interfaceNow: interfaceNow)
+        DispatchQueue.main.async { [weak self] in self?.releaseSettlingPosture = nil }
         let targetMask: UIInterfaceOrientationMask?
         switch target {
         case .portrait: targetMask = .portrait
