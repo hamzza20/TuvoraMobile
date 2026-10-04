@@ -2,6 +2,7 @@
 
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.diag.LogRedaction
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -115,7 +116,7 @@ internal class SidecarSubtitleController(
                 if (parseResult.cues.isEmpty()) {
                     Log.w(
                         SIDECAR_TAG,
-                        "Sidecar subtitle parse empty for url=$url urlMime=$urlMimeHint sniffed=$resolvedMime (buffer preserved; no media reload)"
+                        "Sidecar subtitle parse empty for url=${LogRedaction.url(url)} urlMime=$urlMimeHint sniffed=$resolvedMime (buffer preserved; no media reload)"
                     )
                     activeSidecarSubtitleKey = null
                     sidecarTimedCues = emptyList()
@@ -129,7 +130,7 @@ internal class SidecarSubtitleController(
                 sidecarTimedCues = parseResult.cues
                 Log.d(
                     SIDECAR_TAG,
-                    "Sidecar subtitle ready url=$url cues=${parseResult.cues.size} mime=${parseResult.effectiveMime} source=${parseResult.source} (buffer preserved)"
+                    "Sidecar subtitle ready url=${LogRedaction.url(url)} cues=${parseResult.cues.size} mime=${parseResult.effectiveMime} source=${parseResult.source} (buffer preserved)"
                 )
 
                 while (isActive && activeSidecarSubtitleKey == subtitleKey) {
@@ -142,7 +143,7 @@ internal class SidecarSubtitleController(
                 if (activeSidecarSubtitleKey != subtitleKey) return@launch
                 Log.w(
                     SIDECAR_TAG,
-                    "Sidecar subtitle failed url=$url: ${e.message} (buffer preserved; no media reload)"
+                    "Sidecar subtitle failed url=${LogRedaction.url(url)}: ${LogRedaction.text(e.message)} (buffer preserved; no media reload)"
                 )
                 activeSidecarSubtitleKey = null
                 sidecarTimedCues = emptyList()

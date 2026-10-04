@@ -1515,7 +1515,10 @@ final class MPVPlayerViewController: UIViewController {
                     if let msg = UnsafeMutablePointer<mpv_event_log_message>(OpaquePointer(eventPtr.pointee.data)) {
                         let prefix = String(cString: msg.pointee.prefix!)
                         let level = String(cString: msg.pointee.level!)
-                        let text = String(cString: msg.pointee.text!)
+                        // B116: mpv/FFmpeg lines embed request URLs ("Failed to open <url>.") —
+                        // provider credentials included. Redact before the line is printed or
+                        // composed into the on-screen playback error.
+                        let text = LogRedaction.shared.text(message: String(cString: msg.pointee.text!))
                         self.appendPlaybackLog(prefix: prefix, level: level, text: text)
                         print("[MPV][\(prefix)] \(level): \(text)", terminator: "")
                     }
