@@ -52,7 +52,7 @@ struct SportsScreen: View {
             for await next in TvSports.shared.state {
                 radar = next
                 now = TvSports.shared.nowMs()
-                NSLog("SMOKE sports follows=%d fixtures=%d loading=%d", next.follows.count, next.fixturesByLeague.count, next.loadingFixtures)
+                smokeLog("SMOKE sports follows=%d fixtures=%d loading=%d", next.follows.count, next.fixturesByLeague.count, next.loadingFixtures)
                 // Simulator smoke hook: `-smokeSportsMatch` opens the first upcoming match's channel sheet.
                 // `-smokeSportsLeague <leagueId>` opens a league page.
                 let args = AppArguments.list
@@ -702,7 +702,7 @@ private struct MatchChannelsSheet: View {
             do {
                 let matches = try await TvSports.shared.matchChannels(fixture: fixture)
                 groups = TvSports.shared.groupMatches(fixture: fixture, matches: matches)
-                NSLog("SMOKE sports match channels=%d", matches.count)
+                smokeLog("SMOKE sports match channels=%d", matches.count)
             } catch {
                 failed = true
             }

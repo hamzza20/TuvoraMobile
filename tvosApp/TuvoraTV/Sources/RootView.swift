@@ -109,9 +109,9 @@ struct RootView: View {
             autoRefreshHours: TvPlaylistFormPolicy.shared.DEFAULT_AUTO_REFRESH_HOURS, backupUrls: backup)
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             #if DEBUG
-            NSLog("SMOKE adding playlist url=%@", args[i + 2])
+            smokeLog("SMOKE adding playlist url=%@", args[i + 2])
             #endif
-            TvPlaylists.shared.add(form: form) { ok in NSLog("SMOKE add playlist ok=%d", ok.boolValue ? 1 : 0) }
+            TvPlaylists.shared.add(form: form) { ok in smokeLog("SMOKE add playlist ok=%d", ok.boolValue ? 1 : 0) }
         }
     }
 
@@ -127,7 +127,7 @@ struct RootView: View {
         }
         .task {
             for await next in TvAppLifecycle.shared.screen {
-                NSLog("SMOKE gate screen=%@", "\(next)")
+                smokeLog("SMOKE gate screen=%@", "\(next)")
                 if next == .main, smokeSession == nil, let session = Self.smokeCatalogSession() {
                     try? await Task.sleep(nanoseconds: 2_000_000_000)   // let the add-ons load first
                     smokeSession = session

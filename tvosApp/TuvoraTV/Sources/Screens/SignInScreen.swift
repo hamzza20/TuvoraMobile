@@ -54,10 +54,10 @@ struct SignInView: View {
                 switch onEnum(of: next) {
                 case .waiting(let waiting):
                     #if DEBUG
-                    NSLog("SMOKE device login code=%@ url=%@ completing=%d", waiting.code, waiting.verificationUrl, waiting.isCompleting)
+                    smokeLog("SMOKE device login code=%@ url=%@ completing=%d", waiting.code, waiting.verificationUrl, waiting.isCompleting)
                     #endif
                 case .failed(let failed):
-                    NSLog("SMOKE device login failed=%@", "\(failed.reason)")
+                    smokeLog("SMOKE device login failed=%@", "\(failed.reason)")
                 default: break
                 }
             }
@@ -120,7 +120,7 @@ struct SignInView: View {
                 .focused($focus, equals: .refresh)
                 .disabled(isLoading)
                 AuthButton(title: "Continue without account", focused: focus == .continueWithout) {
-                    NSLog("SMOKE sign-in continue without account")
+                    smokeLog("SMOKE sign-in continue without account")
                     DeviceLinkAuthRepository.shared.cancel()
                     AuthRepository.shared.signInAnonymously()
                 }

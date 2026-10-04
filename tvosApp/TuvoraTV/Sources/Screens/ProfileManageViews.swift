@@ -285,7 +285,7 @@ struct ProfileEditorOverlay: View {
                     name: name, avatarColorHex: colorHex, avatarId: avatarId, avatarUrl: nil, usesPrimaryAddons: false))?.boolValue ?? false
             }
             saving = false
-            NSLog("SMOKE profile save new=%d ok=%d", isNew, saved)
+            smokeLog("SMOKE profile save new=%d ok=%d", isNew, saved)
             if saved {
                 onSaved()
             } else {

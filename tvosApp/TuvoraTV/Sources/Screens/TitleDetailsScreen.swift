@@ -90,7 +90,7 @@ struct TitleDetailsScreen: View {
                 // Simulator smoke hook: `-smokePressPlay` presses Play once the title loads.
                 if let meta = next.meta, sourcesFor == nil, !smokePressed, AppArguments.list.contains("-smokePressPlay") {
                     smokePressed = true
-                    NSLog("SMOKE details loaded %@ videos=%d", meta.name, meta.videos.count)
+                    smokeLog("SMOKE details loaded %@ videos=%d", meta.name, meta.videos.count)
                     sourcesFor = SourceTarget(meta: meta, video: isSeries ? resumeEpisode(meta) : nil)
                 }
             }
@@ -118,7 +118,7 @@ struct TitleDetailsScreen: View {
         smokeScrolled = true
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         let anchor: DetailAnchor = ["cast": .cast, "more": .more, "bottom": .companies][args[i + 1]] ?? .tabs
-        NSLog("SMOKE details scroll to %@", args[i + 1])
+        smokeLog("SMOKE details scroll to %@", args[i + 1])
         withAnimation { proxy.scrollTo(anchor, anchor: .center) }
     }
 
@@ -450,7 +450,7 @@ struct StreamPickerScreen: View {
                 if AppArguments.list.contains("-smokePickFirstSource"), !opening, !smokePicked,
                    let first = next.groups.first(where: { !$0.streams.isEmpty })?.streams.first {
                     smokePicked = true
-                    NSLog("SMOKE sources loaded groups=%d; opening %@", next.groups.count, first.streamLabel)
+                    smokeLog("SMOKE sources loaded groups=%d; opening %@", next.groups.count, first.streamLabel)
                     open(first)
                 }
                 if let pick = next.autoPlayStream, !opening {

@@ -57,7 +57,7 @@ struct SetupCodeScreen: View {
             }
             for delay in [0.1, 0.4] { DispatchQueue.main.asyncAfter(deadline: .now() + delay) { if focus != target { focus = target } } }
             #if DEBUG
-            NSLog("SMOKE setup phase=%@", String(describing: phase))
+            smokeLog("SMOKE setup phase=%@", String(describing: phase))
             #endif
             if phase == .done { openIfReady() }
         }

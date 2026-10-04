@@ -46,7 +46,7 @@ struct SearchScreen: View {
                 if TvSearchPolicy.shared.shouldRecord(query: query, requested: requested, state: next) {
                     TvSearch.shared.record(query: TvSearchPolicy.shared.submittedQuery(raw: query))
                 }
-                if !next.sections.isEmpty { NSLog("SMOKE search rows=%d loading=%d titles=%@", next.sections.count, next.isLoading ? 1 : 0, next.sections.map { "\($0.title) (\($0.items.count))" }.joined(separator: " / ")) }
+                if !next.sections.isEmpty { smokeLog("SMOKE search rows=%d loading=%d titles=%@", next.sections.count, next.isLoading ? 1 : 0, next.sections.map { "\($0.title) (\($0.items.count))" }.joined(separator: " / ")) }
             }
         }
         .task { for await next in TvSearch.shared.recent { recent = next } }
@@ -271,7 +271,7 @@ private struct DiscoverScreen: View {
             TvSearch.shared.refreshDiscover()
             for await next in TvSearch.shared.discover {
                 state = next
-                NSLog("SMOKE discover items=%d loading=%d", next.items.count, next.isLoading ? 1 : 0)
+                smokeLog("SMOKE discover items=%d loading=%d", next.items.count, next.isLoading ? 1 : 0)
             }
         }
         .task { for await _ in TvSearch.shared.addonSignature { TvSearch.shared.refreshDiscover() } }

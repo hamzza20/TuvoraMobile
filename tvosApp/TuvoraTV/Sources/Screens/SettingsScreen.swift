@@ -925,7 +925,7 @@ private struct HiddenItemsDialog: View {
             ForEach(items ?? [], id: \.id) { item in
                 SettingsActionRow(title: item.name, subtitle: item.kindLabel, value: "Unhide", showChevron: false) {
                     TvIptvPersonalize.shared.unhide(id: item.id)
-                    NSLog("SMOKE settings unhid=%@", item.name)
+                    smokeLog("SMOKE settings unhid=%@", item.name)
                     items?.removeAll { $0.id == item.id }
                 }
             }
@@ -933,7 +933,7 @@ private struct HiddenItemsDialog: View {
         }
         .task {
             items = (try? await TvIptvPersonalize.shared.hiddenItems(accountId: account.id)) ?? []
-            NSLog("SMOKE settings hidden count=%d", items?.count ?? -1)
+            smokeLog("SMOKE settings hidden count=%d", items?.count ?? -1)
             // `-smokeUnhide <name>` (with `-smokeSettingsDialog hiddenItems`) reverts one verification hide,
             // by exact name — never anything else the account has hidden.
             let args = AppArguments.list
@@ -941,7 +941,7 @@ private struct HiddenItemsDialog: View {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 for item in (items ?? []) where item.name == args[i + 1] {
                     TvIptvPersonalize.shared.unhide(id: item.id)
-                    NSLog("SMOKE settings unhid=%@", item.name)
+                    smokeLog("SMOKE settings unhid=%@", item.name)
                     items?.removeAll { $0.id == item.id }
                 }
             }
@@ -966,7 +966,7 @@ private struct GuideRegionsDialog: View {
                 HStack(spacing: dp(8)) {
                     SettingsDialogButton(title: "Done", primary: true) {
                         TvIptvPersonalize.shared.setRegions(regions: selected)
-                        NSLog("SMOKE settings regions=%@", selected.sorted().joined(separator: ","))
+                        smokeLog("SMOKE settings regions=%@", selected.sorted().joined(separator: ","))
                         dialogs.pop()
                     }
                     SettingsDialogButton(title: "Use all") { selected = [] }
@@ -1235,7 +1235,7 @@ private struct PlaylistFormDialog: View {
     private func submit() {
         let kotlinForm = form.kotlin
         guard TvPlaylistFormPolicy.shared.canSubmit(form: kotlinForm), !(xtream?.isValidating ?? false) else { return }
-        NSLog("SMOKE playlist submit source=%@ backups=%ld", form.sourceType, form.backupUrls.count)
+        smokeLog("SMOKE playlist submit source=%@ backups=%ld", form.sourceType, form.backupUrls.count)
         let done: (KotlinBoolean) -> Void = { ok in
             if ok.boolValue { DispatchQueue.main.async { dialogs.pop() } }
         }
@@ -1649,7 +1649,7 @@ private struct IptvPairingDialog: View {
                 // The session reports from Kotlin's dispatcher threads; state belongs to the main actor.
                 DispatchQueue.main.async { state = next }
                 #if DEBUG
-                NSLog("SMOKE pairing status=%@ code=%@", next.status, next.code ?? "-")
+                smokeLog("SMOKE pairing status=%@ code=%@", next.status, next.code ?? "-")
                 #endif
             }
         }
@@ -1725,7 +1725,7 @@ enum IptvOffsetPickers {
                    options: options(catchUpLabel), selectedId: "\(account.catchUpTimeCorrectionMinutes)") { id in
             guard let minutes = Int32(id) else { return }
             TvIptvContentSettings.shared.setCatchUpCorrection(accountId: account.id, minutes: minutes)
-            NSLog("SMOKE settings catchUpCorrection=%d", minutes)
+            smokeLog("SMOKE settings catchUpCorrection=%d", minutes)
         }
     }
 
@@ -1734,7 +1734,7 @@ enum IptvOffsetPickers {
                    options: options(guideLabel), selectedId: "\(account.guideEpgCorrectionMinutes)") { id in
             guard let minutes = Int32(id) else { return }
             Task { try? await TvIptvContentSettings.shared.setGuideOffset(accountId: account.id, minutes: minutes) }
-            NSLog("SMOKE settings guideOffset=%d", minutes)
+            smokeLog("SMOKE settings guideOffset=%d", minutes)
         }
     }
 
@@ -1768,7 +1768,7 @@ private struct ContentTypesDialog: View {
                                    onOpen: { dialogs.push(.categoryChecklist(accountId, type)) },
                                    onToggle: {
                                        TvIptvContentSettings.shared.setTypeEnabled(accountId: accountId, type: type, enabled: !enabled)
-                                       NSLog("SMOKE settings contentType=%@ enabled=%d", type, !enabled)
+                                       smokeLog("SMOKE settings contentType=%@ enabled=%d", type, !enabled)
                                    })
                 }
                 SettingsHelperText(text: "The toggle shows or hides a content type. Select a type to choose its categories.")
@@ -1869,7 +1869,7 @@ private struct CategoryChecklistDialog: View {
                     CategoryCheckRow(name: category.name, checked: checked) {
                         TvIptvContentSettings.shared.toggleCategory(accountId: accountId, type: type,
                                                                    allIds: categories.map(\.id), categoryId: category.id, checked: !checked)
-                        NSLog("SMOKE settings category=%@ checked=%d", category.name, !checked)
+                        smokeLog("SMOKE settings category=%@ checked=%d", category.name, !checked)
                     }
                 }
             } else {

@@ -46,7 +46,7 @@ struct LibraryScreen: View {
         .task {
             for await next in TvLibrary.shared.views() {
                 view = next
-                NSLog("SMOKE library source=%@ items=%d loaded=%d loading=%d", String(describing: next.sourceMode), next.items.count, next.isLoaded ? 1 : 0, next.isLoading ? 1 : 0)
+                smokeLog("SMOKE library source=%@ items=%d loaded=%d loading=%d", String(describing: next.sourceMode), next.items.count, next.isLoaded ? 1 : 0, next.isLoading ? 1 : 0)
             }
         }
         .sheet(isPresented: $managingLists) {

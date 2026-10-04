@@ -85,7 +85,7 @@ struct ProfilePickerView: View {
                 if focusedIndex == nil, let first = state.activeProfile ?? state.profiles.first {
                     focusedIndex = first.profileIndex
                 }
-                NSLog("SMOKE profiles=%@", state.profiles.map { "\($0.profileIndex):\($0.pinEnabled ? "pin" : "open")" }.joined(separator: ","))
+                smokeLog("SMOKE profiles=%@", state.profiles.map { "\($0.profileIndex):\($0.pinEnabled ? "pin" : "open")" }.joined(separator: ","))
                 runSmokeHooks(state.profiles)
             }
         }
@@ -219,7 +219,7 @@ struct ProfilePickerView: View {
         case .deleteConfirm(let index):
             if let profile = profile(index) {
                 ProfileDeleteDialog(profile: profile, onDismiss: closeOverlay) {
-                    NSLog("SMOKE profile delete index=%d", index)
+                    smokeLog("SMOKE profile delete index=%d", index)
                     closeOverlay()
                     Task { try? await ProfileRepository.shared.deleteProfile(profileIndex: index) }
                 }
@@ -262,7 +262,7 @@ struct ProfilePickerView: View {
         } else if profile.pinEnabled {
             overlay = .pin(profile.profileIndex, .unlock)
         } else {
-            NSLog("SMOKE pick profile=%d", profile.profileIndex)
+            smokeLog("SMOKE pick profile=%d", profile.profileIndex)
             TvAppLifecycle.shared.pickProfile(profileIndex: profile.profileIndex)
         }
     }
@@ -568,7 +568,7 @@ struct ProfilePinOverlay: View {
                 let result = try? await ProfileRepository.shared.setPin(profileIndex: profile.profileIndex, pin: submitted, currentPin: action.currentPin)
                 let outcome = policy.afterSet(state: flow, result: result)
                 if outcome.kind == .saved {
-                    NSLog("SMOKE pin saved profile=%d", profile.profileIndex)
+                    smokeLog("SMOKE pin saved profile=%d", profile.profileIndex)
                     onFinished("PIN saved for \(profile.name).")
                     return
                 }
@@ -581,7 +581,7 @@ struct ProfilePinOverlay: View {
                 let result = try? await ProfileRepository.shared.clearPin(profileIndex: profile.profileIndex, currentPin: action.currentPin)
                 let outcome = policy.afterClear(result: result)
                 if outcome.kind == .saved {
-                    NSLog("SMOKE pin cleared profile=%d", profile.profileIndex)
+                    smokeLog("SMOKE pin cleared profile=%d", profile.profileIndex)
                     onFinished("PIN lock removed for \(profile.name).")
                     return
                 }
@@ -604,7 +604,7 @@ struct ProfilePinOverlay: View {
         case .unlocked:
             switch policy.verified(mode: flow.mode) {
             case .openProfile:
-                NSLog("SMOKE pin unlocked profile=%d", profile.profileIndex)
+                smokeLog("SMOKE pin unlocked profile=%d", profile.profileIndex)
                 TvAppLifecycle.shared.pickProfile(profileIndex: profile.profileIndex)
             case .startNewPin:
                 flow = policy.startNewPin(currentPin: submitted)
@@ -616,7 +616,7 @@ struct ProfilePinOverlay: View {
         case .incorrect: error = "Current PIN is incorrect."
         default: error = "Could not verify PIN. Try again."
         }
-        NSLog("SMOKE pin rejected profile=%d", profile.profileIndex)
+        smokeLog("SMOKE pin rejected profile=%d", profile.profileIndex)
         await playErrorShake()
     }
 

@@ -278,7 +278,7 @@ struct TvPlayerScreen: View {
         .task {
             for await next in session.state {
                 state = next
-                NSLog("SMOKE player lane=%@ gen=%d loading=%d playing=%d pos=%lld dur=%lld err=%@ skip=%@ startOver=%@ speed=%.2f subDelay=%d addonSub=%@ segments=%d audioDelay=%d/%d",
+                smokeLog("SMOKE player lane=%@ gen=%d loading=%d playing=%d pos=%lld dur=%lld err=%@ skip=%@ startOver=%@ speed=%.2f subDelay=%d addonSub=%@ segments=%d audioDelay=%d/%d",
                       "\(next.lane)", next.engineGeneration, next.isLoading, next.isPlaying,
                       next.positionMs, next.durationMs, next.errorMessage ?? "-", next.skipSegment?.label ?? "-",
                       next.startOverAtMs.map { "\($0)" } ?? "-", next.speed, next.subtitleDelayMs, next.addonSubtitleId ?? "-", next.skipSegmentCount, next.audioDelayMs, next.audioDelaySupported ? 1 : 0)
@@ -319,7 +319,7 @@ struct TvPlayerScreen: View {
     /// One remote press, as TvPlayerRemotePolicy decides it.
     private func handle(_ input: TvRemoteInput) {
         let action = remoteAction(input)
-        NSLog("SMOKE remote %@ -> %@", "\(input)", "\(action)")
+        smokeLog("SMOKE remote %@ -> %@", "\(input)", "\(action)")
         RemoteTrail.add("\(input)>\(action)")
         switch action {
         case .passThrough:
@@ -711,7 +711,7 @@ private struct TrackPanel: View {
         .task {
             for await next in session.addonSubtitles {
                 addonSubtitles = next
-                NSLog("SMOKE addon subtitles=%d %@", next.count, next.prefix(3).map { "\($0.language)/\($0.addonName ?? "-")" }.joined(separator: ","))
+                smokeLog("SMOKE addon subtitles=%d %@", next.count, next.prefix(3).map { "\($0.language)/\($0.addonName ?? "-")" }.joined(separator: ","))
             }
         }
         .task { for await next in session.addonSubtitlesLoading { addonLoading = next.boolValue } }

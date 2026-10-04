@@ -63,7 +63,7 @@ final class LiveDisplayCriteriaController {
         clearTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(LiveDisplayCriteriaPolicy.shared.GRACE_MS) * 1_000_000)
             guard let self, !Task.isCancelled, self.tracker.graceElapsed() else { return }
-            NSLog("SMOKE afr clear (left Live TV)")
+            smokeLog("SMOKE afr clear (left Live TV)")
             self.apply(nil)
         }
     }
@@ -78,7 +78,7 @@ final class LiveDisplayCriteriaController {
             if !enabled { logMatchingOffOnce(criteria) }
             return
         }
-        NSLog("SMOKE afr set %.3f Hz %@ %dx%d %@", next.refreshRate, "\(next.dynamicRange)", next.width, next.height, next.codec)
+        smokeLog("SMOKE afr set %.3f Hz %@ %dx%d %@", next.refreshRate, "\(next.dynamicRange)", next.width, next.height, next.codec)
         apply(next)
     }
 
@@ -86,7 +86,7 @@ final class LiveDisplayCriteriaController {
         clearTask?.cancel()
         clearTask = nil
         guard tracker.backgrounded() else { return }
-        NSLog("SMOKE afr clear (background)")
+        smokeLog("SMOKE afr clear (background)")
         // The app is leaving the screen and libmpv has already released its video: no idle dance.
         Self.displayManager()?.preferredDisplayCriteria = nil
         finishSwitch()
@@ -97,7 +97,7 @@ final class LiveDisplayCriteriaController {
         let next: AVDisplayCriteria?
         if let criteria {
             guard let format = Self.formatDescription(for: criteria) else {
-                NSLog("SMOKE afr skipped: no format description for %@", criteria.codec)
+                smokeLog("SMOKE afr skipped: no format description for %@", criteria.codec)
                 return
             }
             next = AVDisplayCriteria(refreshRate: Float(criteria.refreshRate), formatDescription: format)
@@ -138,7 +138,7 @@ final class LiveDisplayCriteriaController {
     private func logMatchingOffOnce(_ wanted: TvDisplayCriteria) {
         guard !loggedMatchingOff else { return }
         loggedMatchingOff = true
-        NSLog("SMOKE afr off: Match Content is disabled in Apple TV Settings (wanted %.3f Hz %@ %dx%d %@)",
+        smokeLog("SMOKE afr off: Match Content is disabled in Apple TV Settings (wanted %.3f Hz %@ %dx%d %@)",
               wanted.refreshRate, "\(wanted.dynamicRange)", wanted.width, wanted.height, wanted.codec)
     }
 

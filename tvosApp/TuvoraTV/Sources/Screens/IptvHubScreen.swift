@@ -72,7 +72,7 @@ struct IptvHubScreen: View {
             Spacer()
             if let account = hub.accounts.first(where: { $0.id == hub.selectedAccountId }) ?? hub.accounts.first {
                 HubChip(title: account.name, trailingIcon: hub.accounts.count > 1 ? "md_arrow_drop_down" : nil, selected: false) {
-                    if hub.accounts.count > 1 { NSLog("SMOKE playlist chip pressed"); choosingPlaylist = true }
+                    if hub.accounts.count > 1 { smokeLog("SMOKE playlist chip pressed"); choosingPlaylist = true }
                 }
             }
         }
@@ -290,7 +290,7 @@ private struct LiveGuideView: View {
                 HideGroupDialog(name: hideAsk.1,
                                 onHide: {
                                     _ = TvIptvPersonalize.shared.hideCategory(categoryId: hideAsk.0)
-                                    NSLog("SMOKE guide hid group=%@", hideAsk.1)
+                                    smokeLog("SMOKE guide hid group=%@", hideAsk.1)
                                     if category == hideAsk.0 { category = "all" }
                                     self.hideAsk = nil
                                 },
@@ -338,7 +338,7 @@ private struct LiveGuideView: View {
             TvGuideEpg.shared.resetSession()
             for await row in TvGuideEpg.shared.results {
                 programmes[Self.windowKey(row.contentId, row.windowStartMs)] = row.programmes
-                NSLog("SMOKE guide row=%@ window=%lld programmes=%d", row.contentId, row.windowStartMs, row.programmes.count)
+                smokeLog("SMOKE guide row=%@ window=%lld programmes=%d", row.contentId, row.windowStartMs, row.programmes.count)
             }
         }
         .task(id: prefetchKey) {
@@ -351,7 +351,7 @@ private struct LiveGuideView: View {
             let anchor = focusedChannel.flatMap { f in list.firstIndex { $0.contentId == f.contentId } } ?? 0
             TvGuideEpg.shared.request(channels: list, anchor: Int32(anchor), windowStartMs: windowStart,
                                       travelling: !atLive, catchUpSupported: catchUpSupported)
-            NSLog("SMOKE guide prefetch anchor=%d window=%lld asked=%d", anchor, windowStart, TvGuideEpg.shared.askedCount)
+            smokeLog("SMOKE guide prefetch anchor=%d window=%lld asked=%d", anchor, windowStart, TvGuideEpg.shared.askedCount)
         }
         .task(id: focusedCell?.startMs) {
             cellDescription = nil
@@ -533,7 +533,7 @@ private struct LiveGuideView: View {
                                     // NuvioTV MENU on a channel: hide it (personalization overlay, synced).
                                     Button("Hide channel") {
                                         TvIptvPersonalize.shared.hideChannel(channel: channel)
-                                        NSLog("SMOKE guide hid channel=%@", channel.name)
+                                        smokeLog("SMOKE guide hid channel=%@", channel.name)
                                     }
                                 }
                         }
@@ -606,7 +606,7 @@ private struct LiveGuideView: View {
                                   nowMs: now, catchUpDays: channel.catchUpDays)
         guard next != windowStart else { return }
         windowStart = next
-        NSLog("SMOKE guide travel start=%lld live=%d", next, atLive)
+        smokeLog("SMOKE guide travel start=%lld live=%d", next, atLive)
         Task {
             await loadWindow(channel, force: true)
             let cells = timeline.cells(programmes: rowProgrammes(channel), channel: channel,
@@ -635,29 +635,29 @@ private struct LiveGuideView: View {
         notice = nil
         previewRequests.cancel()
         previewSession?.close(); previewSession = nil; previewing = nil
-        NSLog("SMOKE guide replay channel=%@ programme=%@", channel.name, programme.title)
+        smokeLog("SMOKE guide replay channel=%@ programme=%@", channel.name, programme.title)
         Task {
             guard let pair = try? await TvCatchUp.shared.startReplay(channel: channel, programme: programme) else { return }
             guard var current = pair.first.session else {
                 notice = pair.first.notice
-                NSLog("SMOKE guide replay notice=%@", pair.first.notice ?? "-")
+                smokeLog("SMOKE guide replay notice=%@", pair.first.notice ?? "-")
                 return
             }
             playback.play(current)
             while let step = try? await pair.replay.supervise(session: current) {
                 if let next = step.session {
-                    NSLog("SMOKE guide replay next dialect")
+                    smokeLog("SMOKE guide replay next dialect")
                     guard playback.session?.session === current else { next.close(); return }   // viewer left
                     playback.continuePlaying(next, from: current)
                     current = next
                 } else {
                     notice = step.notice
-                    NSLog("SMOKE guide replay notice=%@", step.notice ?? "-")
+                    smokeLog("SMOKE guide replay notice=%@", step.notice ?? "-")
                     if playback.session?.session === current { playback.stop() }
                     return
                 }
             }
-            NSLog("SMOKE guide replay settled state playing=%d", current.state.value.isPlaying)
+            smokeLog("SMOKE guide replay settled state playing=%d", current.state.value.isPlaying)
         }
     }
 
@@ -711,7 +711,7 @@ private struct LiveGuideView: View {
             Task {
                 select(first)
                 try? await Task.sleep(nanoseconds: 12_000_000_000)
-                NSLog("SMOKE guide preview=%@ session=%d", first.name, previewSession == nil ? 0 : 1)
+                smokeLog("SMOKE guide preview=%@ session=%d", first.name, previewSession == nil ? 0 : 1)
                 select(first)
             }
         }
@@ -721,11 +721,11 @@ private struct LiveGuideView: View {
             TvIptvPersonalize.shared.hideChannel(channel: first)
             Task {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
-                NSLog("SMOKE guide hide channel=%@ before=%d after=%d", first.name, before, channels.count)
+                smokeLog("SMOKE guide hide channel=%@ before=%d after=%d", first.name, before, channels.count)
             }
         }
         let archive = channels.filter(\.hasArchive)
-        NSLog("SMOKE guide channels=%d archive=%d catchUp=%d first=%@", channels.count, archive.count, catchUpSupported,
+        smokeLog("SMOKE guide channels=%d archive=%d catchUp=%d first=%@", channels.count, archive.count, catchUpSupported,
               archive.first?.name ?? "-")
         guard let channel = archive.first,
               args.contains("-smokeGuideTimeline") || args.contains("-smokeGuideSheet") || args.contains("-smokeGuideReplay") else { return }
@@ -739,7 +739,7 @@ private struct LiveGuideView: View {
             await loadWindow(channel, force: true)
             let cells = timeline.cells(programmes: rowProgrammes(channel), channel: channel,
                                        startMs: windowStart, nowMs: now, catchUpSupported: catchUpSupported)
-            NSLog("SMOKE guide cells=%@", cells.map { "\($0.programme?.title ?? "·"):\($0.intent)" }.joined(separator: " | "))
+            smokeLog("SMOKE guide cells=%@", cells.map { "\($0.programme?.title ?? "·"):\($0.intent)" }.joined(separator: " | "))
             if args.contains("-smokeGuideSheet"), let airing = cells.first(where: { $0.intent == .openSheet })?.programme {
                 sheet = GuideSheetTarget(channel: channel, programme: airing)
             } else if args.contains("-smokeGuideReplay"), let past = cells.first(where: { $0.intent == .replay })?.programme {

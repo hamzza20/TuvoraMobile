@@ -26,7 +26,7 @@ struct TuvoraTVApp: App {
         #if DEBUG
         // UIAppFonts must name the file as it lands in the bundle (root, not Fonts/): a wrong path
         // silently falls back to the system font on every screen.
-        if UIFont(name: "Inter", size: 20) == nil { NSLog("SMOKE font Inter MISSING") }
+        if UIFont(name: "Inter", size: 20) == nil { smokeLog("SMOKE font Inter MISSING") }
         #endif
     }
 

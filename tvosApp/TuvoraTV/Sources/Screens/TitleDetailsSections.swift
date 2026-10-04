@@ -48,7 +48,7 @@ struct DetailLowerSections: View {
             if let i = AppArguments.list.firstIndex(of: "-smokeDetailsScroll"),
                AppArguments.list.dropFirst(i + 1).first == "more" { activeTab = .moreLikeThis }
             cast = try? await TvTitleSections.shared.cast(meta: meta)
-            NSLog("SMOKE sections tabs=%@ rows=%@ leading=%d cast=%d roles=%@ more=%d trailers=%d collection=%d",
+            smokeLog("SMOKE sections tabs=%@ rows=%@ leading=%d cast=%d roles=%@ more=%d trailers=%d collection=%d",
                   "\(layout.tabs)", "\(layout.rows)", cast?.leading.count ?? -1, cast?.cast.count ?? -1,
                   meta.cast.prefix(3).map { $0.role ?? "-" }.joined(separator: ","), meta.moreLikeThis.count, meta.trailers.count, meta.collectionItems.count)
             // Simulator smoke hook: `-smokePressTrailer` presses the first trailer once sections load.
@@ -58,7 +58,7 @@ struct DetailLowerSections: View {
                 openTrailer(first)
             }
             if smokeArg("-smokePerson"), let first = (cast?.leading ?? []).first ?? cast?.cast.first {
-                NSLog("SMOKE opening person %@", first.name)
+                smokeLog("SMOKE opening person %@", first.name)
                 onOpenPerson(first, cast?.leading.contains(first) ?? false)
             }
         }
@@ -132,7 +132,7 @@ struct DetailLowerSections: View {
     private func openTrailer(_ trailer: MetaTrailer) {
         guard let url = URL(string: TvDetailSectionsPolicy.shared.youtubeAppUrl(key: trailer.key)) else { return }
         UIApplication.shared.open(url) { opened in
-            NSLog("SMOKE trailer %@ opened=%d", url.absoluteString, opened ? 1 : 0)
+            smokeLog("SMOKE trailer %@ opened=%d", url.absoluteString, opened ? 1 : 0)
             if !opened { playback.notify(L("Unable to play trailer")) }
         }
     }
