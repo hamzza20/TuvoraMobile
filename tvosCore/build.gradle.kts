@@ -59,6 +59,10 @@ val tvosExcludedCommon = listOf(
     "com/nuvio/app/features/player/PlayerNextEpisodeAutoPlay.kt",
     "com/nuvio/app/features/player/PlayerScreenModalHosts.kt", "com/nuvio/app/features/player/ResumeLoadingUi.kt",
     "com/nuvio/app/features/player/PlayerScreenRuntime*.kt",
+    // Compose player toast text (uses PlayerLayout's time formatter); Apple TV shows its own skip feedback.
+    "com/nuvio/app/features/player/PlayerAutoSkipNotification.kt",
+    // Compose settings page whose UI moved behind shared Chip/Settings* helpers; Apple TV settings are SwiftUI.
+    "com/nuvio/app/features/settings/RatingsSettings.kt",
 )
 val tvosExcludedIos = listOf(
     // iPhone-only APIs; Apple TV supplies its own actual in tvosCore/src/tvosMain (named gaps).

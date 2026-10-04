@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.diag.LogRedaction
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +60,7 @@ actual fun PlatformPlayerSurface(
     initialPositionMs: Long?,
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
+    playbackEngine: AndroidPlaybackEngine?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
@@ -245,7 +247,7 @@ actual fun PlatformPlayerSurface(
             }
 
             override fun setSubtitleUri(url: String) {
-                Logger.d(TAG) { "setSubtitleUri: $url" }
+                Logger.d(TAG) { "setSubtitleUri: ${LogRedaction.url(url)}" }
                 bridge.setSubtitleUrl(url)
             }
 

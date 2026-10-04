@@ -161,6 +161,8 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "../composeApp/proguard-rules.pro",
+                // B116: strip Log.v/Log.d (incl. Kermit's) from shipped builds.
+                "proguard-release-logs.pro",
             )
             signingConfig = signingConfigs.getByName("release")
             ndk {

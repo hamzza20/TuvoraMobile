@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import com.nuvio.app.core.diag.installLogRedaction
 import com.nuvio.app.core.contracts.IptvCatalogAccess
 import com.nuvio.app.core.contracts.IptvContentClassifierAccess
 import com.nuvio.app.core.contracts.IptvSearchAccess
@@ -42,6 +43,8 @@ import com.nuvio.app.features.radar.RadarSyncParticipant
  * FeatureWiring.kt, or Apple TV will run without it.
  */
 fun registerLogicFeatureContributions() {
+    // B116: first, so every later log line (all Kermit loggers share this config) is redacted.
+    installLogRedaction()
     // S10: app-wide memory port (AppMemory + BudgetRegistry) — image loaders, player buffer
     // sizing, and the platform startup probes size their budgets through this.
     MemoryPortAccess.register(MemoryPortImpl)
