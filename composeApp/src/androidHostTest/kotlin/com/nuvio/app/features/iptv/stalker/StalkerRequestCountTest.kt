@@ -73,7 +73,7 @@ class StalkerRequestCountTest {
 
     @Test
     fun `a browsed movie survives a process death and plays without re-finding it`() = runBlocking {
-        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal) }
+        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal, { u, h, c -> c(fakePortal(u, h)) }) }
         val acc = account("rc-coldvod")
 
         // Browse one VOD page: rows land in the write-through store with their cmd.
@@ -93,7 +93,7 @@ class StalkerRequestCountTest {
 
     @Test
     fun `the live lineup is ONE request and every category is served from it`() = runBlocking {
-        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal) }
+        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal, { u, h, c -> c(fakePortal(u, h)) }) }
         val acc = account("rc-lineup")
 
         assertEquals(3, StalkerClient.liveChannels(acc, "g1").getOrThrow().size)
@@ -107,9 +107,54 @@ class StalkerRequestCountTest {
         assertEquals(0, requests.count { it == "itv/get_ordered_list" })
     }
 
+    /**
+     * B02 ("Movies keep loading" on a genuine Ministra portal): stock `vod.class.php` treats a
+     * non-`*` `genre` as a GENRE filter on top of `category`, so a Movies row sent with
+     * genre=<categoryId> came back empty. The category must travel as `category` only.
+     */
+    @Test
+    fun `a movie row asks for its category without a genre filter`() = runBlocking {
+        val urls = mutableListOf<String>()
+        val recording: suspend (String, Map<String, String>) -> String = { url, h -> urls += url; fakePortal(url, h) }
+        StalkerClient.sessionFactory = { StalkerSession(it, recording, { u, h, c -> c(recording(u, h)) }) }
+        StalkerClient.vodMovies(account("rc-genre"), "12").getOrThrow()
+        val list = urls.first { "action=get_ordered_list" in it && "type=vod" in it }
+        kotlin.test.assertTrue("category=12" in list, list)
+        kotlin.test.assertTrue("genre=%2A" in list || "genre=*" in list, list)
+    }
+
+    /**
+     * B76 (iOS: "live channels keep loading and wouldn't complete"): get_all_channels is the one
+     * Stalker body that scales with the lineup (13 MB / 11k channels on a real portal). Through the
+     * plain text client it is bound by Ktor Darwin's 60 s WHOLE-REQUEST timeout on iOS, so a big
+     * lineup on a slow line never finished, and the client fell back to paging type=itv (up to 200
+     * requests, truncated at 2,800 channels). The lineup must ride the streaming transport (between-
+     * bytes timeout only) — here the text client gives up on it exactly as Darwin's cap does.
+     */
+    @Test
+    fun `the lineup streams so a body the text client cannot finish still loads in one request`() = runBlocking {
+        val textClientGivesUp: suspend (String, Map<String, String>) -> String = { url, h ->
+            if ("action=get_all_channels" in url) {
+                requests += "itv/get_all_channels(text)"
+                throw IllegalStateException("Request timeout has expired [request_timeout=60000 ms]")
+            }
+            fakePortal(url, h)
+        }
+        StalkerClient.sessionFactory = {
+            StalkerSession(it, textClientGivesUp, { u, h, c -> fakePortal(u, h).chunked(7).forEach(c) })
+        }
+        val acc = account("rc-stream")
+
+        assertEquals(6, StalkerClient.liveChannels(acc, null).getOrThrow().size)
+        assertEquals(3, StalkerClient.liveChannels(acc, "g1").getOrThrow().size)
+        assertEquals(1, requests.count { it == "itv/get_all_channels" }, "$requests")
+        assertEquals(0, requests.count { it == "itv/get_all_channels(text)" }, "$requests")
+        assertEquals(0, requests.count { it == "itv/get_ordered_list" }, "$requests")
+    }
+
     @Test
     fun `playing a channel costs exactly one request`() = runBlocking {
-        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal) }
+        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal, { u, h, c -> c(fakePortal(u, h)) }) }
         val acc = account("rc-browsed")
 
         StalkerClient.liveChannels(acc, "g1").getOrThrow()
@@ -124,7 +169,7 @@ class StalkerRequestCountTest {
 
     @Test
     fun `cold-start play uses the cached lineup, never the catalog`() = runBlocking {
-        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal) }
+        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal, { u, h, c -> c(fakePortal(u, h)) }) }
         val acc = account("rc-cold")
 
         // Nothing browsed: the lineup fetch (1 request) supplies the cmd — no paging at all.
@@ -191,7 +236,7 @@ class StalkerRequestCountTest {
                 }
             }
         }
-        StalkerClient.sessionFactory = { StalkerSession(it, big) }
+        StalkerClient.sessionFactory = { StalkerSession(it, big, { u, h, c -> c(big(u, h)) }) }
         val movies = StalkerClient.vodMovies(account("rc-cap"), "big").getOrThrow()
         assertEquals(70, movies.size)
         assertEquals(5, requests.count { it == "vod/get_ordered_list" })   // 5 pages, not 100
@@ -199,7 +244,7 @@ class StalkerRequestCountTest {
 
     @Test
     fun `cold-start VOD play stops paging at the match instead of slurping the catalog`() = runBlocking {
-        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal) }
+        StalkerClient.sessionFactory = { StalkerSession(it, fakePortal, { u, h, c -> c(fakePortal(u, h)) }) }
         val acc = account("rc-vod")
 
         // VOD has no get_all_channels equivalent, so it still scans — but must stop at the match.

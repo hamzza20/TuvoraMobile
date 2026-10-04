@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.diag.MpvLogLevelPolicy
+import com.nuvio.app.core.diag.LogRedaction
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -902,7 +904,7 @@ private fun ExoPlayerSurface(
                 }
 
                 override fun setSubtitleUri(url: String) {
-                    Log.d(TAG, "setSubtitleUri: url=$url")
+                    Log.d(TAG, "setSubtitleUri: url=${LogRedaction.url(url)}")
                     subtitleSelectionJob?.cancel()
                     subtitleSelectionJob = coroutineScope.launch {
                         val currentPosition = exoPlayer.currentPosition
@@ -922,7 +924,7 @@ private fun ExoPlayerSurface(
                             .build()
                         Log.d(
                             TAG,
-                            "setSubtitleUri: subtitleConfig built, uri=${subtitleConfig.uri}, mime=${subtitleConfig.mimeType}, selectionFlags=${subtitleConfig.selectionFlags}"
+                            "setSubtitleUri: subtitleConfig built, uri=${LogRedaction.url(subtitleConfig.uri.toString())}, mime=${subtitleConfig.mimeType}, selectionFlags=${subtitleConfig.selectionFlags}"
                         )
                         val newMediaItem = currentMediaItem.buildUpon()
                             .setSubtitleConfigurations(listOf(subtitleConfig))
@@ -1734,7 +1736,9 @@ private class NuvioLibmpvView(
         if (yuv420pEnabled) {
             mpv.setOptionString("vf", "format=yuv420p")
         }
-        mpv.setOptionString("msg-level", "all=warn")
+        // B116: libmpv's native layer prints every delivered log line straight to logcat (unredactable);
+        // modules that format URLs ("Failed to open <url>.") stay silent. See MpvLogLevelPolicy.
+        mpv.setOptionString("msg-level", MpvLogLevelPolicy.MSG_LEVEL)
         // The app supplies its own controls; avoid loading mpv's built-in Lua console and its
         // extra interpreter state (also present in the native tombstones seen in production).
         mpv.setOptionString("load-console", "no")
@@ -2929,8 +2933,9 @@ private fun isLoopbackPlaybackSource(value: String): Boolean = runCatching {
     }
 }.getOrDefault(false)
 
+// B116: mpv/ExoPlayer messages and error chains embed request URLs (credentials included).
 private fun diagnosticPlayerMessage(value: String?): String =
-    value?.replace('\n', ' ')?.replace('\r', ' ')?.take(160) ?: "none"
+    value?.let(LogRedaction::text)?.replace('\n', ' ')?.replace('\r', ' ')?.take(160) ?: "none"
 
 private fun diagnosticThrowableChain(value: Throwable): String =
     generateSequence(value) { it.cause }

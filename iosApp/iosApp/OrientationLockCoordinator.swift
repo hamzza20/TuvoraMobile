@@ -64,12 +64,20 @@ final class OrientationLockCoordinator {
 
     private(set) var supportedOrientations: UIInterfaceOrientationMask = .allButUpsideDown
     private var observers: [NSObjectProtocol] = []
+    /// How the interface faced before a player lock took over; restored on release when the
+    /// device can't say how it is held (flat, unknown). Nil while no lock is active.
+    private var interfacePostureBeforeLock: OrientationPosture?
+    /// Where the last release is rotating the interface to, for a lock posted in the same main-queue
+    /// turn (Live TV mode switch = unlock + lock). Cleared on the next turn so it never goes stale.
+    private var releaseSettlingPosture: OrientationPosture?
 
     private init() {}
 
     func start() {
         guard observers.isEmpty else { return }
 
+        // Device orientation is only reported while generation is on (nesting-counted, cheap).
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         let center = NotificationCenter.default
         observers.append(
             center.addObserver(forName: lockPlayerToLandscapeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -78,18 +86,117 @@ final class OrientationLockCoordinator {
         )
         observers.append(
             center.addObserver(forName: lockPlayerToPortraitNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.rememberPreLockPosture()
                 self?.setForcedOrientation(.portrait, forceRotate: true)
             }
         )
         observers.append(
             center.addObserver(forName: unlockPlayerOrientationNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.setForcedOrientation(.allButUpsideDown, forceRotate: false)
+                self?.releaseLock()
             }
         )
     }
 
     private func setLandscapeLock(enabled: Bool) {
-        setForcedOrientation(enabled ? .landscape : .allButUpsideDown, forceRotate: enabled)
+        if enabled {
+            rememberPreLockPosture()
+            setForcedOrientation(.landscape, forceRotate: true)
+        } else {
+            releaseLock()
+        }
+    }
+
+    private func rememberPreLockPosture() {
+        // Only the first lock in a chain counts (landscape -> portrait switches inside Live TV).
+        guard interfacePostureBeforeLock == nil else { return }
+        interfacePostureBeforeLock = OrientationReleasePolicy.shared.preLockPosture(
+            interfaceNow: posture(of: currentInterfaceOrientation),
+            settlingTo: releaseSettlingPosture
+        )
+    }
+
+    /// B107: widening the mask alone never rotates back — iOS waits for the device to move, so an
+    /// upright phone stayed sideways after the player. Rotate to how the phone is held instead.
+    private func releaseLock() {
+        let before = interfacePostureBeforeLock ?? .unknown
+        interfacePostureBeforeLock = nil
+        supportedOrientations = .allButUpsideDown
+
+        let interfaceNow = posture(of: currentInterfaceOrientation)
+        let target = OrientationReleasePolicy.shared.target(
+            device: posture(of: UIDevice.current.orientation),
+            interfaceNow: interfaceNow,
+            interfaceBeforeLock: before
+        )
+        releaseSettlingPosture = OrientationReleasePolicy.shared.settledPosture(target: target, interfaceNow: interfaceNow)
+        DispatchQueue.main.async { [weak self] in self?.releaseSettlingPosture = nil }
+        let targetMask: UIInterfaceOrientationMask?
+        switch target {
+        case .portrait: targetMask = .portrait
+        case .landscape: targetMask = preferredLandscapeOrientation == .landscapeLeft ? .landscapeLeft : .landscapeRight
+        default: targetMask = nil
+        }
+
+        if #available(iOS 16.0, *) {
+            // Order matters: refresh the supported set first, then request the geometry.
+            updateSupportedOrientationsOnRootControllers()
+            if let targetMask {
+                requestGeometry(targetMask)
+            }
+        } else {
+            if let targetMask {
+                let orientation: UIInterfaceOrientation = targetMask == .portrait ? .portrait : preferredLandscapeOrientation
+                UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
+            }
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+    }
+
+    private var currentInterfaceOrientation: UIInterfaceOrientation {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first(where: { $0.activationState == .foregroundActive })?
+            .interfaceOrientation
+            ?? UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.interfaceOrientation }.first
+            ?? .unknown
+    }
+
+    private func posture(of orientation: UIInterfaceOrientation) -> OrientationPosture {
+        if orientation.isPortrait { return .portrait }
+        if orientation.isLandscape { return .landscape }
+        return .unknown
+    }
+
+    private func posture(of orientation: UIDeviceOrientation) -> OrientationPosture {
+        switch orientation {
+        case .portrait: return .portrait
+        case .landscapeLeft, .landscapeRight: return .landscape
+        // Upside-down is not a supported interface orientation; face up/down and unknown carry
+        // no hint of how the phone will be held.
+        default: return .unknown
+        }
+    }
+
+    @available(iOS 16.0, *)
+    private func updateSupportedOrientationsOnRootControllers() {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .forEach { window in
+                window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
+    }
+
+    @available(iOS 16.0, *)
+    private func requestGeometry(_ mask: UIInterfaceOrientationMask) {
+        let preferences = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: mask)
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .forEach { scene in
+                scene.requestGeometryUpdate(preferences) { error in
+                    print("[OrientationLockCoordinator] Geometry update failed: \(error.localizedDescription)")
+                }
+            }
     }
 
     private func setForcedOrientation(_ mask: UIInterfaceOrientationMask, forceRotate: Bool) {

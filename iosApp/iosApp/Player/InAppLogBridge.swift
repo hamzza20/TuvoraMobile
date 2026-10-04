@@ -1,4 +1,5 @@
 import Foundation
+import ComposeApp
 
 /// Minimal logging shim for the ported Picture-in-Picture code.
 ///
@@ -7,7 +8,8 @@ import Foundation
 /// files are ~1,500 lines and we will want to re-sync them against that fork when it moves, so the
 /// call sites are kept byte-identical and adapted here instead of edited in place.
 ///
-/// Maps onto the `print("[Tag] …")` convention the rest of this bridge already uses.
+/// Maps onto the `print("[Tag] …")` convention the rest of this bridge already uses. Every line goes
+/// through the shared Kotlin `LogRedaction` policy first (B116 — URLs carry provider credentials).
 final class InAppLogBridge {
     static let shared = InAppLogBridge()
 
@@ -15,24 +17,24 @@ final class InAppLogBridge {
 
     func debug(tag: String, message: String) {
         #if DEBUG
-        print("[\(tag)] \(message)")
+        print("[\(tag)] \(LogRedaction.shared.text(message: message))")
         #endif
     }
 
     func info(tag: String, message: String) {
-        print("[\(tag)] \(message)")
+        print("[\(tag)] \(LogRedaction.shared.text(message: message))")
     }
 
     func warn(tag: String, message: String) {
-        print("[\(tag)] WARN \(message)")
+        print("[\(tag)] WARN \(LogRedaction.shared.text(message: message))")
     }
 
     func error(tag: String, message: String) {
-        print("[\(tag)] ERROR \(message)")
+        print("[\(tag)] ERROR \(LogRedaction.shared.text(message: message))")
     }
 
     /// mpv's own log callback, which already carries its level and module prefix.
     func mpv(platform: String, prefix: String, level: String, message: String) {
-        print("[MPV/\(platform)][\(prefix)] \(level): \(message)", terminator: "")
+        print("[MPV/\(platform)][\(prefix)] \(level): \(LogRedaction.shared.text(message: message))", terminator: "")
     }
 }
