@@ -1,5 +1,6 @@
 package com.nuvio.app.features.p2p
 
+import com.nuvio.app.core.diag.LogRedaction
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
@@ -285,7 +286,7 @@ actual object P2pStreamingEngine {
                 )) {
                 throw CancellationException("P2P stream start was cancelled")
             }
-            Log.i(TAG, "Nuvio Engine stream ready: ${stream.url}")
+            Log.i(TAG, "Nuvio Engine stream ready: ${LogRedaction.url(stream.url)}")
             Log.i(
                 DIAGNOSTIC_TAG,
                 "start request=$requestSequence phase=route_ready elapsedMs=${elapsedSince(startedAtMs)} " +
