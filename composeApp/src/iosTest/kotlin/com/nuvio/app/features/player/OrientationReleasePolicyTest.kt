@@ -46,6 +46,36 @@ class OrientationReleasePolicyTest {
         )
     }
 
+    // B107 follow-up (wave-1 device pass 2026-10-03): Live TV docked -> fullscreen -> exit fullscreen
+    // -> Back left the IPTV hub sideways with the phone flat. Exiting fullscreen is an unlock (rotate
+    // to portrait, asynchronous) immediately followed by the portrait lock, which read the interface
+    // while it was still landscape and remembered LANDSCAPE as "before the player".
+    @Test
+    fun lock_right_after_a_release_remembers_where_the_release_is_rotating_to() {
+        val exitFullscreen = OrientationReleasePolicy.target(device = UNKNOWN, interfaceNow = LANDSCAPE, interfaceBeforeLock = PORTRAIT)
+        assertEquals(OrientationReleaseTarget.PORTRAIT, exitFullscreen, "leaving fullscreen goes back to portrait")
+        val settling = OrientationReleasePolicy.settledPosture(exitFullscreen, interfaceNow = LANDSCAPE)
+
+        val remembered = OrientationReleasePolicy.preLockPosture(interfaceNow = LANDSCAPE, settlingTo = settling)
+        assertEquals(PORTRAIT, remembered, "the in-flight rotation's target, not the stale landscape, is the pre-lock posture")
+
+        assertEquals(
+            OrientationReleaseTarget.KEEP,
+            OrientationReleasePolicy.target(device = UNKNOWN, interfaceNow = PORTRAIT, interfaceBeforeLock = remembered),
+            "Back from Live TV must leave the hub in portrait",
+        )
+    }
+
+    @Test
+    fun lock_with_no_release_in_flight_remembers_the_interface_as_it_is() {
+        assertEquals(LANDSCAPE, OrientationReleasePolicy.preLockPosture(interfaceNow = LANDSCAPE, settlingTo = null))
+    }
+
+    @Test
+    fun keep_release_settles_where_the_interface_already_is() {
+        assertEquals(LANDSCAPE, OrientationReleasePolicy.settledPosture(OrientationReleaseTarget.KEEP, interfaceNow = LANDSCAPE))
+    }
+
     @Test
     fun nothing_known_changes_nothing() {
         assertEquals(

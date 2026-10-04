@@ -30,4 +30,21 @@ object OrientationReleasePolicy {
             else -> OrientationReleaseTarget.LANDSCAPE
         }
     }
+
+    /** Where the interface ends up once [target] has been applied (the rotation is asynchronous). */
+    fun settledPosture(target: OrientationReleaseTarget, interfaceNow: OrientationPosture): OrientationPosture =
+        when (target) {
+            OrientationReleaseTarget.PORTRAIT -> OrientationPosture.PORTRAIT
+            OrientationReleaseTarget.LANDSCAPE -> OrientationPosture.LANDSCAPE
+            OrientationReleaseTarget.KEEP -> interfaceNow
+        }
+
+    /**
+     * The posture a new player lock remembers as "how the app looked before". Live TV switches mode
+     * as an unlock immediately followed by a lock (exit fullscreen = release + portrait lock); the
+     * release's rotation is still in flight then, so the interface still reads the old posture.
+     * [settlingTo] is where that release is rotating to (null when no release is in flight) and wins.
+     */
+    fun preLockPosture(interfaceNow: OrientationPosture, settlingTo: OrientationPosture?): OrientationPosture =
+        settlingTo ?: interfaceNow
 }
