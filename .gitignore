@@ -45,3 +45,8 @@ MPVKit/
 # the build produces, so they belong on disk, not in the repo. Dated, hence the glob.
 MPVKit-dist-backup-*/
 iosApp/Configuration/PostHog.local.xcconfig
+
+# JVM crash / replay dumps (never commit)
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
