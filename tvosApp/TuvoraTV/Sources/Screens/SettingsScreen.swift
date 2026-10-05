@@ -973,9 +973,11 @@ private struct GuideRegionsDialog: View {
                     Spacer()
                 }
                 ForEach(regions, id: \.name) { region in
-                    RegionCheckRow(region: region, checked: selected.contains(region.name),
+                    // B119: under "All" (empty) every row is checked and OK removes just that one.
+                    RegionCheckRow(region: region,
+                                   checked: TvIptvSettingsPolicy.shared.regionChecked(selected: selected, name: region.name),
                                    initialFocus: region.name == regions.first?.name) {
-                        if selected.contains(region.name) { selected.remove(region.name) } else { selected.insert(region.name) }
+                        selected = TvIptvSettingsPolicy.shared.toggleRegion(selected: selected, available: regions, name: region.name)
                     }
                 }
             } else {
