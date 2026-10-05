@@ -19,6 +19,7 @@ import com.nuvio.app.features.player.PlayerControlsShell
 import com.nuvio.app.features.player.PlayerEngineController
 import com.nuvio.app.features.player.PlayerLayoutMetrics
 import com.nuvio.app.features.player.PlayerPlaybackSnapshot
+import com.nuvio.app.features.player.PictureMemoryScope
 import com.nuvio.app.features.player.PlayerResizeMode
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.StreamInfoLine
@@ -168,6 +169,7 @@ internal fun LiveFullscreenControls(
             zoom = zoom,
             onZoomChanged = onZoomChanged,
             onDismiss = { showZoom = false },
+            memoryScope = PictureMemoryScope.Channel,
         )
     }
 }

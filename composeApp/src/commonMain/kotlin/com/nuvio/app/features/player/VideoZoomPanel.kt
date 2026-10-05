@@ -17,10 +17,12 @@ import nuvio.composeapp.generated.resources.compose_player_reset
 import nuvio.composeapp.generated.resources.player_zoom_both
 import nuvio.composeapp.generated.resources.player_zoom_height
 import nuvio.composeapp.generated.resources.player_zoom_help
+import nuvio.composeapp.generated.resources.player_zoom_help_channel
 import nuvio.composeapp.generated.resources.player_zoom_position_horizontal
 import nuvio.composeapp.generated.resources.player_zoom_position_vertical
 import nuvio.composeapp.generated.resources.player_zoom_title
 import nuvio.composeapp.generated.resources.player_zoom_width
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -36,6 +38,7 @@ internal fun VideoZoomPanel(
     onZoomChanged: (VideoZoom) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    memoryScope: PictureMemoryScope = PictureMemoryScope.Series,
 ) {
     PlayerSidePanel(
         visible = visible,
@@ -59,7 +62,7 @@ internal fun VideoZoomPanel(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            SubtitleHelperText(stringResource(Res.string.player_zoom_help))
+            SubtitleHelperText(stringResource(videoZoomHelpText(memoryScope)))
             Spacer(Modifier.height(16.dp))
 
             Column(
@@ -131,4 +134,10 @@ private fun percent(value: Float): String = "${(value * 100).roundToInt()}%"
 private fun signedPercent(value: Float): String {
     val p = (value * 100).roundToInt()
     return if (p > 0) "+$p%" else "$p%"
+}
+
+/** P2: the help line names what the zoom is remembered for — "this series", or "this channel" on live. */
+internal fun videoZoomHelpText(scope: PictureMemoryScope): StringResource = when (scope) {
+    PictureMemoryScope.Series -> Res.string.player_zoom_help
+    PictureMemoryScope.Channel -> Res.string.player_zoom_help_channel
 }

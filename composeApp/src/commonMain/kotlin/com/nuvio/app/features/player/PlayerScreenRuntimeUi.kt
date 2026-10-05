@@ -752,5 +752,9 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         zoom = videoZoom,
         onZoomChanged = { zoom -> setVideoZoom(zoom) },
         onDismiss = { showVideoZoomPanel = false },
+        memoryScope = PlayerPreferencePolicy.pictureMemoryScope(
+            isLive = com.nuvio.app.features.streams.normalizeStreamType(activeStreamType) == "live" ||
+                contentType.equals("live", ignoreCase = true),
+        ),
     )
 }

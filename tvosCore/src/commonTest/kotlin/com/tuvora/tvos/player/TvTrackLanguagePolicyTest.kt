@@ -26,4 +26,12 @@ class TvTrackLanguagePolicyTest {
     fun `no match leaves the engine's choice alone`() {
         assertNull(TvTrackLanguagePolicy.subtitleChoice(tracks, listOf("ja"), preferenceIsNone = false))
     }
+
+    /** P3: Apple TV lists an embedded caption track as "Closed captions", not "Subtitle 1 (eia_608)". */
+    @Test
+    fun `an embedded caption track reads Closed captions`() {
+        assertEquals(TvTrack(1, "Closed captions", "", false), TvTrackLanguagePolicy.subtitleTrack(1, "Subtitle 1 (eia_608)", "", false))
+        assertEquals(TvTrack(2, "Closed captions", "en", true), TvTrackLanguagePolicy.subtitleTrack(2, "eia_608", "en", true))
+        assertEquals(TvTrack(3, "English", "en", false), TvTrackLanguagePolicy.subtitleTrack(3, "English", "en", false))
+    }
 }
