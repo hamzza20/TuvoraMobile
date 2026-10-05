@@ -55,6 +55,7 @@ import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
 import com.nuvio.app.features.player.SubtitleSideMargin
+import com.nuvio.app.features.player.LiveBufferPolicy
 import com.nuvio.app.features.player.AvailableLanguageOptions
 import com.nuvio.app.features.player.ExternalPlayerApp
 import com.nuvio.app.features.player.ExternalPlayerPlatform
@@ -424,6 +425,25 @@ private fun PlaybackSettingsSection(
                     checked = autoPlayPlayerSettings.rememberPlayerPreferences,
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setRememberPlayerPreferences,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                // F13: live IPTV buffer length. Slider over the offered choices; 0 = Auto.
+                val liveBufferIndex = LiveBufferPolicy.CHOICES_SECONDS
+                    .indexOf(autoPlayPlayerSettings.liveBufferSeconds).coerceAtLeast(0)
+                SettingsSliderRow(
+                    title = stringResource(Res.string.settings_playback_live_buffer),
+                    value = liveBufferIndex,
+                    valueText = if (autoPlayPlayerSettings.liveBufferSeconds == LiveBufferPolicy.AUTO) {
+                        stringResource(Res.string.settings_playback_live_buffer_auto)
+                    } else {
+                        stringResource(Res.string.settings_playback_live_buffer_seconds, autoPlayPlayerSettings.liveBufferSeconds)
+                    },
+                    valueRange = 0..LiveBufferPolicy.CHOICES_SECONDS.lastIndex,
+                    step = 1,
+                    isTablet = isTablet,
+                    onValueChange = { index ->
+                        PlayerSettingsRepository.setLiveBufferSeconds(LiveBufferPolicy.CHOICES_SECONDS[index])
+                    },
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 // Player preference picker: Internal / External

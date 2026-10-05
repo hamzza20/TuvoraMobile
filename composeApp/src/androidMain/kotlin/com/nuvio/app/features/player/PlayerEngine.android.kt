@@ -173,6 +173,12 @@ actual fun PlatformPlayerSurface(
     // ponytail: if a codec class regresses on ExoPlayer, narrow the force back BY CODEC, not by "live".
     // Upstream "switch player": a per-session override from the player's action row wins over the setting.
     val requestedEngine = playbackEngine ?: playerSettings.androidPlaybackEngine
+    // F13: the user's live buffer length (null = engine default; VOD and catch-up never get one).
+    val liveBufferPlan = LiveBufferPolicy.planFor(
+        seconds = playerSettings.liveBufferSeconds,
+        isLive = normalizeStreamType(streamType) == "live",
+        isCatchUp = isCatchUpPlayback,
+    )
     var activeEngine by remember(playerSourceKey, requestedEngine) {
         val base = requestedEngine.initialAndroidEngine()
         // Fix 2 (telemetry-derived, 2026-08-25): open live on libmpv on the hardware decoders that
@@ -206,6 +212,7 @@ actual fun PlatformPlayerSurface(
             initialPositionRequestKey = initialPositionRequestKey,
             resizeMode = resizeMode,
             videoZoom = videoZoom,
+            liveBufferPlan = liveBufferPlan,
             useNativeController = useNativeController,
             onInitialPositionHandled = onInitialPositionHandled,
             onControllerReady = onControllerReady,
@@ -249,6 +256,7 @@ actual fun PlatformPlayerSurface(
                 playWhenReady = playWhenReady,
                 resizeMode = resizeMode,
                 videoZoom = videoZoom,
+                liveBufferPlan = liveBufferPlan,
                 // Routed through the policy: on the live path it downgrades a leaking gpu-next to
                 // gpu (the fence-fd leak fix — see LiveVideoOutputPolicy); off the live path it
                 // passes the user's renderer through unchanged.
@@ -296,6 +304,7 @@ private fun ExoPlayerSurface(
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
     videoZoom: VideoZoom,
+    liveBufferPlan: LiveBufferPlan?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
@@ -470,10 +479,12 @@ private fun ExoPlayerSurface(
             setParameters(parameters)
         }
 
-        val minBufferMs = 15_000
-        val maxBufferMs = 70_000
-        val bufferForPlaybackMs = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS
-        val bufferForPlaybackAfterRebufferMs = 5_000
+        // F13: a live channel with a chosen buffer length uses it (LiveBufferPolicy); otherwise the
+        // tuned defaults. The byte cap below still bounds memory either way.
+        val minBufferMs = liveBufferPlan?.minBufferMs ?: 15_000
+        val maxBufferMs = liveBufferPlan?.maxBufferMs ?: 70_000
+        val bufferForPlaybackMs = liveBufferPlan?.startMs ?: DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+        val bufferForPlaybackAfterRebufferMs = liveBufferPlan?.rebufferMs ?: 5_000
         val loadControl = DefaultLoadControl.Builder()
             .setTargetBufferBytes(playerTargetBufferBytes())
             // Pinned to media3 1.8.0's default, because the heap/4 byte cap above only bounds
@@ -1078,6 +1089,7 @@ private fun LibmpvPlayerSurface(
     playWhenReady: Boolean,
     resizeMode: PlayerResizeMode,
     videoZoom: VideoZoom,
+    liveBufferPlan: LiveBufferPlan?,
     /** Already resolved by [LiveVideoOutputPolicy]: gpu on the live path, else the user's renderer. */
     videoOutput: String,
     hardwareDecodingEnabled: Boolean,
@@ -1319,6 +1331,10 @@ private fun LibmpvPlayerSurface(
 
     LaunchedEffect(playerViewRef, videoZoom) {
         playerViewRef?.applyVideoZoom(videoZoom)
+    }
+
+    LaunchedEffect(playerViewRef, liveBufferPlan) {
+        liveBufferPlan?.let { plan -> playerViewRef?.applyLiveBuffer(plan) }
     }
 
     LaunchedEffect(playerViewRef, sourceUrl, sourceAudioUrl, sanitizedSourceHeaders, externalSubtitles) {
@@ -1964,6 +1980,13 @@ private class NuvioLibmpvView(
     }
 
     @Volatile private var appliedVideoZoom: VideoZoom? = null
+
+    /** F13: cache cap + rebuffer cushion for a live channel (runtime-settable mpv options). */
+    fun applyLiveBuffer(plan: LiveBufferPlan) = ctl {
+        LiveBufferPolicy.mpvProperties(plan).forEach { (name, value) ->
+            runCatching { mpv.setPropertyString(name, value) }
+        }
+    }
 
     /** F36: video-scale-x/y + video-pan-x/y on the control thread (never mpv on Main). */
     fun applyVideoZoom(zoom: VideoZoom) {

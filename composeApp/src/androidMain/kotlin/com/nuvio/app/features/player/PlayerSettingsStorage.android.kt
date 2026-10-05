@@ -32,6 +32,8 @@ actual object PlayerSettingsStorage {
     // Device-local (not in syncKeys): see PlayerSettingsUiState.rememberPlayerPreferences.
     private const val rememberPlayerPreferencesKey = "remember_player_preferences"
     private const val subtitleSideMarginPercentKey = "subtitle_side_margin_percent"
+    // F13: device-local like the other buffer/engine choices (network- and device-dependent).
+    private const val liveBufferSecondsKey = "live_buffer_seconds"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val pictureInPictureEnabledKey = "picture_in_picture_enabled"
@@ -317,6 +319,16 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(rememberPlayerPreferencesKey), enabled)
             ?.apply()
+    }
+
+    actual fun loadLiveBufferSeconds(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(liveBufferSecondsKey)
+            if (sharedPreferences.contains(key)) sharedPreferences.getInt(key, 0) else null
+        }
+
+    actual fun saveLiveBufferSeconds(seconds: Int) {
+        preferences?.edit()?.putInt(ProfileScopedKey.of(liveBufferSecondsKey), seconds)?.apply()
     }
 
     actual fun loadSubtitleSideMarginPercent(): Int? =

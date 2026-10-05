@@ -46,6 +46,8 @@ data class PlayerSettingsUiState(
      * (adding it is a sync payload change, held for an owner decision).
      */
     val rememberPlayerPreferences: Boolean = PlayerPreferencePolicy.DEFAULT_REMEMBER,
+    /** F13: live IPTV buffer in seconds, [LiveBufferPolicy.AUTO] = engine default. Device-local. */
+    val liveBufferSeconds: Int = LiveBufferPolicy.AUTO,
     val holdToSpeedEnabled: Boolean = true,
     val holdToSpeedValue: Float = 2f,
     val touchGesturesEnabled: Boolean = true,
@@ -166,6 +168,7 @@ object PlayerSettingsRepository {
     private var showStreamInfo = true
     private var resizeMode = PlayerResizeMode.Fit
     private var rememberPlayerPreferences = PlayerPreferencePolicy.DEFAULT_REMEMBER
+    private var liveBufferSeconds = LiveBufferPolicy.AUTO
     private var holdToSpeedEnabled = true
     private var holdToSpeedValue = 2f
     private var touchGesturesEnabled = true
@@ -249,6 +252,7 @@ object PlayerSettingsRepository {
         showStreamInfo = true
         resizeMode = PlayerResizeMode.Fit
         rememberPlayerPreferences = PlayerPreferencePolicy.DEFAULT_REMEMBER
+        liveBufferSeconds = LiveBufferPolicy.AUTO
         holdToSpeedEnabled = true
         holdToSpeedValue = 2f
         touchGesturesEnabled = true
@@ -324,6 +328,7 @@ object PlayerSettingsRepository {
             ?: PlayerResizeMode.Fit
         rememberPlayerPreferences = PlayerSettingsStorage.loadRememberPlayerPreferences()
             ?: PlayerPreferencePolicy.DEFAULT_REMEMBER
+        liveBufferSeconds = LiveBufferPolicy.normalize(PlayerSettingsStorage.loadLiveBufferSeconds())
         holdToSpeedEnabled = PlayerSettingsStorage.loadHoldToSpeedEnabled() ?: true
         holdToSpeedValue = PlayerSettingsStorage.loadHoldToSpeedValue() ?: 2f
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
@@ -525,6 +530,15 @@ object PlayerSettingsRepository {
         rememberPlayerPreferences = enabled
         publish()
         PlayerSettingsStorage.saveRememberPlayerPreferences(enabled)
+    }
+
+    fun setLiveBufferSeconds(seconds: Int) {
+        ensureLoaded()
+        val normalized = LiveBufferPolicy.normalize(seconds)
+        if (liveBufferSeconds == normalized) return
+        liveBufferSeconds = normalized
+        publish()
+        PlayerSettingsStorage.saveLiveBufferSeconds(normalized)
     }
 
     fun setHoldToSpeedEnabled(enabled: Boolean) {
@@ -1086,6 +1100,7 @@ object PlayerSettingsRepository {
             showStreamInfo = showStreamInfo,
             resizeMode = resizeMode,
             rememberPlayerPreferences = rememberPlayerPreferences,
+            liveBufferSeconds = liveBufferSeconds,
             holdToSpeedEnabled = holdToSpeedEnabled,
             holdToSpeedValue = holdToSpeedValue,
             touchGesturesEnabled = touchGesturesEnabled,

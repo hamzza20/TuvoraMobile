@@ -323,6 +323,12 @@ actual fun PlatformPlayerSurface(
         // end of the recording they were part-way through.
         val isLive = LivePlaybackRejoinPolicy.rejoinsLiveEdge(streamType, isCatchUpPlayback)
         bridge.setIsLiveStream(isLive)
+        // F13: the user's live buffer length (cache cap + rebuffer cushion); null = mpv defaults.
+        LiveBufferPolicy.planFor(
+            seconds = latestPlayerSettings.value.liveBufferSeconds,
+            isLive = normalizeStreamType(streamType) == "live",
+            isCatchUp = isCatchUpPlayback,
+        )?.let { plan -> bridge.setMpvProperties(LiveBufferPolicy.mpvProperties(plan)) }
         // The resume rides the load (mpv `start=`), not a post-load seek mpv can reject (B59b).
         val startOption = MpvStartPosition.loadOption(latestInitialPositionMs.value, isLive)
         bridge.loadFileWithAudio(
