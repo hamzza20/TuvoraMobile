@@ -137,6 +137,9 @@ object VideoZoomPolicy {
     }
 }
 
+/** What a remembered aspect + manual zoom belongs to (P2): a series/title, or a live channel. */
+enum class PictureMemoryScope { Series, Channel }
+
 /** What a play starts with for the picture: the resize mode plus any manual zoom. */
 data class PictureChoice(
     val resizeMode: PlayerResizeMode,
@@ -163,6 +166,13 @@ object PlayerPreferencePolicy {
         rememberEnabled: Boolean,
         stored: PersistedPlayerTrackPreference?,
     ): PersistedPlayerTrackPreference? = if (rememberEnabled) stored else null
+
+    /**
+     * P2 (W2 device pass): what a remembered picture is kept for, so the zoom panel can say so —
+     * a live channel's picture is keyed by the CHANNEL (F28/B123), not a series.
+     */
+    fun pictureMemoryScope(isLive: Boolean): PictureMemoryScope =
+        if (isLive) PictureMemoryScope.Channel else PictureMemoryScope.Series
 
     /** Whether an in-player choice (track, aspect, zoom) is written to the per-series memory. */
     fun persistsSeriesChoice(rememberEnabled: Boolean, seriesKey: String?): Boolean =

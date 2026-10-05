@@ -460,6 +460,7 @@
     <string name="compose_player_resize_zoom">Zoom</string>
     <string name="player_zoom_title">Manual zoom</string>
     <string name="player_zoom_help">Fine-tune the picture on top of Fit, Fill or Zoom. Remembered for this series when “Remember my player preferences” is on.</string>
+    <string name="player_zoom_help_channel">Fine-tune the picture on top of Fit, Fill or Zoom. Remembered for this channel when “Remember my player preferences” is on.</string>
     <string name="player_zoom_both">Zoom</string>
     <string name="player_zoom_width">Width</string>
     <string name="player_zoom_height">Height</string>
@@ -1386,6 +1387,7 @@
     <string name="source_trakt">Trakt</string>
     <string name="source_mal">MyAnimeList</string>
     <string name="subtitle_language_unknown">Unknown</string>
+    <string name="subtitle_closed_captions">Closed captions</string>
     <string name="theme_amber">Amber</string>
     <string name="theme_crimson">Crimson</string>
     <string name="theme_emerald">Emerald</string>

@@ -351,6 +351,7 @@ internal fun PlayerControlsShell(
                         displayedPositionMs = displayedPositionMs,
                         showRemainingTime = showRemainingTime,
                         onRuntimeClick = onRuntimeClick,
+                        isLive = isLive,
                         metrics = metrics,
                         resizeMode = resizeMode,
                         onSubtitleClick = onSubtitleClick,
