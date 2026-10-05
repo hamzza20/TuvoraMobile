@@ -406,10 +406,15 @@ private struct LiveGuideView: View {
         Task {
             try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
             refreshFavorites()
-            lastFavoriteToggle = undoable ? (channel.contentId, Date()) : nil
+            let at = Date()
+            lastFavoriteToggle = undoable ? (channel.contentId, at) : nil
             notice = undoable
                 ? "\u{201C}\(channel.name)\u{201D} \(adding ? "added to" : "removed from") Favorites. Hold OK to undo."
                 : nil
+            // The notice lasts as long as Undo is offered (the hold-OK menu's 6 s window).
+            guard undoable else { return }
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            if lastFavoriteToggle?.at == at { notice = nil }
         }
     }
 
@@ -546,7 +551,13 @@ private struct LiveGuideView: View {
                                             onFocus: {
                                                 focusedChannel = channel
                                                 focusedCell = nil
-                                                notice = nil
+                                                // F03 (device pass 2026-10-05): the hold-OK menu closing hands
+                                                // focus back to this row, which wiped "Hold OK to undo" at once —
+                                                // keep the notice while it is about this row.
+                                                let undoNotice = lastFavoriteToggle.map {
+                                                    $0.contentId == channel.contentId && Date().timeIntervalSince($0.at) < 6
+                                                } ?? false
+                                                if !undoNotice { notice = nil }
                                                 if timelineChannel != nil { leaveTimeline() }
                                             },
                                             onSelect: { select(channel) },
