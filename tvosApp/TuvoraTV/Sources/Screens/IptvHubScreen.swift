@@ -239,6 +239,9 @@ private struct LiveGuideView: View {
     @State private var favoriteOrder: [LiveGuideChannel] = []
     /// F03: the favourite just toggled — Undo (in the hold-OK menu) for a few seconds, like a hide.
     @State private var lastFavoriteToggle: (contentId: String, at: Date)?
+    /// P5: a favourite removed from a favourites row stays listed (marked as removed) while Undo is offered.
+    @State private var pendingRemoval: TvFavouriteRows.PendingRemoval?
+    @State private var pendingRemovalChannel: LiveGuideChannel?
 
     // Catch-up
     @State private var windowStart = TvGuideTimeline.shared.liveWindowStartMs(nowMs: TvLiveGuide.shared.nowMs())
@@ -264,10 +267,14 @@ private struct LiveGuideView: View {
         // channel (schedule, pin, archive flags), another playlist's come from the library entry.
         case "favorites", "allfavorites":
             let prefix = TvLiveGuide.shared.accountPrefix(accountId: accountId)
-            let byId = Dictionary(channels.map { ($0.contentId, $0) }, uniquingKeysWith: { a, _ in a })
-            return favoriteOrder
-                .filter { category == "allfavorites" || $0.contentId.hasPrefix(prefix) }
-                .map { byId[$0.contentId] ?? $0 }
+            var byId = Dictionary(channels.map { ($0.contentId, $0) }, uniquingKeysWith: { a, _ in a })
+            let rows = favoriteOrder.filter { category == "allfavorites" || $0.contentId.hasPrefix(prefix) }
+            for row in rows where byId[row.contentId] == nil { byId[row.contentId] = row }
+            if let removed = pendingRemovalChannel, byId[removed.contentId] == nil { byId[removed.contentId] = removed }
+            // P5: a just-removed favourite keeps its row until the Undo window closes.
+            return TvFavouriteRows.shared
+                .visibleIds(rowIds: rows.map(\.contentId), pending: pendingRemoval, nowMs: now)
+                .compactMap { byId[$0] }
         case "recent":
             let ids = recents.map(\.contentId)
             return ids.compactMap { id in channels.first { $0.contentId == id } }
@@ -406,8 +413,25 @@ private struct LiveGuideView: View {
     /// F03 (owner 2026-10-04): a favourite toggle is confirmed — with Undo — rather than a popup.
     private func toggleFavorite(_ channel: LiveGuideChannel, undoable: Bool) {
         let adding = !favorites.contains(channel.contentId)
+        // P5: Undo of a removal puts the favourite back in its old place, not at the top.
+        let undoing = !undoable ? pendingRemoval.flatMap { $0.contentId == channel.contentId ? $0 : nil } : nil
+        // P5: removing inside a favourites row keeps the row (marked as removed) while Undo is offered —
+        // dropping it at once left the promised "Hold OK to undo" nothing to hold OK on.
+        let stamp = TvLiveGuide.shared.nowMs()
+        let removal = undoable && !adding && isFavoritesCategory
+            ? TvFavouriteRows.shared.pendingRemoval(
+                rowIds: visible.map(\.contentId), contentId: channel.contentId,
+                savedAtEpochMs: TvLiveGuide.shared.favoriteSavedAt(contentId: channel.contentId), nowMs: stamp)
+            : nil
         Task {
-            try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
+            if let undoing {
+                try? await TvLiveGuide.shared.restoreFavorite(channel: channel, savedAtEpochMs: undoing.savedAtEpochMs)
+            } else {
+                try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
+            }
+            now = TvLiveGuide.shared.nowMs()
+            pendingRemoval = removal
+            pendingRemovalChannel = removal == nil ? nil : channel
             refreshFavorites()
             let at = Date()
             lastFavoriteToggle = undoable ? (channel.contentId, at) : nil
@@ -416,8 +440,14 @@ private struct LiveGuideView: View {
                 : nil
             // The notice lasts as long as Undo is offered (the hold-OK menu's 6 s window).
             guard undoable else { return }
-            try? await Task.sleep(nanoseconds: 6_000_000_000)
-            if lastFavoriteToggle?.at == at { notice = nil }
+            try? await Task.sleep(nanoseconds: UInt64(TvFavouriteRows.shared.UNDO_WINDOW_MS) * 1_000_000)
+            if lastFavoriteToggle?.at == at {
+                notice = nil
+                // The window closed: the removed row leaves now.
+                pendingRemoval = nil
+                pendingRemovalChannel = nil
+                now = TvLiveGuide.shared.nowMs()
+            }
         }
     }
 
@@ -546,6 +576,7 @@ private struct LiveGuideView: View {
                                                        startMs: windowStart, nowMs: now, catchUpSupported: catchUpSupported)
                             GuideChannelRow(number: index + 1, channel: channel, cells: cells,
                                             favorite: favorites.contains(channel.contentId),
+                                            removed: pendingRemoval?.contentId == channel.contentId,
                                             interactive: timelineChannel == channel.contentId,
                                             nowFraction: timeline.containsNow(startMs: windowStart, nowMs: now)
                                                 ? timeline.nowFraction(startMs: windowStart, nowMs: now) : nil,
@@ -741,7 +772,9 @@ private struct LiveGuideView: View {
             previewRequests.cancel()
             self.previewSession = nil
             previewing = nil
-            let list = visible
+            // T4: zapping from All favorites stays inside the playing channel's own playlist.
+            let zapIds = Set(TvFavouriteRows.shared.zapIds(rowIds: visible.map(\.contentId), playingId: channel.contentId))
+            let list = visible.filter { zapIds.contains($0.contentId) }
             var index = list.firstIndex { $0.contentId == channel.contentId } ?? 0
             playback.play(previewSession) { offset in
                 guard !list.isEmpty else { return nil }
@@ -885,6 +918,8 @@ private struct GuideChannelRow: View {
     let channel: LiveGuideChannel
     let cells: [TvGuideCell]
     let favorite: Bool
+    /// P5: a favourite just removed, kept in its favourites row while Undo is offered.
+    var removed: Bool = false
     let interactive: Bool
     let nowFraction: Double?
     let labelWidth: CGFloat
@@ -916,6 +951,8 @@ private struct GuideChannelRow: View {
             strip
         }
         .frame(height: height)
+        // P5: a just-removed favourite reads as removed (dimmed, no ★) until the Undo window closes.
+        .opacity(removed ? 0.5 : 1)
         .background(RoundedRectangle(cornerRadius: dp(8)).fill(focused || interactive ? colors.primary.opacity(0.22) : .clear))
         .overlay(RoundedRectangle(cornerRadius: dp(8)).stroke(focused || interactive ? colors.primary : .clear, lineWidth: NuvioTokens.Stroke.focus))
     }
