@@ -23,10 +23,21 @@ final class FavouriteUndoTests: XCTestCase {
     private func holdMenu() -> [String] {
         remote.press(.select, forDuration: 1.2)
         Thread.sleep(forTimeInterval: 1.5)
-        return app.descendants(matching: .other).allElementsBoundByIndex
-            .filter { Self.menuLabels.contains($0.label) && $0.frame.width > 100 }
-            .sorted { $0.frame.minY < $1.frame.minY }
-            .map(\.label)
+        // One snapshot of the tree (querying element by element races the menu's animation).
+        for _ in 0..<3 {
+            guard let root = try? app.snapshot() else { Thread.sleep(forTimeInterval: 0.5); continue }
+            var found: [(String, CGFloat)] = []
+            func walk(_ node: XCUIElementSnapshot) {
+                if node.elementType == .other, Self.menuLabels.contains(node.label), node.frame.width > 100 {
+                    found.append((node.label, node.frame.minY))
+                }
+                node.children.forEach(walk)
+            }
+            walk(root)
+            if !found.isEmpty { return found.sorted { $0.1 < $1.1 }.map(\.0) }
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        return []
     }
     private func pick(_ item: String, in menu: [String]) {
         guard let index = menu.firstIndex(of: item) else { XCTFail("no \(item) in \(menu)"); return }
