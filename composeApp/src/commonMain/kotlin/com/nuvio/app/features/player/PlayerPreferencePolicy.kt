@@ -284,3 +284,16 @@ object SubtitleSideMargin {
     fun paddingPx(widthPx: Int, sideMarginPercent: Int): Int =
         (widthPx.coerceAtLeast(0) * sideMarginPercent.coerceIn(0, MAX_PERCENT) / 100f).roundToInt()
 }
+
+/** F47 default look — which base a stored style is read over. (stub: red step) */
+object SubtitleStyleDefaults {
+    val LEGACY = SubtitleStyleState.DEFAULT
+    fun baseFor(anyFieldStored: Boolean): SubtitleStyleState = SubtitleStyleState.DEFAULT
+}
+
+/** F47 inner box padding for ExoPlayer cues. (stub: red step) */
+object SubtitleBoxPadding {
+    const val PAD_CHAR = ' '
+    const val EXO_PAD_CHARS = 1
+    fun padLines(text: String, count: Int): String = text
+}
