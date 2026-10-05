@@ -11,6 +11,7 @@ import com.nuvio.app.features.iptv.content.IptvSeriesRow
 import com.nuvio.app.features.iptv.content.IptvStreamRow
 import com.nuvio.app.features.iptv.identity.M3uIdentity
 import com.nuvio.app.features.trakt.TraktPlatformClock
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -44,7 +45,9 @@ object M3UClient : IptvClient {
      */
     suspend fun ensureIngested(acc: XtreamAccount, force: Boolean = false): Boolean {
         val meta = IptvContentDb.ingestMeta(acc.id)
-        if (!force && meta != null && !isStale(meta)) return true
+        // B64: a catalog built under the pre-B64 ids rebuilds once (and the saved refs follow, below).
+        val oldIds = meta != null && meta.idScheme < M3U_ID_SCHEME
+        if (!force && meta != null && !isStale(meta) && !oldIds) return true
         val shouldRun = ingestLock.withLock {
             if (acc.id in ingesting) false else { ingesting.add(acc.id); true }
         }
@@ -53,7 +56,12 @@ object M3UClient : IptvClient {
             return IptvContentDb.ingestMeta(acc.id) != null
         }
         return try {
-            ingest(acc).isSuccess
+            if (oldIds) evictIdKeyedCaches(acc)
+            ingest(acc).isSuccess.also { ok ->
+                // B64: move this profile's saved refs onto the ids the catalog now carries. Off the
+                // browse path; idempotent, so a second run (next ingest) finds nothing to move.
+                if (ok) rekeyScope.launch { M3uIdRekeyRunner.run(acc) }
+            }
         } finally {
             ingestLock.withLock { ingesting.remove(acc.id) }
         }
@@ -88,7 +96,7 @@ object M3UClient : IptvClient {
         // Capture the playlist's declared EPG url (#EXTM3U url-tvg) so XmltvClient can resolve a guide
         // when the account has no explicit epgUrl. Persisted on the meta row alongside the counts.
         val headerEpgUrl = parser.epgUrl
-        IptvContentDb.finishIngest(acc.id, collector.liveCount, collector.vodCount, collector.seriesCount, headerEpgUrl)
+        IptvContentDb.finishIngest(acc.id, collector.liveCount, collector.vodCount, collector.seriesCount, headerEpgUrl, idScheme = M3U_ID_SCHEME)
         val meta = IngestMeta(0, collector.liveCount, collector.vodCount, collector.seriesCount, headerEpgUrl)
         log.i { "M3U ingest done acc=${acc.id} lines=$lineCount live=${collector.liveCount} vod=${collector.vodCount} series=${collector.seriesCount} episodes=${collector.episodeCount} epgUrl=$headerEpgUrl" }
         meta
@@ -184,6 +192,22 @@ object M3UClient : IptvClient {
             }
             channels.clear(); vod.clear(); series.clear(); episodes.clear(); pendingCats.clear()
         }
+    }
+
+    // A re-key failure must never reach the app: it only logs, and the next ingest retries.
+    private val rekeyScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default +
+            kotlinx.coroutines.CoroutineExceptionHandler { _, e -> log.w(e) { "M3U id re-key failed" } },
+    )
+
+    /**
+     * B64: caches keyed by the pre-B64 item ids (TMDB match index, canonical-EPG mapping, learned
+     * catch-up facts) would key the rebuilt catalog's items wrongly — drop them; they rebuild.
+     */
+    private suspend fun evictIdKeyedCaches(acc: XtreamAccount) {
+        runCatching { com.nuvio.app.features.iptv.match.XtreamMatchIndex.purge(acc.id) }
+        runCatching { com.nuvio.app.features.epg.EpgMirrorRepository.purgeProvider(acc.id) }
+        runCatching { CatchUpEpgRepository.forget(acc.id) }
     }
 
     // --- IptvClient ------------------------------------------------------------
