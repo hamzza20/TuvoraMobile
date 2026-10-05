@@ -93,7 +93,7 @@ internal fun LazyListScope.xtreamSettingsContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     val info = managed[account.id]
                     SettingsNavigationRow(
-                        title = account.name,
+                        title = PlaylistAddress.displayName(account.name),
                         // B60: an edit saved despite a failed provider check says so first.
                         description = state.saveWarnings[account.id]
                             ?: com.nuvio.app.features.iptv.match.indexingStatusLine(
@@ -101,7 +101,8 @@ internal fun LazyListScope.xtreamSettingsContent(
                                 progress = indexProgress[account.id],
                             )
                             ?: info?.let { managedRowLine(it, knownInfo[account.id]) }
-                            ?: ((ServerFailoverPolicy.backupLabel(activeServers[account.id] ?: 0) ?: account.baseUrl) +
+                            // P4: the address with its login masked — an M3U link's query IS the login.
+                            ?: ((ServerFailoverPolicy.backupLabel(activeServers[account.id] ?: 0) ?: PlaylistAddress.masked(account.baseUrl)) +
                                 if (account.enabled) "" else "  •  disabled"),
                         isTablet = isTablet,
                         trailingContent = if (info != null) {

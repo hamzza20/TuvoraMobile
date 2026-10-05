@@ -71,7 +71,7 @@ struct IptvHubScreen: View {
             }
             Spacer()
             if let account = hub.accounts.first(where: { $0.id == hub.selectedAccountId }) ?? hub.accounts.first {
-                HubChip(title: account.name, trailingIcon: hub.accounts.count > 1 ? "md_arrow_drop_down" : nil, selected: false) {
+                HubChip(title: TvIptvSettingsPolicy.shared.playlistName(name: account.name), trailingIcon: hub.accounts.count > 1 ? "md_arrow_drop_down" : nil, selected: false) {
                     if hub.accounts.count > 1 { smokeLog("SMOKE playlist chip pressed"); choosingPlaylist = true }
                 }
             }
@@ -92,7 +92,7 @@ private struct PlaylistDialog: View {
     var body: some View {
         NuvioDialog(title: "Choose a playlist") {
             ForEach(hub.accounts, id: \.id) { account in
-                SettingsActionRow(title: account.name, value: account.id == hub.selectedAccountId ? "Selected" : nil) {
+                SettingsActionRow(title: TvIptvSettingsPolicy.shared.playlistName(name: account.name), value: account.id == hub.selectedAccountId ? "Selected" : nil) {
                     TvIptvBrowse.shared.selectPlaylist(accountId: account.id)
                     dismiss()
                 }

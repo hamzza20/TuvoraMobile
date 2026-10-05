@@ -2,6 +2,7 @@ package com.tuvora.tvos.screens
 
 import com.nuvio.app.features.iptv.BackupServerListEdits
 import com.nuvio.app.features.iptv.BackupServerValidation
+import com.nuvio.app.features.iptv.PlaylistAddress
 import com.nuvio.app.features.iptv.SOURCE_TYPE_M3U_URL
 import com.nuvio.app.features.iptv.SOURCE_TYPE_STALKER
 import com.nuvio.app.features.iptv.SOURCE_TYPE_XTREAM
@@ -69,8 +70,9 @@ object TvBackupServers {
     /**
      * The backup now answering for a playlist, for the details' "Using backup server N (address)"
      * (NuvioTV `iptv_using_backup_server_host`); null when [activeIndex] is the main server or no
-     * longer names a saved backup (the row then says just "Using backup server N").
+     * longer names a saved backup (the row then says just "Using backup server N"). Display-only, so
+     * the address comes login-masked (P4).
      */
     fun activeBackupAddress(backupUrls: List<String>, activeIndex: Int): String? =
-        if (activeIndex <= 0) null else backupUrls.getOrNull(activeIndex - 1)
+        if (activeIndex <= 0) null else backupUrls.getOrNull(activeIndex - 1)?.let(PlaylistAddress::masked)
 }
