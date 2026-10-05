@@ -78,4 +78,36 @@ final class FavouriteUndoTests: XCTestCase {
         XCTAssertTrue(third.contains(toggle), "Undo did not restore the favourite state (menu \(third))")
         press(.menu, settle: 1)
     }
+
+    /// Every row of All favorites is a favourite — including those of OTHER playlists, whose hold-OK
+    /// menu used to say "Add to Favorites" (the set behind the label only held the current playlist's
+    /// channels). Read-only: each menu is dismissed with MENU. Skips when All favorites is empty.
+    func testAllFavoritesRowsOfferRemove() throws {
+        app.launchArguments = ["-smokePickProfile", "1", "-smokeTab", "iptv"]
+        app.launch()
+        guard app.buttons["hubchip.Live TV"].waitForExistence(timeout: 40) else {
+            throw XCTSkip("needs a playlist on profile 1 (the IPTV hub has no Live TV chip)")
+        }
+        Thread.sleep(forTimeInterval: 4)
+        press(.down, settle: 1.5)
+        if !["#All favorites", "#Favorites", "#Recent", "#All channels"].contains(focusedId()) { press(.left, settle: 1) }
+        for _ in 0..<10 where focusedId() != "#All favorites" { press(.up, settle: 0.5) }
+        guard focusedId() == "#All favorites" else { throw XCTSkip("never reached All favorites (focus \(focusedId()))") }
+        press(.select, settle: 2)
+        press(.right, settle: 1.5)
+        guard focusedId().range(of: #"^#1, "#, options: .regularExpression) != nil else {
+            throw XCTSkip("All favorites is empty on this profile (focus \(focusedId()))")
+        }
+        var seen = Set<String>()
+        for _ in 0..<6 {
+            let row = focusedId()
+            guard row.range(of: #"^#\d+, "#, options: .regularExpression) != nil, seen.insert(row).inserted else { break }
+            let menu = holdMenu()
+            XCTAssertTrue(menu.contains("Remove from Favorites") && !menu.contains("Add to Favorites"),
+                          "All favorites row \(row) offers \(menu)")
+            press(.menu, settle: 1)
+            press(.down, settle: 0.8)
+        }
+        XCTAssertGreaterThan(seen.count, 0)
+    }
 }
