@@ -1,6 +1,7 @@
 package com.tuvora.tvos.screens
 
 import com.nuvio.app.features.epg.EpgRegionSelection
+import com.nuvio.app.features.iptv.PlaylistAddress
 
 /** A row of "Hidden channels & groups": what it is, and the id the facade unhides it by. */
 data class TvHiddenItem(val id: String, val name: String, val kindLabel: String)
@@ -13,6 +14,15 @@ data class TvEpgRegion(val name: String, val flag: String, val channelCount: Int
  * regions), pure so the wording rules are tested without the overlay or the EPG mirror.
  */
 object TvIptvSettingsPolicy {
+    /**
+     * P4 — a playlist's name as a settings row, hub chip or picker shows it. Older builds named a
+     * nameless synced M3U row after its full link (login included), and that name syncs.
+     */
+    fun playlistName(name: String): String = PlaylistAddress.displayName(name)
+
+    /** P4 — a playlist or backup address on a READ-ONLY row: login masked (B116), shape kept. Editors keep the raw value. */
+    fun maskedAddress(url: String): String = PlaylistAddress.masked(url)
+
     /** hiddenItemKindLabel: "Channel", or the group's content type. */
     fun kindLabel(isChannel: Boolean, contentType: String): String = when {
         isChannel -> "Channel"

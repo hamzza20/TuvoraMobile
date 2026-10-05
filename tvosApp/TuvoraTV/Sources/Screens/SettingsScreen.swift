@@ -889,8 +889,9 @@ struct IptvSettingsDetail: View {
                     // Step 0.3: name the backup that is answering when it isn't the main server (NuvioTV); then
                     // Step 2's "Managed by X \u{00B7} N days left" for a playlist a provider installed; else the address.
                     let source = model.activeServers[account.id].map(BackupServerCopy.using)
-                        ?? managedLines[account.id] ?? (account.fileName ?? account.baseUrl)
-                    SettingsActionRow(title: account.name,
+                        ?? managedLines[account.id]
+                        ?? (account.fileName ?? TvIptvSettingsPolicy.shared.maskedAddress(url: account.baseUrl)) // P4: never the login
+                    SettingsActionRow(title: TvIptvSettingsPolicy.shared.playlistName(name: account.name),
                                       subtitle: [source, model.xtream?.saveWarnings[account.id]]
                                           .compactMap { $0 }.joined(separator: "\n"),
                                       value: account.enabled ? "On" : "Off",
@@ -919,7 +920,7 @@ private struct HiddenItemsDialog: View {
     @State private var items: [TvHiddenItem]?
 
     var body: some View {
-        NuvioDialog(title: "Hidden in \(account.name)",
+        NuvioDialog(title: "Hidden in \(TvIptvSettingsPolicy.shared.playlistName(name: account.name))",
                     subtitle: TvIptvSettingsPolicy.shared.hiddenSubtitle(loading: items == nil, count: Int32(items?.count ?? 0)),
                     width: dp(520)) {
             ForEach(items ?? [], id: \.id) { item in
@@ -1172,7 +1173,9 @@ private struct PlaylistFormDialog: View {
         SettingsHelperText(text: "Used automatically if the main server doesn't respond.")
         ForEach(Array(form.backupUrls.enumerated()), id: \.offset) { index, value in
             SettingsActionRow(title: BackupServerCopy.row(index + 1),
-                              subtitle: value.isEmpty ? L("Not set — press OK to enter an address") : value,
+                              // P4: a read-only row — the login is masked; the editor it opens keeps the raw value.
+                              subtitle: value.isEmpty ? L("Not set — press OK to enter an address")
+                                  : TvIptvSettingsPolicy.shared.maskedAddress(url: value),
                               value: problems[index].map(L), valueColor: colors.error) {
                 openEditor(index: index)
             }
@@ -1302,13 +1305,15 @@ enum BackupServerCopy {
     }
     static func using(_ n: Int) -> String { String(format: LK("iptv_using_backup_server", "Using backup server %1$ld"), n) }
     static func usingAddress(_ n: Int, _ address: String) -> String {
-        String(format: LK("iptv_using_backup_server_host", "Using backup server %1$ld (%2$@)"), n, address)
+        String(format: LK("iptv_using_backup_server_host", "Using backup server %1$ld (%2$@)"), n,
+               TvIptvSettingsPolicy.shared.maskedAddress(url: address))
     }
     static func removeTitle(_ n: Int) -> String {
         String(format: LK("iptv_backup_server_remove_confirm_title", "Remove backup server %1$ld?"), n)
     }
     static func removeSubtitle(_ address: String) -> String {
-        String(format: LK("iptv_backup_server_remove_confirm_subtitle", "%1$@ won't be tried if the main server stops responding."), address)
+        String(format: LK("iptv_backup_server_remove_confirm_subtitle", "%1$@ won't be tried if the main server stops responding."),
+               TvIptvSettingsPolicy.shared.maskedAddress(url: address))
     }
 }
 
@@ -1771,7 +1776,7 @@ private struct ContentTypesDialog: View {
     private var account: XtreamAccount? { model.xtream?.accounts.first { $0.id == accountId } }
 
     var body: some View {
-        NuvioDialog(title: "Content & Categories", subtitle: account?.name) {
+        NuvioDialog(title: "Content & Categories", subtitle: account.map { TvIptvSettingsPolicy.shared.playlistName(name: $0.name) }) {
             if let account {
                 ForEach(TvIptvContentPolicy.shared.contentTypes, id: \.first) { pair in
                     let type = pair.first as String? ?? ""

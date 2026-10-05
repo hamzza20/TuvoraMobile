@@ -190,7 +190,7 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
 
         hiddenFor?.let { target ->
             IptvHiddenItemsDialog(
-                playlistName = target.name,
+                playlistName = PlaylistAddress.displayName(target.name),
                 state = hiddenState,
                 onUnhide = { hiddenController.unhide(target, it) },
                 onDismiss = { hiddenFor = null },
@@ -199,10 +199,11 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
 
         confirming?.let { action ->
             val provider = info?.providerName
-            val copy = DestructiveConfirmPolicy.copy(action, account.name, provider, managed = info != null)
+            val shownName = PlaylistAddress.displayName(account.name)
+            val copy = DestructiveConfirmPolicy.copy(action, shownName, provider, managed = info != null)
             DestructiveConfirmDialog(
                 action = action,
-                copy = localizedCopy(action, copy, account.name, provider, managed = info != null),
+                copy = localizedCopy(action, copy, shownName, provider, managed = info != null),
                 confirmLabel = stringResource(
                     if (action == DestructiveAction.DETACH) Res.string.provider_confirm_detach_button else Res.string.provider_confirm_remove_button,
                 ),
