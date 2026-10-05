@@ -77,6 +77,11 @@ object TvIptvPairingPolicy {
                     serialNumber = obj.string("serial_number").orEmpty(),
                     deviceId = obj.string("device_id").orEmpty(),
                     sendDeviceId = obj.bool("send_device_id") ?: true,
+                    // F46 — the same keys NuvioTV's IptvPairingPayload reads.
+                    deviceId2 = obj.string("device_id2")?.trim().orEmpty(),
+                    signature = obj.string("signature")?.trim().orEmpty(),
+                    stbModel = obj.string("stb_model")?.trim().orEmpty(),
+                    hwVersion = obj.string("hw_version")?.trim().orEmpty(),
                 )
             }
             else -> null
