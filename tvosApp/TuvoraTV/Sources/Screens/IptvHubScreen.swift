@@ -234,6 +234,11 @@ private struct LiveGuideView: View {
     @State private var revealCategories = false
     @State private var recents: [XtreamLiveRecent] = []
     @State private var favorites: Set<String> = []
+    /// F03: every playlist's favourites, in the synced favourites order (the All favorites row; this
+    /// playlist's Favorites row is its part of it).
+    @State private var favoriteOrder: [LiveGuideChannel] = []
+    /// F03: the favourite just toggled — Undo (in the hold-OK menu) for a few seconds, like a hide.
+    @State private var lastFavoriteToggle: (contentId: String, at: Date)?
 
     // Catch-up
     @State private var windowStart = TvGuideTimeline.shared.liveWindowStartMs(nowMs: TvLiveGuide.shared.nowMs())
@@ -255,7 +260,14 @@ private struct LiveGuideView: View {
     private var visible: [LiveGuideChannel] {
         switch category {
         case "all": return channels
-        case "favorites": return channels.filter { favorites.contains($0.contentId) }
+        // F03: favourites rows keep the synced favourites order; this playlist's rows reuse the full
+        // channel (schedule, pin, archive flags), another playlist's come from the library entry.
+        case "favorites", "allfavorites":
+            let prefix = TvLiveGuide.shared.accountPrefix(accountId: accountId)
+            let byId = Dictionary(channels.map { ($0.contentId, $0) }, uniquingKeysWith: { a, _ in a })
+            return favoriteOrder
+                .filter { category == "allfavorites" || $0.contentId.hasPrefix(prefix) }
+                .map { byId[$0.contentId] ?? $0 }
         case "recent":
             let ids = recents.map(\.contentId)
             return ids.compactMap { id in channels.first { $0.contentId == id } }
@@ -322,7 +334,7 @@ private struct LiveGuideView: View {
         .task { for await next in TvLiveGuide.shared.recents { recents = next } }
         .task {
             for await _ in TvLiveGuide.shared.libraryChanges {
-                favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+                refreshFavorites()
             }
         }
         .task {
@@ -381,15 +393,37 @@ private struct LiveGuideView: View {
         programmes[Self.windowKey(channel.contentId, windowStart)] ?? []
     }
 
+    private var isFavoritesCategory: Bool { category == "favorites" || category == "allfavorites" }
+
+    private func refreshFavorites() {
+        favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+        favoriteOrder = TvLiveGuide.shared.favoriteChannels(accountId: nil)
+    }
+
+    /// F03 (owner 2026-10-04): a favourite toggle is confirmed — with Undo — rather than a popup.
+    private func toggleFavorite(_ channel: LiveGuideChannel, undoable: Bool) {
+        let adding = !favorites.contains(channel.contentId)
+        Task {
+            try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
+            refreshFavorites()
+            lastFavoriteToggle = undoable ? (channel.contentId, Date()) : nil
+            notice = undoable
+                ? "\u{201C}\(channel.name)\u{201D} \(adding ? "added to" : "removed from") Favorites. Hold OK to undo."
+                : nil
+        }
+    }
+
     private func reloadChannels() async {
         channels = (try? await TvLiveGuide.shared.channels(accountId: accountId)) ?? []
-        favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+        refreshFavorites()
     }
 
     // Category column: plain rows, radius 8, padding 12×8, bodyMedium; focused grey Primary, selected BackgroundElevated.
     private var categoryColumn: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: dp(2)) {
+                GuideCategoryRow(title: "All favorites", selected: category == "allfavorites") { category = "allfavorites" }
+                    .focused($categoryFocus, equals: "allfavorites")
                 GuideCategoryRow(title: "Favorites", selected: category == "favorites") { category = "favorites" }
                     .focused($categoryFocus, equals: "favorites")
                 GuideCategoryRow(title: "Recent", selected: category == "recent") { category = "recent" }
@@ -524,10 +558,30 @@ private struct LiveGuideView: View {
                                             onLeft: showCategories)
                                 // Hold OK (NuvioTV) = the tvOS context menu.
                                 .contextMenu {
+                                    // F03: Undo for the favourite toggle just made (the tvOS stand-in for
+                                    // NuvioTV's Undo toast: hold OK again within a few seconds).
+                                    if let last = lastFavoriteToggle, last.contentId == channel.contentId,
+                                       Date().timeIntervalSince(last.at) < 6 {
+                                        Button("Undo") { toggleFavorite(channel, undoable: false) }
+                                    }
                                     Button(favorites.contains(channel.contentId) ? "Remove from Favorites" : "Add to Favorites") {
-                                        Task {
-                                            try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
-                                            favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+                                        toggleFavorite(channel, undoable: true)
+                                    }
+                                    // F03: reorder a favourite (favourites rows) or a pinned channel (its group).
+                                    if isFavoritesCategory {
+                                        let ids = visible.map(\.contentId)
+                                        if TvLiveGuide.shared.canMoveFavorite(rowIds: ids, contentId: channel.contentId, delta: -1) {
+                                            Button("Move up") { TvLiveGuide.shared.moveFavorite(rowIds: ids, contentId: channel.contentId, delta: -1) }
+                                        }
+                                        if TvLiveGuide.shared.canMoveFavorite(rowIds: ids, contentId: channel.contentId, delta: 1) {
+                                            Button("Move down") { TvLiveGuide.shared.moveFavorite(rowIds: ids, contentId: channel.contentId, delta: 1) }
+                                        }
+                                    } else if channel.pinned {
+                                        if TvLiveGuide.shared.canMovePinned(shown: visible, channel: channel, delta: -1) {
+                                            Button("Move up") { TvLiveGuide.shared.movePinned(shown: visible, channel: channel, delta: -1) }
+                                        }
+                                        if TvLiveGuide.shared.canMovePinned(shown: visible, channel: channel, delta: 1) {
+                                            Button("Move down") { TvLiveGuide.shared.movePinned(shown: visible, channel: channel, delta: 1) }
                                         }
                                     }
                                     // NuvioTV MENU on a channel: hide it (personalization overlay, synced).
