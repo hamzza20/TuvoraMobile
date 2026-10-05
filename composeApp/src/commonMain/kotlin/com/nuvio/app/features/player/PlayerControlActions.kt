@@ -61,13 +61,13 @@ internal val PlayerToolbarHeight = 48.dp
 @Composable
 internal fun PlayerToolbar(
     isLocked: Boolean,
-    onLockToggle: () -> Unit,
+    onLockToggle: (() -> Unit)?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
-        PlayerAction(
+        if (onLockToggle != null) PlayerAction(
             description = stringResource(
                 if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
             ),
@@ -93,13 +93,13 @@ internal fun PlayerControlActions(
     onRuntimeClick: () -> Unit,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
-    onSubtitleClick: () -> Unit,
-    onAudioClick: () -> Unit,
+    onSubtitleClick: (() -> Unit)?,
+    onAudioClick: (() -> Unit)?,
     onSourcesClick: (() -> Unit)?,
     onEpisodesClick: (() -> Unit)?,
     onNextEpisodeClick: (() -> Unit)?,
     onSwitchEngineClick: (() -> Unit)?,
-    onSpeedClick: () -> Unit,
+    onSpeedClick: (() -> Unit)?,
     onResizeModeClick: () -> Unit,
     onVideoZoomClick: (() -> Unit)? = null,
     onVideoSettingsClick: (() -> Unit)?,
@@ -115,14 +115,18 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
             )
         },
-        PlayerControlAction(
-            stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
-            painter = appIconPainter(AppIconResource.PlayerSubtitles),
-        ),
-        PlayerControlAction(
-            stringResource(Res.string.compose_player_audio), onAudioClick,
-            painter = appIconPainter(AppIconResource.PlayerAudioFilled),
-        ),
+        onSubtitleClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_subtitles), it,
+                painter = appIconPainter(AppIconResource.PlayerSubtitles),
+            )
+        },
+        onAudioClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_audio), it,
+                painter = appIconPainter(AppIconResource.PlayerAudioFilled),
+            )
+        },
         onSourcesClick?.let {
             PlayerControlAction(
                 stringResource(Res.string.compose_player_sources), it,
@@ -141,10 +145,12 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.SwapHoriz,
             )
         },
-        PlayerControlAction(
-            "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
-            onSpeedClick, icon = Icons.Rounded.Speed,
-        ),
+        onSpeedClick?.let {
+            PlayerControlAction(
+                "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
+                it, icon = Icons.Rounded.Speed,
+            )
+        },
         PlayerControlAction(
             stringResource(resizeMode.labelRes), onResizeModeClick,
             painter = appIconPainter(AppIconResource.PlayerAspectRatio),
