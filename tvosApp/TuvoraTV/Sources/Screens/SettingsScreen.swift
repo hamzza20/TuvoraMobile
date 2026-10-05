@@ -1713,7 +1713,9 @@ private struct IptvPairingDialog: View {
 /// Zero reads "None (UTC)" for catch-up and "Auto" for the guide (unset = detect, not "+0").
 enum IptvOffsetPickers {
     static func catchUpLabel(_ minutes: Int32) -> String {
-        minutes == 0 ? L("None (UTC)") : TvIptvContentPolicy.shared.offsetText(minutes: minutes)
+        // 0 is not "UTC": the replay start already follows the panel's measured clock; this only
+        // corrects it (B117 parity — same rule as the phone and, now, NuvioTV).
+        minutes == 0 ? L("None") : TvIptvContentPolicy.shared.offsetText(minutes: minutes)
     }
 
     static func guideLabel(_ minutes: Int32) -> String {

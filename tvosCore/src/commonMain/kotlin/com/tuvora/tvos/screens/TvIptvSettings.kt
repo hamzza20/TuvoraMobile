@@ -83,7 +83,7 @@ object TvIptvContentPolicy {
     /** −12 h … +14 h in 30-minute steps (CATCHUP_CORRECTION_OPTIONS). */
     fun correctionOptions(): List<Int> = generateSequence(-12 * 60) { it + 30 }.takeWhile { it <= 14 * 60 }.toList()
 
-    /** "+2h", "-1h 30m"; zero is the caller's word ("None (UTC)" for catch-up, "Auto" for the guide). */
+    /** "+2h", "-1h 30m"; zero is the caller's word ("None" for catch-up, "Auto" for the guide). */
     fun offsetText(minutes: Int): String {
         val sign = if (minutes < 0) "-" else "+"
         val abs = kotlin.math.abs(minutes)
