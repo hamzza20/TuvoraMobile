@@ -27,7 +27,14 @@ class TvSubtitleStyleTest {
 
     @Test
     fun `sizes and positions are clamped`() {
-        val mpv = TvSubtitleStyle.forMpv(SubtitleStyleState(fontSizeSp = 60, bottomOffset = 400, outlineEnabled = false))
+        val mpv = TvSubtitleStyle.forMpv(
+            SubtitleStyleState(
+                fontSizeSp = 60,
+                bottomOffset = 400,
+                outlineEnabled = false,
+                backgroundColor = androidx.compose.ui.graphics.Color.Transparent,
+            ),
+        )
         assertEquals(96f, mpv.fontSize)
         assertEquals(0, mpv.subPos)
         assertEquals(0f, mpv.outlineSize)
