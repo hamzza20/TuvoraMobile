@@ -2488,6 +2488,8 @@
     <string name="compose_livetv_catchup_watch_live">Watch live</string>
     <string name="compose_livetv_error_tap_retry">Can't play this channel · Tap to retry</string>
     <string name="compose_livetv_exit_fullscreen">Exit fullscreen</string>
+    <string name="compose_livetv_previous_channel">Previous channel</string>
+    <string name="compose_livetv_next_channel">Next channel</string>
     <string name="compose_livetv_fullscreen">Fullscreen</string>
     <string name="compose_livetv_guide_back_to_now">Back to now</string>
     <string name="compose_livetv_guide_earlier">Earlier</string>
