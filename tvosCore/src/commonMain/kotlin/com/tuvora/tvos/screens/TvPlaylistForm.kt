@@ -32,6 +32,11 @@ data class TvPlaylistForm(
     val serialNumber: String,
     val deviceId: String,
     val sendDeviceId: Boolean,
+    /** F46: optional STB identity overrides (NuvioTV XtreamAddDialog); blank = today's derived values. */
+    val deviceId2: String = "",
+    val signature: String = "",
+    val stbModel: String = "",
+    val hwVersion: String = "",
     val epgUrl: String,
     val autoRefreshHours: Int,
     /** Step 0.3: backup server rows as typed, priority order (Xtream / M3U link / Stalker only). */
@@ -106,6 +111,10 @@ object TvPlaylistFormPolicy {
             serialNumber = form.serialNumber.trim().ifEmpty { null },
             deviceId = form.deviceId.trim().ifEmpty { null },
             sendDeviceId = form.sendDeviceId,
+            deviceId2 = if (stalker) form.deviceId2.trim().ifEmpty { null } else null,
+            signature = if (stalker) form.signature.trim().ifEmpty { null } else null,
+            stbModel = if (stalker) form.stbModel.trim().ifEmpty { null } else null,
+            hwVersion = if (stalker) form.hwVersion.trim().ifEmpty { null } else null,
             // Raw rows: the repository validates + normalizes them (BackupServerValidation) on save.
             backupUrls = if (TvBackupServers.supports(form.sourceType)) form.backupUrls else emptyList(),
         )
@@ -143,6 +152,11 @@ object TvPlaylistFormPolicy {
             serialNumber = pulled.serialNumber,
             deviceId = pulled.deviceId,
             sendDeviceId = pulled.sendDeviceId,
+            // F46: locked on managed playlists like the rest of the portal identity (owner 2026-10-03).
+            deviceId2 = pulled.deviceId2,
+            signature = pulled.signature,
+            stbModel = pulled.stbModel,
+            hwVersion = pulled.hwVersion,
             backupUrls = pulled.backupUrls,
         )
     }
@@ -166,6 +180,10 @@ object TvPlaylistFormPolicy {
                 serialNumber = account.serialNumber.orEmpty(),
                 deviceId = account.deviceId.orEmpty(),
                 sendDeviceId = account.sendDeviceId,
+                deviceId2 = account.deviceId2.orEmpty(),
+                signature = account.signature.orEmpty(),
+                stbModel = account.stbModel.orEmpty(),
+                hwVersion = account.hwVersion.orEmpty(),
             )
             SOURCE_TYPE_M3U_FILE -> base
             else -> base.copy(server = account.baseUrl, username = account.username, password = account.password)

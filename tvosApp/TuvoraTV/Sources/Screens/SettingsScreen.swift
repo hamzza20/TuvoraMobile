@@ -1047,6 +1047,11 @@ final class PlaylistFormModel: ObservableObject {
     @Published var serialNumber = ""
     @Published var deviceId = ""
     @Published var sendDeviceId = true
+    // F46: optional STB identity overrides; blank = the values derived from the MAC.
+    @Published var deviceId2 = ""
+    @Published var signature = ""
+    @Published var stbModel = ""
+    @Published var hwVersion = ""
     @Published var epgUrl = ""
     @Published var autoRefreshHours: Int32 = TvPlaylistFormPolicy.shared.DEFAULT_AUTO_REFRESH_HOURS
     /// Step 0.3: backup server rows as typed, priority order (validated by the shared rules on save).
@@ -1060,6 +1065,7 @@ final class PlaylistFormModel: ObservableObject {
         name = f.name; userAgent = f.userAgent; m3uUrl = f.m3uUrl; portalUrl = f.portalUrl
         macAddress = f.macAddress; stalkerUsername = f.stalkerUsername; stalkerPassword = f.stalkerPassword
         serialNumber = f.serialNumber; deviceId = f.deviceId; sendDeviceId = f.sendDeviceId
+        deviceId2 = f.deviceId2; signature = f.signature; stbModel = f.stbModel; hwVersion = f.hwVersion
         epgUrl = f.epgUrl; autoRefreshHours = f.autoRefreshHours; backupUrls = f.backupUrls
     }
 
@@ -1068,7 +1074,8 @@ final class PlaylistFormModel: ObservableObject {
                        username: username, password: password, name: name, userAgent: userAgent, m3uUrl: m3uUrl,
                        portalUrl: portalUrl, macAddress: macAddress, stalkerUsername: stalkerUsername,
                        stalkerPassword: stalkerPassword, serialNumber: serialNumber, deviceId: deviceId,
-                       sendDeviceId: sendDeviceId, epgUrl: epgUrl, autoRefreshHours: autoRefreshHours,
+                       sendDeviceId: sendDeviceId, deviceId2: deviceId2, signature: signature,
+                       stbModel: stbModel, hwVersion: hwVersion, epgUrl: epgUrl, autoRefreshHours: autoRefreshHours,
                        backupUrls: backupUrls)
     }
 }
@@ -1208,9 +1215,13 @@ private struct PlaylistFormDialog: View {
             SettingsTextField(label: "Password (optional)", text: $form.stalkerPassword, secure: true, onSubmit: submit)
             SettingsTextField(label: "Serial Number (optional)", text: $form.serialNumber, onSubmit: submit)
             SettingsTextField(label: "Device ID (optional)", text: $form.deviceId, onSubmit: submit)
+            SettingsTextField(label: "Device ID 2 (optional)", text: $form.deviceId2, onSubmit: submit)
+            SettingsTextField(label: "Signature (optional)", text: $form.signature, onSubmit: submit)
+            SettingsTextField(label: "STB Model (optional, e.g. MAG254)", text: $form.stbModel, onSubmit: submit)
+            SettingsTextField(label: "Hardware Version (optional, e.g. 2.6-IB-00)", text: $form.hwVersion, onSubmit: submit)
             SettingsActionRow(title: "Send Device ID", subtitle: "Include device identifier in portal requests",
                               value: form.sendDeviceId ? "On" : "Off") { form.sendDeviceId.toggle() }
-            SettingsHelperText(text: "Enter your portal URL and the MAC registered with the provider. Serial / Device ID override the values derived from the MAC.")
+            SettingsHelperText(text: "Enter your portal URL and the MAC registered with the provider. The serial, device IDs and signature are derived from the MAC and Tuvora presents itself as a MAG250 — only fill in the optional fields if your provider (or your old box) gave you specific values. Long values are easier to enter from your phone: use \"Add from phone\".")
         default:
             HStack(spacing: dp(8)) {
                 SettingsChoiceChip(label: "Enter details", selected: !form.pasteLink) { form.pasteLink = false }
