@@ -9,6 +9,7 @@ import com.nuvio.app.features.iptv.content.IptvContentKind
 import com.nuvio.app.features.iptv.content.IptvEpisodeRow
 import com.nuvio.app.features.iptv.content.IptvSeriesRow
 import com.nuvio.app.features.iptv.content.IptvStreamRow
+import com.nuvio.app.features.iptv.identity.M3uIdentity
 import com.nuvio.app.features.trakt.TraktPlatformClock
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -73,7 +74,8 @@ object M3UClient : IptvClient {
         if (acc.sourceType != SOURCE_TYPE_M3U_FILE) require(url.isNotBlank()) { "M3U playlist URL is blank" }
         IptvContentDb.beginIngest(acc.id)
 
-        val collector = IngestCollector(acc.id)
+        // B64: item ids are derived from stream URLs with THIS playlist's login removed.
+        val collector = IngestCollector(acc.id, if (acc.sourceType == SOURCE_TYPE_M3U_FILE) null else M3uIdentity.loginOf(url))
         val parser = M3UParser.StreamingParser { entry -> collector.add(entry) }
 
         var lineCount = 0
@@ -134,7 +136,7 @@ object M3UClient : IptvClient {
      * Accumulates parsed entries into per-kind chunk buffers and flushes to the DB every [CHUNK]
      * rows via [runBlocking] (safe: the ingest runs on an IO thread). Keeps at most one chunk in RAM.
      */
-    private class IngestCollector(private val playlistId: String) {
+    private class IngestCollector(private val playlistId: String, private val login: M3uIdentity.Login?) {
         private val channels = ArrayList<IptvStreamRow>(CHUNK)
         private val vod = ArrayList<IptvStreamRow>(CHUNK)
         private val series = ArrayList<IptvSeriesRow>(CHUNK)
@@ -148,37 +150,21 @@ object M3UClient : IptvClient {
         val seriesCount: Int get() = seenSeries.size
 
         fun add(entry: M3UParser.Entry) {
-            val catId = categoryId(entry.group)
-            when (entry.kind) {
-                M3UKind.LIVE -> {
-                    rememberCategory(IptvContentKind.LIVE.slug, catId, entry.group)
-                    channels.add(IptvStreamRow(sidOf(entry.url), entry.name, entry.logo, entry.tvgId, catId, entry.url, entry.ext))
+            when (val mapped = M3uIngestMapping.map(entry, login, episodeCount)) {
+                is M3uIngestRow.Channel -> {
+                    rememberCategory(IptvContentKind.LIVE.slug, mapped.categoryId, entry.group)
+                    channels.add(mapped.row)
                     liveCount++
                 }
-                M3UKind.MOVIE -> {
-                    rememberCategory(IptvContentKind.VOD.slug, catId, entry.group)
-                    vod.add(IptvStreamRow(sidOf(entry.url), entry.name, entry.logo, null, catId, entry.url, entry.ext))
+                is M3uIngestRow.Movie -> {
+                    rememberCategory(IptvContentKind.VOD.slug, mapped.categoryId, entry.group)
+                    vod.add(mapped.row)
                     vodCount++
                 }
-                M3UKind.SERIES -> {
-                    rememberCategory(IptvContentKind.SERIES.slug, catId, entry.group)
-                    val key = entry.seriesKey ?: entry.name
-                    val seriesSid = sidOf("series:$key")
-                    if (seenSeries.add(seriesSid)) {
-                        series.add(IptvSeriesRow(seriesSid, seriesTitle(key), entry.logo, catId))
-                    }
-                    episodes.add(
-                        IptvEpisodeRow(
-                            seriesSid = seriesSid,
-                            episodeId = episodeIdOf(entry.url),
-                            name = entry.name,
-                            season = entry.season ?: 1,
-                            episode = entry.episode ?: (episodeCount % 10_000),
-                            logo = entry.logo,
-                            url = entry.url,
-                            ext = entry.ext,
-                        )
-                    )
+                is M3uIngestRow.Episode -> {
+                    rememberCategory(IptvContentKind.SERIES.slug, mapped.categoryId, entry.group)
+                    if (seenSeries.add(mapped.series.sid)) series.add(mapped.series)
+                    episodes.add(mapped.row)
                     episodeCount++
                 }
             }
