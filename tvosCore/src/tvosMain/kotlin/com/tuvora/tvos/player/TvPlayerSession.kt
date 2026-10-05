@@ -13,6 +13,8 @@ import com.nuvio.app.features.player.AddonSubtitle
 import com.nuvio.app.features.player.PlayerStreamInfo
 import com.nuvio.app.features.player.PlayerTrackPreferenceStorage
 import com.nuvio.app.features.player.ResumeLoadPolicy
+import com.nuvio.app.features.player.setMpvProperties
+import androidx.compose.ui.graphics.toArgb
 import com.nuvio.app.features.player.SubtitleRepository
 import com.nuvio.app.features.player.addonSubtitleRequests
 import com.nuvio.app.features.addons.AddonRepository
@@ -445,16 +447,32 @@ class TvPlayerSession(
         if (addonSubtitlesRequested || isLive) return
         val type = (launch.contentType ?: launch.parentMetaType).takeIf { it.isNotBlank() } ?: return
         if (type.lowercase() in setOf("cloud", "live", "tv")) return
-        val videoId = launch.videoId?.takeIf { it.isNotBlank() } ?: return
+        val ownVideoId = launch.videoId?.takeIf { it.isNotBlank() } ?: return
         addonSubtitlesRequested = true
         AddonRepository.initialize()
         // As the phone's fetch key: search again whenever the set of subtitle add-ons changes (the
         // manifests may still be loading when the player opens).
         scope.launch {
+            // F17: an IPTV item is looked up under its public IMDb id; its provider-scoped id (which
+            // embeds the playlist key) never reaches an add-on (AddonSubtitleIdPolicy).
+            val publicId = if (com.nuvio.app.features.player.AddonSubtitleIdPolicy.isProviderScoped(ownVideoId)) {
+                runCatching {
+                    com.nuvio.app.core.contracts.IptvSubtitleIdAccess.resolver.publicSubtitleVideoId(
+                        parentMetaId = launch.parentMetaId,
+                        season = launch.seasonNumber,
+                        episode = launch.episodeNumber,
+                    )
+                }.getOrNull()
+            } else {
+                null
+            }
+            val videoId = com.nuvio.app.features.player.AddonSubtitleIdPolicy
+                .requestVideoId(ownVideoId, publicId) ?: return@launch
+            val requestType = com.nuvio.app.features.player.AddonSubtitleIdPolicy.requestType(type, videoId)
             AddonRepository.uiState
-                .map { addonSubtitleRequests(type, videoId).map { it.url } }
+                .map { addonSubtitleRequests(requestType, videoId).map { it.url } }
                 .distinctUntilChanged()
-                .collect { urls -> if (urls.isNotEmpty()) SubtitleRepository.fetchAddonSubtitles(type, videoId) }
+                .collect { urls -> if (urls.isNotEmpty()) SubtitleRepository.fetchAddonSubtitles(requestType, videoId) }
         }
     }
 
@@ -556,6 +574,28 @@ class TvPlayerSession(
             outlineSize = subStyle.outlineSize, bold = subStyle.bold, fontSize = subStyle.fontSize,
             subPos = subStyle.subPos, stripSdh = subStyle.stripSdh,
         )
+        // UX61/F47: shared box/outline/side-padding mapping. Takes effect once the Apple TV MPV bridge
+        // adopts NuvioPlayerPropertyBridge (tvosApp, lane E); until then this is a no-op.
+        val style = PlayerSettingsRepository.uiState.value.subtitleStyle
+        b.setMpvProperties(
+            com.nuvio.app.features.player.SubtitleStyleMpvMapping.properties(
+                backgroundColorHex = subStyle.backgroundColor,
+                backgroundAlpha = style.backgroundColor.alpha,
+                // The style's own outline: forMpv's opaque-box fallback must not become a real outline.
+                outlineColorHex = TvSubtitleStyle.mpvColor(style.outlineColor.toArgb()),
+                outlineSize = if (style.outlineEnabled) style.outlineWidth.toDouble() else 0.0,
+                sideMarginPercent = style.sideMarginPercent,
+            ),
+        )
+    }
+
+    /**
+     * F36 manual zoom for the Apple TV player UI (tvosApp, lane E): video-scale-x/y + video-pan-x/y
+     * through [com.nuvio.app.features.player.VideoZoomPolicy]. No-op until the bridge adopts
+     * NuvioPlayerPropertyBridge.
+     */
+    fun setVideoZoom(zoom: com.nuvio.app.features.player.VideoZoom) {
+        bridge?.setMpvProperties(com.nuvio.app.features.player.VideoZoomPolicy.mpvProperties(zoom))
     }
 
     // ---- Playback-issue report --------------------------------------------------------------

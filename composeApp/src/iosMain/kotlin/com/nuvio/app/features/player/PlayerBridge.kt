@@ -134,6 +134,26 @@ interface NuvioPlayerBridge {
 }
 
 /**
+ * Optional capability of an mpv-backed [NuvioPlayerBridge]: set mpv properties by name, as strings
+ * (`names[i]` = `values[i]`). One generic call instead of a method per feature, because bridges are
+ * hand-mirrored in Swift and Gradle cannot check them: the shared policies ([VideoZoomPolicy],
+ * [SubtitleStyleMpvMapping]) choose names and values, the bridge only applies them, and a name an
+ * older mpv lacks fails alone.
+ *
+ * A separate interface (checked with `as?`), not a [NuvioPlayerBridge] member, so a bridge that has
+ * not adopted it yet — the Apple TV app's MPV and AVPlayer bridges — keeps compiling and simply goes
+ * without manual zoom and the box fix until it conforms.
+ */
+interface NuvioPlayerPropertyBridge {
+    fun setMpvStringProperties(names: List<String>, values: List<String>)
+}
+
+internal fun NuvioPlayerBridge.setMpvProperties(properties: List<Pair<String, String>>) {
+    (this as? NuvioPlayerPropertyBridge)
+        ?.setMpvStringProperties(properties.map { it.first }, properties.map { it.second })
+}
+
+/**
  * Registry for the player bridge factory.
  * Swift calls [registerFactory] during app startup before Compose is initialized.
  */

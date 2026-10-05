@@ -616,7 +616,11 @@ fun LiveTvScreen(
                 LivePlayerSurface(
                     source = source,
                     isCatchUpPlayback = isCatchUp,
-                    onControllerReady = { controller = it },
+                    onControllerReady = {
+                        controller = it
+                        // F47/UX61: live channels get the subtitle style too (was engine defaults).
+                        it.applySubtitleStyle(PlayerSettingsRepository.uiState.value.subtitleStyle)
+                    },
                     onSnapshot = {
                         snapshot = it
                         val session = catchUp

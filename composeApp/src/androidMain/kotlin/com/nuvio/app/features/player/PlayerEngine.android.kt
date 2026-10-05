@@ -135,6 +135,7 @@ actual fun PlatformPlayerSurface(
     initialPositionMs: Long?,
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
+    videoZoom: VideoZoom,
     playbackEngine: AndroidPlaybackEngine?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
@@ -172,6 +173,12 @@ actual fun PlatformPlayerSurface(
     // ponytail: if a codec class regresses on ExoPlayer, narrow the force back BY CODEC, not by "live".
     // Upstream "switch player": a per-session override from the player's action row wins over the setting.
     val requestedEngine = playbackEngine ?: playerSettings.androidPlaybackEngine
+    // F13: the user's live buffer length (null = engine default; VOD and catch-up never get one).
+    val liveBufferPlan = LiveBufferPolicy.planFor(
+        seconds = playerSettings.liveBufferSeconds,
+        isLive = normalizeStreamType(streamType) == "live",
+        isCatchUp = isCatchUpPlayback,
+    )
     var activeEngine by remember(playerSourceKey, requestedEngine) {
         val base = requestedEngine.initialAndroidEngine()
         // Fix 2 (telemetry-derived, 2026-08-25): open live on libmpv on the hardware decoders that
@@ -204,6 +211,8 @@ actual fun PlatformPlayerSurface(
             initialPositionMs = initialPositionMs,
             initialPositionRequestKey = initialPositionRequestKey,
             resizeMode = resizeMode,
+            videoZoom = videoZoom,
+            liveBufferPlan = liveBufferPlan,
             useNativeController = useNativeController,
             onInitialPositionHandled = onInitialPositionHandled,
             onControllerReady = onControllerReady,
@@ -246,6 +255,8 @@ actual fun PlatformPlayerSurface(
                 modifier = modifier,
                 playWhenReady = playWhenReady,
                 resizeMode = resizeMode,
+                videoZoom = videoZoom,
+                liveBufferPlan = liveBufferPlan,
                 // Routed through the policy: on the live path it downgrades a leaking gpu-next to
                 // gpu (the fence-fd leak fix — see LiveVideoOutputPolicy); off the live path it
                 // passes the user's renderer through unchanged.
@@ -292,6 +303,8 @@ private fun ExoPlayerSurface(
     initialPositionMs: Long?,
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
+    videoZoom: VideoZoom,
+    liveBufferPlan: LiveBufferPlan?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
@@ -430,6 +443,10 @@ private fun ExoPlayerSurface(
                 latestExternalSubtitleMimeType.value == MimeTypes.TEXT_VTT
             },
             shouldStripSdhProvider = { currentSubtitleStyle.stripSdh },
+            // F47: inner horizontal padding inside the cue box (only when a box is drawn).
+            boxPaddingCharsProvider = {
+                if (currentSubtitleStyle.backgroundColor.alpha > 0f) SubtitleBoxPadding.EXO_PAD_CHARS else 0
+            },
             videoBoundsFractionProvider = {
                 playerViewRef?.videoBoundsFraction(latestVideoAspectRatio.value)
             },
@@ -466,10 +483,12 @@ private fun ExoPlayerSurface(
             setParameters(parameters)
         }
 
-        val minBufferMs = 15_000
-        val maxBufferMs = 70_000
-        val bufferForPlaybackMs = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS
-        val bufferForPlaybackAfterRebufferMs = 5_000
+        // F13: a live channel with a chosen buffer length uses it (LiveBufferPolicy); otherwise the
+        // tuned defaults. The byte cap below still bounds memory either way.
+        val minBufferMs = liveBufferPlan?.minBufferMs ?: 15_000
+        val maxBufferMs = liveBufferPlan?.maxBufferMs ?: 70_000
+        val bufferForPlaybackMs = liveBufferPlan?.startMs ?: DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+        val bufferForPlaybackAfterRebufferMs = liveBufferPlan?.rebufferMs ?: 5_000
         val loadControl = DefaultLoadControl.Builder()
             .setTargetBufferBytes(playerTargetBufferBytes())
             // Pinned to media3 1.8.0's default, because the heap/4 byte cap above only bounds
@@ -1039,6 +1058,7 @@ private fun ExoPlayerSurface(
                     renderType = libassRenderType,
                 )
                 applySubtitleStyle(currentSubtitleStyle, pipSubtitleScale)
+                applyVideoZoom(videoZoom)
             }
         },
         update = { playerView ->
@@ -1053,6 +1073,7 @@ private fun ExoPlayerSurface(
                 renderType = libassRenderType,
             )
             playerView.applySubtitleStyle(currentSubtitleStyle, pipSubtitleScale)
+            playerView.applyVideoZoom(videoZoom)
         },
     )
 }
@@ -1071,6 +1092,8 @@ private fun LibmpvPlayerSurface(
     modifier: Modifier,
     playWhenReady: Boolean,
     resizeMode: PlayerResizeMode,
+    videoZoom: VideoZoom,
+    liveBufferPlan: LiveBufferPlan?,
     /** Already resolved by [LiveVideoOutputPolicy]: gpu on the live path, else the user's renderer. */
     videoOutput: String,
     hardwareDecodingEnabled: Boolean,
@@ -1310,6 +1333,14 @@ private fun LibmpvPlayerSurface(
         playerViewRef?.applyResizeMode(resizeMode)
     }
 
+    LaunchedEffect(playerViewRef, videoZoom) {
+        playerViewRef?.applyVideoZoom(videoZoom)
+    }
+
+    LaunchedEffect(playerViewRef, liveBufferPlan) {
+        liveBufferPlan?.let { plan -> playerViewRef?.applyLiveBuffer(plan) }
+    }
+
     LaunchedEffect(playerViewRef, sourceUrl, sourceAudioUrl, sanitizedSourceHeaders, externalSubtitles) {
         val view = playerViewRef ?: return@LaunchedEffect
         onControllerReady(view.controller(context, nowPlayingController))
@@ -1352,6 +1383,7 @@ private fun LibmpvPlayerSurface(
             view.isLiveStream = isLiveStream
             view.playWhenReadyIntent = playWhenReady
             view.applyResizeMode(resizeMode)
+            view.applyVideoZoom(videoZoom)
         },
         onRelease = { view ->
             if (playerViewRef === view) playerViewRef = null
@@ -1951,6 +1983,27 @@ private class NuvioLibmpvView(
         return snapshot.isPlaying || snapshot.isLoading
     }
 
+    @Volatile private var appliedVideoZoom: VideoZoom? = null
+
+    /** F13: cache cap + rebuffer cushion for a live channel (runtime-settable mpv options). */
+    fun applyLiveBuffer(plan: LiveBufferPlan) = ctl {
+        LiveBufferPolicy.mpvProperties(plan).forEach { (name, value) ->
+            runCatching { mpv.setPropertyString(name, value) }
+        }
+    }
+
+    /** F36: video-scale-x/y + video-pan-x/y on the control thread (never mpv on Main). */
+    fun applyVideoZoom(zoom: VideoZoom) {
+        val normalized = VideoZoomPolicy.normalize(zoom)
+        if (appliedVideoZoom == normalized) return
+        appliedVideoZoom = normalized
+        ctl {
+            VideoZoomPolicy.mpvProperties(normalized).forEach { (name, value) ->
+                runCatching { mpv.setPropertyString(name, value) }
+            }
+        }
+    }
+
     fun applyResizeMode(resizeMode: PlayerResizeMode) = ctl {
         when (resizeMode) {
             PlayerResizeMode.Fit -> {
@@ -2165,14 +2218,17 @@ private class NuvioLibmpvView(
             override fun applySubtitleStyle(style: SubtitleStyleState) = ctl {
                 mpv.setPropertyString("sub-ass-override", "no")
                 mpv.setPropertyString("sub-color", style.textColor.toMpvColor())
-                mpv.setPropertyString("sub-back-color", style.backgroundColor.toMpvColor())
-                mpv.setPropertyString("sub-outline-color", style.outlineColor.toMpvColor())
-                mpv.setPropertyString("sub-border-color", style.outlineColor.toMpvColor())
-                mpv.setPropertyString("sub-border-style", style.toMpvSubtitleBorderStyle())
                 mpv.setPropertyString("sub-bold", if (style.bold) "yes" else "no")
                 mpv.setPropertyInt("sub-font-size", style.toMpvSubtitleFontSize())
-                mpv.setPropertyInt("sub-outline-size", style.toMpvSubtitleOutlineSize())
-                mpv.setPropertyInt("sub-border-size", style.toMpvSubtitleOutlineSize())
+                // UX61/F47: box, outline and side padding from the shared mapping (background-box, not
+                // opaque-box, so the "dim" alpha is honoured; the box also shows with the outline on).
+                SubtitleStyleMpvMapping.properties(
+                    backgroundColorHex = style.backgroundColor.toMpvColor(),
+                    backgroundAlpha = style.backgroundColor.alpha,
+                    outlineColorHex = style.outlineColor.toMpvColor(),
+                    outlineSize = style.toMpvSubtitleOutlineSize().toDouble(),
+                    sideMarginPercent = style.sideMarginPercent,
+                ).forEach { (name, value) -> runCatching { mpv.setPropertyString(name, value) } }
                 mpv.setPropertyInt("sub-pos", (100 - style.bottomOffset / 10).coerceIn(0, 100))
                 mpv.setPropertyBoolean("sub-filter-sdh", style.stripSdh)
                 mpv.setPropertyBoolean("sub-filter-sdh-harder", style.stripSdh)
@@ -2336,9 +2392,6 @@ private fun androidx.compose.ui.graphics.Color.toMpvColor(): String {
     return "#%02X%02X%02X%02X".format(alpha, red, green, blue)
 }
 
-private fun androidx.compose.ui.graphics.Color.alphaByte(): Int =
-    (toArgb() ushr 24) and 0xff
-
 private fun SubtitleStyleState.toMpvSubtitleFontSize(): Int =
     (fontSizeSp * MPV_SUBTITLE_FONT_SIZE_SCALE).toInt().coerceIn(
         MPV_SUBTITLE_FONT_SIZE_MIN,
@@ -2347,15 +2400,6 @@ private fun SubtitleStyleState.toMpvSubtitleFontSize(): Int =
 
 private fun SubtitleStyleState.toMpvSubtitleOutlineSize(): Int =
     if (!outlineEnabled) 0 else (outlineWidth * MPV_SUBTITLE_OUTLINE_SIZE_SCALE).toInt().coerceAtLeast(1)
-
-private fun SubtitleStyleState.toMpvSubtitleBorderStyle(): String =
-    if (outlineEnabled) {
-        "outline-and-shadow"
-    } else if (backgroundColor.alphaByte() > 0) {
-        "opaque-box"
-    } else {
-        "outline-and-shadow"
-    }
 
 private const val MPV_SUBTITLE_FONT_SIZE_SCALE = 55.0 / 18.0
 private const val MPV_SUBTITLE_FONT_SIZE_MIN = 36
@@ -2579,7 +2623,78 @@ private fun android.widget.FrameLayout.removeAssOverlayChildren() {
     }
 }
 
+/**
+ * F36 on ExoPlayer: scale/translate the video SurfaceView. Since Android N a SurfaceView honours its
+ * view transform (AOSP SurfaceView class docs), so no TextureView is needed. The surface is scaled,
+ * not the content frame, because the SubtitleView lives in that frame and must not zoom with the
+ * picture; the frame stops clipping so a widened 4:3 picture can grow into the letterbox bars, and
+ * the PlayerView (screen bounds) still clips. Re-applied on layout: the pan is a fraction of the size.
+ */
+private fun PlayerView.applyVideoZoom(zoom: VideoZoom) {
+    val surface = videoSurfaceView ?: return
+    val normalized = VideoZoomPolicy.normalize(zoom)
+    (surface.parent as? android.view.ViewGroup)?.clipChildren = normalized == VideoZoom.IDENTITY
+    val listener = zoomListeners.getOrPut(surface) {
+        ZoomLayoutListener().also(surface::addOnLayoutChangeListener)
+    }
+    listener.zoom = normalized
+    listener.apply(surface)
+}
+
+/** Keeps the zoom transform in step with the surface size; state lives here, not in view tags. */
+private class ZoomLayoutListener : android.view.View.OnLayoutChangeListener {
+    var zoom: VideoZoom = VideoZoom.IDENTITY
+
+    fun apply(view: android.view.View) {
+        val t = VideoZoomPolicy.surfaceTransform(zoom, view.width, view.height)
+        if (view.width > 0) view.pivotX = view.width / 2f
+        if (view.height > 0) view.pivotY = view.height / 2f
+        view.scaleX = t.scaleX
+        view.scaleY = t.scaleY
+        view.translationX = t.translationX
+        view.translationY = t.translationY
+    }
+
+    override fun onLayoutChange(
+        v: android.view.View, left: Int, top: Int, right: Int, bottom: Int,
+        oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
+    ) = apply(v)
+}
+
+/** F47 side padding on ExoPlayer's SubtitleView, kept in step with its width. */
+private class SubtitleMarginListener : android.view.View.OnLayoutChangeListener {
+    var percent: Int = 0
+
+    fun apply(view: android.view.View) {
+        val pad = SubtitleSideMargin.paddingPx(view.width, percent)
+        if (view.paddingLeft != pad || view.paddingRight != pad) {
+            view.setPadding(pad, view.paddingTop, pad, view.paddingBottom)
+        }
+    }
+
+    override fun onLayoutChange(
+        v: android.view.View, left: Int, top: Int, right: Int, bottom: Int,
+        oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
+    ) {
+        // Padding changes re-layout; only react to a width change, posted to avoid a layout loop.
+        if (right - left != oldRight - oldLeft) v.post { apply(v) }
+    }
+}
+
+// Main-thread only (View callbacks); weak keys so a released PlayerView is not kept alive.
+private val zoomListeners = java.util.WeakHashMap<android.view.View, ZoomLayoutListener>()
+private val subtitleMarginListeners = java.util.WeakHashMap<android.view.View, SubtitleMarginListener>()
+
+private fun SubtitleView.applySideMargin(sideMarginPercent: Int) {
+    val listener = subtitleMarginListeners.getOrPut(this) {
+        SubtitleMarginListener().also(::addOnLayoutChangeListener)
+    }
+    listener.percent = sideMarginPercent
+    listener.apply(this)
+}
+
 private fun PlayerView.applySubtitleStyle(style: SubtitleStyleState, pipScale: Float = 1.0f) {
+    subtitleView?.applySideMargin(style.sideMarginPercent)
     subtitleView?.apply {
         val baseBottomPaddingFraction = SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION * 2f / 3f
         val offsetFraction = (style.bottomOffset / 1000f).coerceIn(0f, 0.2f)
@@ -2589,10 +2704,13 @@ private fun PlayerView.applySubtitleStyle(style: SubtitleStyleState, pipScale: F
         setApplyEmbeddedFontSizes(false)
         setBottomPaddingFraction(bottomPaddingFraction)
         setStyle(
+            // F47: the background is drawn as ONE box per cue (window colour, inner horizontal
+            // padding built in + SubtitleBoxPadding), like libmpv's background-box — not as tight
+            // per-line strips. Media3 draws it with square corners; it has no corner radius.
             CaptionStyleCompat(
                 style.textColor.toArgb(),
-                style.backgroundColor.toArgb(),
                 android.graphics.Color.TRANSPARENT,
+                style.backgroundColor.toArgb(),
                 if (style.outlineEnabled) CaptionStyleCompat.EDGE_TYPE_OUTLINE else CaptionStyleCompat.EDGE_TYPE_NONE,
                 style.outlineColor.toArgb(),
                 if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT,
@@ -2799,6 +2917,7 @@ private class SubtitleOffsetRenderersFactory(
     private val subtitleDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
+    private val boxPaddingCharsProvider: () -> Int,
     private val videoBoundsFractionProvider: () -> RectF?,
 ) : DefaultRenderersFactory(context) {
     override fun buildTextRenderers(
@@ -2812,6 +2931,7 @@ private class SubtitleOffsetRenderersFactory(
             delegate = output,
             shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
             shouldStripSdhProvider = shouldStripSdhProvider,
+            boxPaddingCharsProvider = boxPaddingCharsProvider,
             videoBoundsFractionProvider = videoBoundsFractionProvider,
         )
         val startIndex = out.size
@@ -2829,6 +2949,7 @@ private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
+    private val boxPaddingCharsProvider: () -> Int,
     private val videoBoundsFractionProvider: () -> RectF?,
 ) : TextOutput {
     override fun onCues(cueGroup: CueGroup) {
@@ -2852,6 +2973,13 @@ private class CueNormalizingTextOutput(
         }
         if (shouldNormalizeCuePositionProvider()) {
             processed = normalizeCuePosition(processed)
+        }
+        val padChars = boxPaddingCharsProvider()
+        if (padChars > 0 && processed.bitmap == null) {
+            val text = processed.text?.toString()
+            if (!text.isNullOrEmpty()) {
+                processed = processed.buildUpon().setText(SubtitleBoxPadding.padLines(text, padChars)).build()
+            }
         }
         if (processed.bitmap != null) {
             val bounds = videoBoundsFractionProvider()

@@ -18,6 +18,12 @@ internal actual object PlayerTrackPreferenceStorage {
     private const val audioTrackIdKey = "audio_track_id"
     private const val subtitleIsForcedKey = "subtitle_is_forced"
     private const val subtitleDelayMsKey = "subtitle_delay_ms"
+    // F37/F36 per-series picture memory (PlayerPreferencePolicy).
+    private const val resizeModeKey = "resize_mode"
+    private const val zoomScaleXKey = "zoom_scale_x"
+    private const val zoomScaleYKey = "zoom_scale_y"
+    private const val zoomPanXKey = "zoom_pan_x"
+    private const val zoomPanYKey = "zoom_pan_y"
 
     private var preferences: SharedPreferences? = null
 
@@ -39,6 +45,11 @@ internal actual object PlayerTrackPreferenceStorage {
             audioName = loadString(audioNameKey, id),
             audioTrackId = loadString(audioTrackIdKey, id),
             subtitleIsForced = loadBoolean(subtitleIsForcedKey, id),
+            resizeMode = loadString(resizeModeKey, id),
+            zoomScaleX = loadString(zoomScaleXKey, id)?.toFloatOrNull(),
+            zoomScaleY = loadString(zoomScaleYKey, id)?.toFloatOrNull(),
+            zoomPanX = loadString(zoomPanXKey, id)?.toFloatOrNull(),
+            zoomPanY = loadString(zoomPanYKey, id)?.toFloatOrNull(),
         )
         return preference.takeIf {
             listOf(
@@ -52,7 +63,9 @@ internal actual object PlayerTrackPreferenceStorage {
                 it.audioLanguage,
                 it.audioName,
                 it.audioTrackId,
-            ).any { value -> !value.isNullOrBlank() } || it.subtitleIsForced != null
+                it.resizeMode,
+            ).any { value -> !value.isNullOrBlank() } || it.subtitleIsForced != null ||
+                it.zoomScaleX != null || it.zoomScaleY != null || it.zoomPanX != null || it.zoomPanY != null
         }
     }
 
@@ -70,6 +83,11 @@ internal actual object PlayerTrackPreferenceStorage {
             putOptionalString(audioNameKey, id, preference.audioName)
             putOptionalString(audioTrackIdKey, id, preference.audioTrackId)
             putOptionalBoolean(subtitleIsForcedKey, id, preference.subtitleIsForced)
+            putOptionalString(resizeModeKey, id, preference.resizeMode)
+            putOptionalString(zoomScaleXKey, id, preference.zoomScaleX?.toString())
+            putOptionalString(zoomScaleYKey, id, preference.zoomScaleY?.toString())
+            putOptionalString(zoomPanXKey, id, preference.zoomPanX?.toString())
+            putOptionalString(zoomPanYKey, id, preference.zoomPanY?.toString())
         }?.apply()
     }
 

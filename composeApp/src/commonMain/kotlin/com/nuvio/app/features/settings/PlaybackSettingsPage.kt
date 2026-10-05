@@ -54,6 +54,8 @@ import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
+import com.nuvio.app.features.player.SubtitleSideMargin
+import com.nuvio.app.features.player.LiveBufferPolicy
 import com.nuvio.app.features.player.AvailableLanguageOptions
 import com.nuvio.app.features.player.ExternalPlayerApp
 import com.nuvio.app.features.player.ExternalPlayerPlatform
@@ -417,6 +419,33 @@ private fun PlaybackSettingsSection(
                     onCheckedChange = PlayerSettingsRepository::setShowStreamInfo,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_remember_preferences),
+                    description = stringResource(Res.string.settings_playback_remember_preferences_description),
+                    checked = autoPlayPlayerSettings.rememberPlayerPreferences,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setRememberPlayerPreferences,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                // F13: live IPTV buffer length. Slider over the offered choices; 0 = Auto.
+                val liveBufferIndex = LiveBufferPolicy.CHOICES_SECONDS
+                    .indexOf(autoPlayPlayerSettings.liveBufferSeconds).coerceAtLeast(0)
+                SettingsSliderRow(
+                    title = stringResource(Res.string.settings_playback_live_buffer),
+                    value = liveBufferIndex,
+                    valueText = if (autoPlayPlayerSettings.liveBufferSeconds == LiveBufferPolicy.AUTO) {
+                        stringResource(Res.string.settings_playback_live_buffer_auto)
+                    } else {
+                        stringResource(Res.string.settings_playback_live_buffer_seconds, autoPlayPlayerSettings.liveBufferSeconds)
+                    },
+                    valueRange = 0..LiveBufferPolicy.CHOICES_SECONDS.lastIndex,
+                    step = 1,
+                    isTablet = isTablet,
+                    onValueChange = { index ->
+                        PlayerSettingsRepository.setLiveBufferSeconds(LiveBufferPolicy.CHOICES_SECONDS[index])
+                    },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
                 // Player preference picker: Internal / External
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_player_preference),
@@ -644,6 +673,19 @@ private fun PlaybackSettingsSection(
                     enabled = subtitleRenderingEnabled,
                     onValueChange = { value ->
                         PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(bottomOffset = value))
+                    },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSliderRow(
+                    title = stringResource(Res.string.settings_playback_subtitle_side_padding),
+                    value = subtitleStyle.sideMarginPercent,
+                    valueText = "${subtitleStyle.sideMarginPercent}%",
+                    valueRange = 0..SubtitleSideMargin.MAX_PERCENT,
+                    step = 1,
+                    isTablet = isTablet,
+                    enabled = subtitleRenderingEnabled,
+                    onValueChange = { value ->
+                        PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(sideMarginPercent = value))
                     },
                 )
                 SettingsGroupDivider(isTablet = isTablet)
