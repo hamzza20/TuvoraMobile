@@ -396,8 +396,11 @@ private struct LiveGuideView: View {
     private var isFavoritesCategory: Bool { category == "favorites" || category == "allfavorites" }
 
     private func refreshFavorites() {
-        favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
         favoriteOrder = TvLiveGuide.shared.favoriteChannels(accountId: nil)
+        // All favorites also lists OTHER playlists' favourites; they are favourites too (★, and the
+        // hold-OK menu offers Remove — it said "Add to Favorites" for them; device pass 2026-10-05).
+        favorites = Set(channels.map(\.contentId).filter { TvLiveGuide.shared.isFavorite(contentId: $0) })
+            .union(favoriteOrder.map(\.contentId))
     }
 
     /// F03 (owner 2026-10-04): a favourite toggle is confirmed — with Undo — rather than a popup.
