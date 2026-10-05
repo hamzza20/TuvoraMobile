@@ -111,10 +111,31 @@ final class FavouriteUndoTests: XCTestCase {
         XCTAssertGreaterThan(seen.count, 0)
     }
 
+    /// Into the guide's category column from the hub (the hub remembers its category and row).
+    private func toCategories() -> Bool {
+        let categories: Set<String> = ["#All favorites", "#Favorites", "#Recent", "#All channels"]
+        press(.down, settle: 1.5)
+        for _ in 0..<4 {
+            let id = focusedId()
+            if categories.contains(id) || id.hasPrefix("#") && !id.contains(", ") { return true }
+            if id.range(of: #"^#\d+, "#, options: .regularExpression) != nil { press(.left, settle: 1) } else { press(.down, settle: 1) }
+        }
+        return categories.contains(focusedId())
+    }
+    private func openCategory(_ name: String) -> Bool {
+        for _ in 0..<12 where focusedId() != "#\(name)" { press(.up, settle: 0.5) }
+        for _ in 0..<20 where focusedId() != "#\(name)" { press(.down, settle: 0.5) }
+        guard focusedId() == "#\(name)" else { return false }
+        press(.select, settle: 2)
+        press(.right, settle: 1.5)
+        return true
+    }
+
     /// P5 (W2 device pass): removing a favourite INSIDE a favourites row used to drop the row at once,
     /// so the "Hold OK to undo" the notice promised had no row to hold OK on. The row now stays (marked
     /// as removed) for the Undo window, and Undo puts the favourite back in the same place.
-    /// Skips when the selected playlist has no favourites.
+    /// Self-contained: favourites the first channel of All channels if Favorites is empty, and removes
+    /// that favourite again at the end.
     func testRemovingInsideFavoritesKeepsTheRowForUndo() throws {
         app.launchArguments = ["-smokePickProfile", "1", "-smokeTab", "iptv"]
         app.launch()
@@ -122,15 +143,25 @@ final class FavouriteUndoTests: XCTestCase {
             throw XCTSkip("needs a playlist on profile 1 (the IPTV hub has no Live TV chip)")
         }
         Thread.sleep(forTimeInterval: 4)
-        press(.down, settle: 1.5)
-        if !["#All favorites", "#Favorites", "#Recent", "#All channels"].contains(focusedId()) { press(.left, settle: 1) }
-        for _ in 0..<10 where focusedId() != "#Favorites" { press(.up, settle: 0.5) }
-        guard focusedId() == "#Favorites" else { throw XCTSkip("never reached Favorites (focus \(focusedId()))") }
-        press(.select, settle: 2)
-        press(.right, settle: 1.5)
+        guard toCategories() else { throw XCTSkip("never reached the category column (focus \(focusedId()))") }
+        // Set-up: make sure this playlist has a favourite.
+        var added = false
+        guard openCategory("Favorites") else { throw XCTSkip("no Favorites category (focus \(focusedId()))") }
+        if focusedId().range(of: #"^#1, "#, options: .regularExpression) == nil {
+            // An empty Favorites leaves focus on its category; LEFT from there would open the sidebar.
+            if focusedId().range(of: #"^#\d+, "#, options: .regularExpression) != nil { press(.left, settle: 1) }
+            guard openCategory("All channels") else { throw XCTSkip("no All channels category") }
+            let menu = holdMenu()
+            guard menu.contains("Add to Favorites") else { throw XCTSkip("first channel offers \(menu)") }
+            pick("Add to Favorites", in: menu)
+            added = true
+            Thread.sleep(forTimeInterval: 7)           // let the add's Undo window close
+            press(.left, settle: 1)
+            guard openCategory("Favorites") else { throw XCTSkip("no Favorites category after the add") }
+        }
         let row = focusedId()
         guard row.range(of: #"^#1, "#, options: .regularExpression) != nil else {
-            throw XCTSkip("Favorites is empty on this playlist (focus \(row))")
+            throw XCTSkip("Favorites is still empty (focus \(row))")
         }
         let first = holdMenu()
         guard first.contains("Remove from Favorites") else { throw XCTSkip("first Favorites row offers \(first)") }
@@ -149,6 +180,12 @@ final class FavouriteUndoTests: XCTestCase {
         XCTAssertEqual(rowKey(focusedId()), rowKey(row), "Undo did not put the favourite back in its place")
         let third = holdMenu()
         XCTAssertTrue(third.contains("Remove from Favorites"), "Undo did not restore the favourite (menu \(third))")
-        press(.menu, settle: 1)
+        // Clean-up: leave the profile as it started.
+        if added {
+            pick("Remove from Favorites", in: third)
+            Thread.sleep(forTimeInterval: 7)
+        } else {
+            press(.menu, settle: 1)
+        }
     }
 }
