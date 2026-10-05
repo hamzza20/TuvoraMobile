@@ -187,6 +187,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                     initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
                     initialPositionRequestKey = initialPositionRequestKey,
                     resizeMode = resizeMode,
+                    videoZoom = videoZoom,
                     playbackEngine = playbackEngineOverride,
                     onInitialPositionHandled = { key, handled ->
                         if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
@@ -370,6 +371,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             onSeekBack = { seekBy(-10_000L) },
             onSeekForward = { seekBy(10_000L) },
             onResizeModeClick = { cycleResizeMode() },
+            onVideoZoomClick = { openVideoZoomPanel() },
             onSpeedClick = { cyclePlaybackSpeed() },
             onSubtitleClick = {
                 refreshTracks()
@@ -744,5 +746,15 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         subtitleTrack = subtitleTracks.firstOrNull { it.index == selectedSubtitleIndex }.takeIf { !useCustomSubtitles },
         addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
         onDismiss = { showStreamInfo = false },
+    )
+    VideoZoomPanel(
+        visible = showVideoZoomPanel,
+        zoom = videoZoom,
+        onZoomChanged = { zoom -> setVideoZoom(zoom) },
+        onDismiss = { showVideoZoomPanel = false },
+        memoryScope = PlayerPreferencePolicy.pictureMemoryScope(
+            isLive = com.nuvio.app.features.streams.normalizeStreamType(activeStreamType) == "live" ||
+                contentType.equals("live", ignoreCase = true),
+        ),
     )
 }

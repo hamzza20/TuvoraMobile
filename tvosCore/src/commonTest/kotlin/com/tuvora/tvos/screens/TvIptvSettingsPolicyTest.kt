@@ -2,6 +2,7 @@ package com.tuvora.tvos.screens
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class TvIptvSettingsPolicyTest {
     private val p = TvIptvSettingsPolicy
@@ -25,6 +26,14 @@ class TvIptvSettingsPolicyTest {
         assertEquals("🇬🇧 🇫🇷", p.regionSummary(setOf("United Kingdom", "France"), regions))
         assertEquals("1 selected", p.regionSummary(setOf("Other"), regions))
         assertEquals("2 of 3 selected", p.regionDialogSubtitle(2, 3))
+    }
+
+    /** B119: the Apple TV picker had the same "All draws unchecked, one OK narrows to one" trap. */
+    @Test
+    fun `region rows under All read checked and OK removes only that one`() {
+        assertEquals(true, p.regionChecked(emptySet(), "France"), "All checks every row")
+        assertEquals(setOf("United Kingdom", "Other"), p.toggleRegion(emptySet(), regions, "France"), "All minus France")
+        assertEquals(emptySet(), p.toggleRegion(setOf("United Kingdom", "Other"), regions, "France"), "back to All")
     }
 
     @Test
@@ -63,5 +72,31 @@ class TvIptvContentPolicyTest {
         assertEquals(53, options.size)
         assertEquals("+2h", p.offsetText(120))
         assertEquals("-1h 30m", p.offsetText(-90))
+    }
+}
+
+/** P4/T7 — the Apple TV settings row, hub chip and backup rows never show a playlist's login. */
+class TvPlaylistLoginMaskingTest {
+    private val p = TvIptvSettingsPolicy
+    private val m3u = "http://host.example:8080/get.php?username=alice&password=s3cret&type=m3u_plus"
+
+    @Test
+    fun `a playlist address on a read-only row hides its login`() {
+        val shown = p.maskedAddress(m3u)
+        assertFalse("alice" in shown || "s3cret" in shown, shown)
+        assertEquals("http://host.example:8080/get.php?username=***&password=***&type=m3u_plus", shown)
+        assertEquals("http://panel.example:8080", p.maskedAddress("http://panel.example:8080"))
+    }
+
+    @Test
+    fun `a playlist name that is its login-carrying link shows as the host`() {
+        assertEquals("host.example:8080", p.playlistName(m3u))
+        assertEquals("Living room", p.playlistName("Living room"))
+    }
+
+    @Test
+    fun `the active backup address comes login-masked`() {
+        val shown = TvBackupServers.activeBackupAddress(listOf("http://b.example/get.php?username=alice&password=s3cret"), 1)
+        assertEquals("http://b.example/get.php?username=***&password=***", shown)
     }
 }

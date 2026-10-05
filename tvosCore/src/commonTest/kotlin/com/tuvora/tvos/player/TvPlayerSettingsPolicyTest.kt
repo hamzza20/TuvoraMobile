@@ -49,10 +49,12 @@ class TvSubtitleStyleEditorTest {
 
     @Test
     fun `background box maps through to mpv`() {
-        val boxed = TvSubtitleStyleEditor.background(base, 1)
-        assertEquals(1, TvSubtitleStyleEditor.view(boxed).backgroundIndex)
-        assertEquals("#80000000", TvSubtitleStyle.forMpv(boxed).backgroundColor)
-        assertEquals(0, TvSubtitleStyleEditor.view(base).backgroundIndex)
+        val solid = TvSubtitleStyleEditor.background(base, 2)
+        assertEquals(2, TvSubtitleStyleEditor.view(solid).backgroundIndex)
+        assertEquals("#E6000000", TvSubtitleStyle.forMpv(solid).backgroundColor)
+        // F47: the default style is the "dim" box.
+        assertEquals(1, TvSubtitleStyleEditor.view(base).backgroundIndex)
+        assertEquals("#8C000000", TvSubtitleStyle.forMpv(base).backgroundColor)
     }
 
     @Test

@@ -54,6 +54,7 @@ import nuvio.composeapp.generated.resources.compose_player_select_addon_subtitle
 import nuvio.composeapp.generated.resources.compose_player_style
 import nuvio.composeapp.generated.resources.compose_player_subtitle_delay
 import nuvio.composeapp.generated.resources.compose_player_text_opacity
+import nuvio.composeapp.generated.resources.player_subtitle_side_padding
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -183,6 +184,20 @@ fun SubtitleStylePanel(
             )
         }
 
+        SubtitleStyleSection(title = stringResource(Res.string.player_subtitle_side_padding)) {
+            SubtitleStyleStepper(
+                value = "${style.sideMarginPercent}%",
+                onDecrease = {
+                    onStyleChanged(style.copy(sideMarginPercent = (style.sideMarginPercent - 1).coerceAtLeast(0)))
+                },
+                onIncrease = {
+                    onStyleChanged(
+                        style.copy(sideMarginPercent = (style.sideMarginPercent + 1).coerceAtMost(SubtitleSideMargin.MAX_PERCENT)),
+                    )
+                },
+            )
+        }
+
         SubtitleAutoSyncSection(
             selectedAddonSubtitle = selectedAddonSubtitle,
             state = subtitleAutoSyncState,
@@ -199,7 +214,7 @@ fun SubtitleStylePanel(
 }
 
 @Composable
-private fun SubtitleStyleSection(
+internal fun SubtitleStyleSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -217,7 +232,7 @@ private fun SubtitleStyleSection(
 }
 
 @Composable
-private fun SubtitleStyleStepper(
+internal fun SubtitleStyleStepper(
     value: String,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
@@ -455,7 +470,7 @@ private fun SubtitleResetAction(
 }
 
 @Composable
-private fun SubtitleHelperText(text: String) {
+internal fun SubtitleHelperText(text: String) {
     Text(
         text = text,
         color = Color.White.copy(alpha = 0.7f),

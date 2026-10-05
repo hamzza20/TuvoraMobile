@@ -92,6 +92,11 @@ import com.nuvio.app.features.player.rememberIsInPictureInPicture
 import com.nuvio.app.features.player.rememberStreamInfoLines
 import com.nuvio.app.features.player.PlayerPlaybackSnapshot
 import com.nuvio.app.features.player.PlayerResizeMode
+import com.nuvio.app.features.player.VideoZoom
+import com.nuvio.app.features.player.PlayerTrackPreferenceStorage
+import com.nuvio.app.features.player.PlayerPreferencePolicy
+import com.nuvio.app.features.player.PictureChoice
+import com.nuvio.app.features.player.PersistedPlayerTrackPreference
 import com.nuvio.app.features.trakt.TraktPlatformClock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -488,6 +493,33 @@ fun LiveTvScreen(
         retryTick = 0   // a fresh channel is a first tune, not a retry — its resolve must not mint
     }
 
+    // F28 + B123: the live picture (aspect + manual zoom), lane F's model keyed by CHANNEL — each
+    // channel opens with its own remembered picture; live never rewrites the global aspect.
+    var livePicture by remember(currentContentId) {
+        val settings = PlayerSettingsRepository.uiState.value
+        mutableStateOf(
+            LiveFullscreenControlsPolicy.initialPicture(
+                rememberEnabled = settings.rememberPlayerPreferences,
+                stored = PlayerTrackPreferenceStorage.load(currentContentId),
+                globalResizeMode = settings.resizeMode,
+            ),
+        )
+    }
+    fun changePicture(next: PictureChoice) {
+        livePicture = next
+        val remember = PlayerSettingsRepository.uiState.value.rememberPlayerPreferences
+        if (!PlayerPreferencePolicy.persistsSeriesChoice(remember, currentContentId)) return
+        val current = PlayerTrackPreferenceStorage.load(currentContentId) ?: PersistedPlayerTrackPreference()
+        PlayerTrackPreferenceStorage.save(
+            currentContentId,
+            PlayerPreferencePolicy.withPicture(current, next.resizeMode, next.zoom),
+        )
+    }
+    fun zapBy(delta: Int) {
+        val targetId = LiveFullscreenControlsPolicy.neighbour(channels.map { it.contentId }, currentContentId, delta) ?: return
+        channels.firstOrNull { it.contentId == targetId }?.let(::switchTo)
+    }
+
     // ---- Orientation / fullscreen state ----
     val physicalLandscape by rememberPhysicalLandscape()
     var manualOrientation by remember { mutableStateOf<Boolean?>(null) } // true=landscape,false=portrait,null=follow
@@ -570,7 +602,8 @@ fun LiveTvScreen(
                 controlsShown = controlsVisible,
             )
         )
-        LaunchedEffect(overlay.autoHideScheduled) {
+        var controlsTick by remember { mutableStateOf(0) }
+        LaunchedEffect(overlay.autoHideScheduled, controlsTick) {
             if (overlay.autoHideScheduled) {
                 delay(LiveTvOverlayPolicy.AUTO_HIDE_DELAY_MS)
                 controlsVisible = false
@@ -616,7 +649,14 @@ fun LiveTvScreen(
                 LivePlayerSurface(
                     source = source,
                     isCatchUpPlayback = isCatchUp,
-                    onControllerReady = { controller = it },
+                    // B123: the live picture was hard-wired to Fit.
+                    resizeMode = livePicture.resizeMode,
+                    videoZoom = livePicture.zoom,
+                    onControllerReady = {
+                        controller = it
+                        // F47/UX61: live channels get the subtitle style too (was engine defaults).
+                        it.applySubtitleStyle(PlayerSettingsRepository.uiState.value.subtitleStyle)
+                    },
                     onSnapshot = {
                         snapshot = it
                         val session = catchUp
@@ -705,7 +745,36 @@ fun LiveTvScreen(
                         Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = colors.accent) }
                 }
 
-                if (fullscreen) {
+                if (fullscreen && !isCatchUp) {
+                    // F28: the regular player's controls with the live keep/drop list.
+                    LiveFullscreenControls(
+                        visible = overlay.chromeVisible,
+                        title = currentTitle,
+                        programmeTitle = nowNext.now?.title,
+                        snapshot = snapshot,
+                        controller = controller,
+                        resizeMode = livePicture.resizeMode,
+                        zoom = livePicture.zoom,
+                        channelCount = channels.size,
+                        // The screen's own stream-info readout stays the one shown.
+                        streamInfoLines = emptyList(),
+                        showStreamInfo = false,
+                        onStreamInfoAnimationComplete = {},
+                        onStreamInfoClick = {
+                            controller?.getStreamInfo()?.takeIf { it.hasAnyValue }?.let {
+                                streamInfo = it
+                                showStreamInfo = true
+                            }
+                        },
+                        onPlayPause = { if (snapshot.isPlaying) controller?.pause() else controller?.play() },
+                        onPreviousChannel = { zapBy(-1) },
+                        onNextChannel = { zapBy(+1) },
+                        onAspect = { changePicture(LiveFullscreenControlsPolicy.nextAspect(livePicture)); controlsTick++ },
+                        onZoomChanged = { changePicture(livePicture.copy(zoom = it)) },
+                        onBack = { setFullscreen(false) },
+                        onInteraction = { controlsTick++ },
+                    )
+                } else if (fullscreen) {
                     FullscreenControls(
                         visible = overlay.chromeVisible,
                         title = catchUp?.programmeTitle ?: currentTitle,
@@ -792,8 +861,13 @@ fun LiveTvScreen(
                 ),
                 onToggleFavorite = { onFavoriteChannel(ch.contentId) },
                 onDismiss = { channelMenu = null },
+                // F03: a pinned channel moves within the pinned ones (synced overlay positions).
+                onMoveEarlier = LiveGuidePinnedMoves.move(channels, overlaySnapshot.channels, ch, -1),
+                onMoveLater = LiveGuidePinnedMoves.move(channels, overlaySnapshot.channels, ch, +1),
             )
         }
+        // F14: the "Choose guide channel" dialog outlives the menu that opened it.
+        com.nuvio.app.features.iptv.epg.GuideChannelPickerHost()
 
         sheetTarget?.let { target ->
             ProgrammeSheet(
@@ -1001,6 +1075,8 @@ private fun FullscreenControls(
 private fun LivePlayerSurface(
     source: LiveChannelSource?,
     isCatchUpPlayback: Boolean,
+    resizeMode: PlayerResizeMode = PlayerResizeMode.Fit,
+    videoZoom: VideoZoom = VideoZoom.IDENTITY,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
     onError: (String?) -> Unit,
@@ -1019,7 +1095,8 @@ private fun LivePlayerSurface(
             playbackSurface = com.nuvio.app.features.player.LIVE_FREEZE_SURFACE_DOCKED,
             modifier = Modifier.fillMaxSize(),
             playWhenReady = true,
-            resizeMode = PlayerResizeMode.Fit,
+            resizeMode = resizeMode,
+            videoZoom = videoZoom,
             useNativeController = false,
             onControllerReady = onControllerReady,
             onSnapshot = onSnapshot,

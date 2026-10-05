@@ -60,6 +60,7 @@ actual fun PlatformPlayerSurface(
     initialPositionMs: Long?,
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
+    videoZoom: VideoZoom,
     playbackEngine: AndroidPlaybackEngine?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
@@ -296,6 +297,17 @@ actual fun PlatformPlayerSurface(
                     subPos = style.toMpvSubtitlePosition(),
                     stripSdh = style.stripSdh,
                 )
+                // UX61/F47: box, outline and side padding from the shared mapping, applied after the
+                // legacy call so background-box (alpha honoured) wins over the bridge's old choice.
+                bridge.setMpvProperties(
+                    SubtitleStyleMpvMapping.properties(
+                        backgroundColorHex = style.backgroundColor.toMpvColorString(),
+                        backgroundAlpha = style.backgroundColor.alpha,
+                        outlineColorHex = style.outlineColor.toMpvColorString(),
+                        outlineSize = if (style.outlineEnabled) style.outlineWidth.toDouble() else 0.0,
+                        sideMarginPercent = style.sideMarginPercent,
+                    ),
+                )
             }
         }
     }
@@ -311,6 +323,12 @@ actual fun PlatformPlayerSurface(
         // end of the recording they were part-way through.
         val isLive = LivePlaybackRejoinPolicy.rejoinsLiveEdge(streamType, isCatchUpPlayback)
         bridge.setIsLiveStream(isLive)
+        // F13: the user's live buffer length (cache cap + rebuffer cushion); null = mpv defaults.
+        LiveBufferPolicy.planFor(
+            seconds = latestPlayerSettings.value.liveBufferSeconds,
+            isLive = normalizeStreamType(streamType) == "live",
+            isCatchUp = isCatchUpPlayback,
+        )?.let { plan -> bridge.setMpvProperties(LiveBufferPolicy.mpvProperties(plan)) }
         // The resume rides the load (mpv `start=`), not a post-load seek mpv can reject (B59b).
         val startOption = MpvStartPosition.loadOption(latestInitialPositionMs.value, isLive)
         bridge.loadFileWithAudio(
@@ -344,6 +362,11 @@ actual fun PlatformPlayerSurface(
                 PlayerResizeMode.Zoom -> 2
             }
         )
+    }
+
+    // F36 manual zoom: video-scale-x/y + video-pan-x/y.
+    LaunchedEffect(bridge, videoZoom) {
+        bridge.setMpvProperties(VideoZoomPolicy.mpvProperties(videoZoom))
     }
 
     LaunchedEffect(bridge, playerSettings) {

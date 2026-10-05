@@ -6,7 +6,7 @@ import ComposeApp
 
 // MARK: - Player Bridge Implementation (Kotlin protocol conformance)
 
-final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
+final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge, NuvioPlayerPropertyBridge {
 
     private var playerVC: MPVPlayerViewController?
     /// Mirrors the user's Picture-in-Picture setting so a view controller created later still gets
@@ -121,6 +121,11 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func setPlaybackSpeed(speed: Float) { playerVC?.setSpeed(speed) }
     func setMuted(muted: Bool) { playerVC?.setMuted(muted) }
     func setResizeMode(mode: Int32) { playerVC?.setResize(Int(mode)) }
+    /// NuvioPlayerPropertyBridge: generic property setter for the shared Kotlin policies
+    /// (VideoZoomPolicy, SubtitleStyleMpvMapping). Hand-mirrored against the Kotlin interface.
+    func setMpvStringProperties(names: [String], values: [String]) {
+        playerVC?.setStringProperties(names, values)
+    }
     func syncVideoSurfaceLayout(width: Double, height: Double) {
         playerVC?.syncVideoSurfaceLayout(size: CGSize(width: width, height: height))
     }
@@ -1077,7 +1082,9 @@ final class MPVPlayerViewController: UIViewController {
         checkError(mpv_set_property_string(mpv, "sub-color", textColor))
         checkError(mpv_set_property_string(mpv, "sub-back-color", backgroundColor))
         checkError(mpv_set_property_string(mpv, "sub-outline-color", outlineColor))
-        checkError(mpv_set_property_string(mpv, "sub-border-style", backgroundColor.hasPrefix("#00") ? "outline-and-shadow" : "opaque-box"))
+        // UX61: background-box paints the box in sub-back-color with its alpha; opaque-box painted it in
+        // the outline colour (near-solid "dim"). The shared SubtitleStyleMpvMapping re-applies this.
+        checkError(mpv_set_property_string(mpv, "sub-border-style", backgroundColor.hasPrefix("#00") ? "outline-and-shadow" : "background-box"))
         setStringProperty("sub-bold", bold ? "yes" : "no")
 
         var outline = Double(outlineSize)
@@ -1634,6 +1641,13 @@ final class MPVPlayerViewController: UIViewController {
         MPVRenderThreadGuard.assertNotOnRenderCallback(name)
         var data: Int = flag ? 1 : 0
         mpv_set_property(mpv, name, MPV_FORMAT_FLAG, &data)
+    }
+
+    func setStringProperties(_ names: [String], _ values: [String]) {
+        guard mpv != nil else { return }
+        for (name, value) in zip(names, values) {
+            setStringProperty(name, value)
+        }
     }
 
     func setStringProperty(_ name: String, _ value: String) {

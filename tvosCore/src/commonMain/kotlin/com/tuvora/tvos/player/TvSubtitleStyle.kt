@@ -16,16 +16,30 @@ data class TvMpvSubtitleStyle(
 )
 
 object TvSubtitleStyle {
-    fun forMpv(style: SubtitleStyleState): TvMpvSubtitleStyle = TvMpvSubtitleStyle(
+    /**
+     * The Apple TV MPV bridge (tvosApp, lane E) still selects `opaque-box` for any background, and
+     * libass paints that box in the OUTLINE colour, padded by the outline size. Until the bridge adopts
+     * NuvioPlayerPropertyBridge (which then applies `background-box` via SubtitleStyleMpvMapping), a
+     * box WITHOUT an outline — the F47 default — is passed as outline colour = background colour and
+     * outline size = the shared box padding: the same soft, translucent, padded box.
+     */
+    fun forMpv(style: SubtitleStyleState): TvMpvSubtitleStyle {
+        val boxWithoutOutline = style.backgroundColor.alpha > 0f && !style.outlineEnabled
+        return TvMpvSubtitleStyle(
         textColor = mpvColor(style.textColor.toArgb()),
         backgroundColor = mpvColor(style.backgroundColor.toArgb()),
-        outlineColor = mpvColor(style.outlineColor.toArgb()),
-        outlineSize = if (style.outlineEnabled) style.outlineWidth.toFloat() else 0f,
+        outlineColor = mpvColor((if (boxWithoutOutline) style.backgroundColor else style.outlineColor).toArgb()),
+        outlineSize = when {
+            boxWithoutOutline -> com.nuvio.app.features.player.SubtitleStyleMpvMapping.BOX_PADDING.toFloat()
+            style.outlineEnabled -> style.outlineWidth.toFloat()
+            else -> 0f
+        },
         bold = style.bold,
         fontSize = (style.fontSizeSp * 3f).coerceIn(18f, 96f),
         subPos = (100 - (style.bottomOffset / 2)).coerceIn(0, 150),
         stripSdh = style.stripSdh,
-    )
+        )
+    }
 
     /** "#AARRGGBB", as mpv's sub-color options take it. */
     fun mpvColor(argb: Int): String {

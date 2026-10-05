@@ -37,6 +37,8 @@ import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.ZoomIn
+import androidx.compose.material.icons.rounded.SkipPrevious
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -110,15 +112,20 @@ internal fun PlayerControlsShell(
     showStreamInfo: Boolean = false,
     onStreamInfoAnimationComplete: () -> Unit = {},
     showPlaybackControls: Boolean = true,
-    onLockToggle: () -> Unit,
+    /** Null hides the lock (F28: live has no timeline to protect from stray touches). */
+    onLockToggle: (() -> Unit)?,
     onBack: () -> Unit,
     onTogglePlayback: () -> Unit,
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onResizeModeClick: () -> Unit,
-    onSpeedClick: () -> Unit,
-    onSubtitleClick: () -> Unit,
-    onAudioClick: () -> Unit,
+    onVideoZoomClick: (() -> Unit)? = null,
+    /** Null hides speed (F28: no meaning on live). */
+    onSpeedClick: (() -> Unit)?,
+    /** Null hides the button (F28: live shows subtitles only when the stream has some). */
+    onSubtitleClick: (() -> Unit)?,
+    /** Null hides the button (F28: live shows audio only when there is a choice). */
+    onAudioClick: (() -> Unit)?,
     onVideoSettingsClick: (() -> Unit)? = null,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
@@ -133,6 +140,12 @@ internal fun PlayerControlsShell(
     onScrubFinished: (Long) -> Unit,
     horizontalSafePadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    /**
+     * F28: on live the centre seek buttons become channel down/up (null = that side is empty);
+     * ignored for VOD.
+     */
+    onPreviousChannel: (() -> Unit)? = null,
+    onNextChannel: (() -> Unit)? = null,
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
@@ -252,6 +265,9 @@ internal fun PlayerControlsShell(
                     CenterControls(
                         snapshot = playbackSnapshot,
                         metrics = metrics,
+                        isLive = isLive,
+                        onPreviousChannel = onPreviousChannel?.let { zap -> { if (!useLegacyLayout) onInteraction(); zap() } },
+                        onNextChannel = onNextChannel?.let { zap -> { if (!useLegacyLayout) onInteraction(); zap() } },
                         onSeekBack = {
                             if (!useLegacyLayout) onInteraction()
                             onSeekBack()
@@ -282,6 +298,7 @@ internal fun PlayerControlsShell(
                     onScrubChange = onScrubChange,
                     onScrubFinished = onScrubFinished,
                     onResizeModeClick = onResizeModeClick,
+                    onVideoZoomClick = onVideoZoomClick,
                     onSpeedClick = onSpeedClick,
                     onSubtitleClick = onSubtitleClick,
                     onAudioClick = onAudioClick,
@@ -334,6 +351,7 @@ internal fun PlayerControlsShell(
                         displayedPositionMs = displayedPositionMs,
                         showRemainingTime = showRemainingTime,
                         onRuntimeClick = onRuntimeClick,
+                        isLive = isLive,
                         metrics = metrics,
                         resizeMode = resizeMode,
                         onSubtitleClick = onSubtitleClick,
@@ -344,6 +362,7 @@ internal fun PlayerControlsShell(
                         onSwitchEngineClick = onSwitchEngineClick,
                         onSpeedClick = onSpeedClick,
                         onResizeModeClick = onResizeModeClick,
+                        onVideoZoomClick = onVideoZoomClick,
                         onVideoSettingsClick = onVideoSettingsClick,
                         onOpenInExternalPlayer = onOpenInExternalPlayer,
                         onStreamInfoClick = onStreamInfoClick,
@@ -374,7 +393,7 @@ private fun PlayerHeader(
     streamInfoLines: List<StreamInfoLine>,
     showStreamInfo: Boolean,
     onStreamInfoAnimationComplete: () -> Unit,
-    onLockToggle: () -> Unit,
+    onLockToggle: (() -> Unit)?,
     onVideoSettingsClick: (() -> Unit)?,
     onOpenInExternalPlayer: (() -> Unit)?,
     onBack: () -> Unit,
@@ -495,7 +514,7 @@ private fun PlayerHeader(
                             onClick = onOpenInExternalPlayer,
                         )
                     }
-                    PlayerHeaderIconButton(
+                    if (onLockToggle != null) PlayerHeaderIconButton(
                         icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
                         contentDescription = if (isLocked) {
                             stringResource(Res.string.compose_player_unlock_controls)
@@ -571,13 +590,26 @@ private fun CenterControls(
     onSeekForward: () -> Unit,
     onTogglePlayback: () -> Unit,
     modifier: Modifier = Modifier,
+    isLive: Boolean = false,
+    onPreviousChannel: (() -> Unit)? = null,
+    onNextChannel: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(metrics.centerGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SideControlButton(
+        // F28: live has no timeline, so no ±10 s; channel down/up take their places when offered.
+        if (isLive) {
+            onPreviousChannel?.let {
+                SideControlButton(
+                    icon = Icons.Rounded.SkipPrevious,
+                    contentDescription = stringResource(Res.string.compose_livetv_previous_channel),
+                    metrics = metrics,
+                    onClick = it,
+                )
+            }
+        } else SideControlButton(
             icon = Icons.Rounded.Replay10,
             contentDescription = stringResource(Res.string.compose_player_seek_back_10),
             metrics = metrics,
@@ -589,7 +621,16 @@ private fun CenterControls(
             metrics = metrics,
             onClick = onTogglePlayback,
         )
-        SideControlButton(
+        if (isLive) {
+            onNextChannel?.let {
+                SideControlButton(
+                    icon = Icons.Rounded.SkipNext,
+                    contentDescription = stringResource(Res.string.compose_livetv_next_channel),
+                    metrics = metrics,
+                    onClick = it,
+                )
+            }
+        } else SideControlButton(
             icon = Icons.Rounded.Forward10,
             contentDescription = stringResource(Res.string.compose_player_seek_forward_10),
             metrics = metrics,
@@ -669,9 +710,10 @@ private fun ProgressControls(
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     onResizeModeClick: () -> Unit,
-    onSpeedClick: () -> Unit,
-    onSubtitleClick: () -> Unit,
-    onAudioClick: () -> Unit,
+    onVideoZoomClick: (() -> Unit)? = null,
+    onSpeedClick: (() -> Unit)?,
+    onSubtitleClick: (() -> Unit)?,
+    onAudioClick: (() -> Unit)?,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -721,17 +763,24 @@ private fun ProgressControls(
                         painter = aspectRatioPainter,
                         onClick = onResizeModeClick,
                     )
-                    PlayerActionPillButton(
+                    if (onVideoZoomClick != null) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.player_zoom_title),
+                            icon = Icons.Rounded.ZoomIn,
+                            onClick = onVideoZoomClick,
+                        )
+                    }
+                    if (onSpeedClick != null) PlayerActionPillButton(
                         label = formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed),
                         icon = Icons.Filled.Speed,
                         onClick = onSpeedClick,
                     )
-                    PlayerActionPillButton(
+                    if (onSubtitleClick != null) PlayerActionPillButton(
                         label = stringResource(Res.string.compose_player_subs),
                         painter = subtitlesPainter,
                         onClick = onSubtitleClick,
                     )
-                    PlayerActionPillButton(
+                    if (onAudioClick != null) PlayerActionPillButton(
                         label = stringResource(Res.string.compose_player_audio),
                         painter = audioPainter,
                         onClick = onAudioClick,
