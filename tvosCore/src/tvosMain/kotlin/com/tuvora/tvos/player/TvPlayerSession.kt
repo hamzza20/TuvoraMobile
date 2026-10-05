@@ -446,16 +446,32 @@ class TvPlayerSession(
         if (addonSubtitlesRequested || isLive) return
         val type = (launch.contentType ?: launch.parentMetaType).takeIf { it.isNotBlank() } ?: return
         if (type.lowercase() in setOf("cloud", "live", "tv")) return
-        val videoId = launch.videoId?.takeIf { it.isNotBlank() } ?: return
+        val ownVideoId = launch.videoId?.takeIf { it.isNotBlank() } ?: return
         addonSubtitlesRequested = true
         AddonRepository.initialize()
         // As the phone's fetch key: search again whenever the set of subtitle add-ons changes (the
         // manifests may still be loading when the player opens).
         scope.launch {
+            // F17: an IPTV item is looked up under its public IMDb id; its provider-scoped id (which
+            // embeds the playlist key) never reaches an add-on (AddonSubtitleIdPolicy).
+            val publicId = if (com.nuvio.app.features.player.AddonSubtitleIdPolicy.isProviderScoped(ownVideoId)) {
+                runCatching {
+                    com.nuvio.app.core.contracts.IptvSubtitleIdAccess.resolver.publicSubtitleVideoId(
+                        parentMetaId = launch.parentMetaId,
+                        season = launch.seasonNumber,
+                        episode = launch.episodeNumber,
+                    )
+                }.getOrNull()
+            } else {
+                null
+            }
+            val videoId = com.nuvio.app.features.player.AddonSubtitleIdPolicy
+                .requestVideoId(ownVideoId, publicId) ?: return@launch
+            val requestType = com.nuvio.app.features.player.AddonSubtitleIdPolicy.requestType(type, videoId)
             AddonRepository.uiState
-                .map { addonSubtitleRequests(type, videoId).map { it.url } }
+                .map { addonSubtitleRequests(requestType, videoId).map { it.url } }
                 .distinctUntilChanged()
-                .collect { urls -> if (urls.isNotEmpty()) SubtitleRepository.fetchAddonSubtitles(type, videoId) }
+                .collect { urls -> if (urls.isNotEmpty()) SubtitleRepository.fetchAddonSubtitles(requestType, videoId) }
         }
     }
 
