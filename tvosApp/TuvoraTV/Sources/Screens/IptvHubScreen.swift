@@ -423,6 +423,13 @@ private struct LiveGuideView: View {
                 rowIds: visible.map(\.contentId), contentId: channel.contentId,
                 savedAtEpochMs: TvLiveGuide.shared.favoriteSavedAt(contentId: channel.contentId), nowMs: stamp)
             : nil
+        // Hold the row BEFORE the library changes: the libraryChanges observer refreshes the rows as
+        // soon as the toggle lands, and a row that vanishes even for a frame takes focus with it.
+        if let removal {
+            now = stamp
+            pendingRemoval = removal
+            pendingRemovalChannel = channel
+        }
         Task {
             if let undoing {
                 try? await TvLiveGuide.shared.restoreFavorite(channel: channel, savedAtEpochMs: undoing.savedAtEpochMs)
@@ -430,8 +437,10 @@ private struct LiveGuideView: View {
                 try? await TvLiveGuide.shared.toggleFavorite(channel: channel)
             }
             now = TvLiveGuide.shared.nowMs()
-            pendingRemoval = removal
-            pendingRemovalChannel = removal == nil ? nil : channel
+            if removal == nil {
+                pendingRemoval = nil
+                pendingRemovalChannel = nil
+            }
             refreshFavorites()
             let at = Date()
             lastFavoriteToggle = undoable ? (channel.contentId, at) : nil
