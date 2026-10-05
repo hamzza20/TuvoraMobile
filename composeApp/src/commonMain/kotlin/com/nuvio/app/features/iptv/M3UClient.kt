@@ -342,14 +342,7 @@ object M3UClient : IptvClient {
     )
 
     /** A stable non-negative Int id from an arbitrary string (URL / series key). FNV-1a, masked. */
-    internal fun sidOf(s: String): Int {
-        var hash = -0x7ee3623b // FNV offset basis (0x811C9DC5) as a signed Int
-        for (c in s) {
-            hash = hash xor c.code
-            hash *= 0x01000193
-        }
-        return hash and 0x7fffffff
-    }
+    internal fun sidOf(s: String): Int = M3uIdentity.sidOf(s)
 
     /** Episode ids stay strings (the registry EPISODE kind expects a string id) — hex of the url hash. */
     internal fun episodeIdOf(url: String): String = sidOf(url).toString(16)
