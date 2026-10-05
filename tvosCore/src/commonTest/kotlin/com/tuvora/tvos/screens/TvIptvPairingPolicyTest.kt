@@ -47,6 +47,14 @@ class TvIptvPairingPolicyTest {
         assertEquals(false, stalker.sendDeviceId)
     }
 
+    /** F46: "Add from phone" carries the four STB identity overrides (NuvioTV IptvPairingPayload keys). */
+    @Test
+    fun `stalker pairing carries device id 2 signature model and hw version`() {
+        val f = p.payloadToForm(json("""{"source_type":"stalker","portal_url":"http://p","mac_address":"00:1A:79:00:00:01",
+            "device_id2":" d2 ","signature":"sig","stb_model":"MAG254","hw_version":"2.6-IB-00"}"""))!!
+        assertEquals(listOf("d2", "sig", "MAG254", "2.6-IB-00"), listOf(f.deviceId2, f.signature, f.stbModel, f.hwVersion))
+    }
+
     @Test
     fun `unusable payloads are refused`() {
         assertNull(p.payloadToForm(null))
