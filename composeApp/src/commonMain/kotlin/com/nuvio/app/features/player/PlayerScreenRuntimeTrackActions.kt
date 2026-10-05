@@ -35,9 +35,43 @@ internal val PlayerScreenRuntime.selectedAddonSubtitle: AddonSubtitle?
 internal fun PlayerScreenRuntime.updateTrackPreference(
     update: (PersistedPlayerTrackPreference) -> PersistedPlayerTrackPreference,
 ) {
-    if (parentMetaId.isBlank()) return
+    // F37: the per-series memory is written only while "Remember my player preferences" is on.
+    if (!PlayerPreferencePolicy.persistsSeriesChoice(playerSettingsUiState.rememberPlayerPreferences, parentMetaId)) return
     val current = PlayerTrackPreferenceStorage.load(parentMetaId) ?: PersistedPlayerTrackPreference()
     PlayerTrackPreferenceStorage.save(parentMetaId, update(current))
+}
+
+/** The series memory to restore from, or null when remembering is off (global defaults apply). */
+private fun PlayerScreenRuntime.loadSeriesMemory(): PersistedPlayerTrackPreference? =
+    PlayerPreferencePolicy.seriesMemory(
+        rememberEnabled = playerSettingsUiState.rememberPlayerPreferences,
+        stored = parentMetaId.takeIf { it.isNotBlank() }?.let(PlayerTrackPreferenceStorage::load),
+    )
+
+/** F37: aspect + manual zoom for this series, else the global last-used aspect and no zoom. */
+internal fun PlayerScreenRuntime.restorePicturePreference() {
+    val choice = PlayerPreferencePolicy.initialPicture(
+        rememberEnabled = playerSettingsUiState.rememberPlayerPreferences,
+        stored = loadSeriesMemory(),
+        globalResizeMode = playerSettingsUiState.resizeMode,
+    )
+    resizeMode = choice.resizeMode
+    lastSyncedSettingsResizeMode = playerSettingsUiState.resizeMode
+    videoZoom = choice.zoom
+}
+
+internal fun PlayerScreenRuntime.persistPicturePreference() {
+    updateTrackPreference { current -> PlayerPreferencePolicy.withPicture(current, resizeMode, videoZoom) }
+}
+
+internal fun PlayerScreenRuntime.setVideoZoom(zoom: VideoZoom) {
+    videoZoom = VideoZoomPolicy.normalize(zoom)
+    persistPicturePreference()
+}
+
+internal fun PlayerScreenRuntime.openVideoZoomPanel() {
+    showVideoZoomPanel = true
+    controlsVisible = true
 }
 
 internal fun PlayerScreenRuntime.persistAudioPreference(track: AudioTrack?) {
@@ -88,7 +122,7 @@ internal fun PlayerScreenRuntime.persistAddonSubtitlePreference(subtitle: AddonS
 
 internal fun PlayerScreenRuntime.restorePersistedTrackPreferenceIfNeeded(): Boolean {
     if (trackPreferenceRestoreApplied) return true
-    val preference = PlayerTrackPreferenceStorage.load(parentMetaId)
+    val preference = loadSeriesMemory()
     if (preference == null) {
         trackPreferenceRestoreApplied = true
         return true

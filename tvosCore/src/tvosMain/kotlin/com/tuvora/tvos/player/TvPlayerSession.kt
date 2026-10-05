@@ -13,6 +13,7 @@ import com.nuvio.app.features.player.AddonSubtitle
 import com.nuvio.app.features.player.PlayerStreamInfo
 import com.nuvio.app.features.player.PlayerTrackPreferenceStorage
 import com.nuvio.app.features.player.ResumeLoadPolicy
+import com.nuvio.app.features.player.setMpvProperties
 import com.nuvio.app.features.player.SubtitleRepository
 import com.nuvio.app.features.player.addonSubtitleRequests
 import com.nuvio.app.features.addons.AddonRepository
@@ -556,6 +557,27 @@ class TvPlayerSession(
             outlineSize = subStyle.outlineSize, bold = subStyle.bold, fontSize = subStyle.fontSize,
             subPos = subStyle.subPos, stripSdh = subStyle.stripSdh,
         )
+        // UX61/F47: shared box/outline/side-padding mapping. Takes effect once the Apple TV MPV bridge
+        // adopts NuvioPlayerPropertyBridge (tvosApp, lane E); until then this is a no-op.
+        val style = PlayerSettingsRepository.uiState.value.subtitleStyle
+        b.setMpvProperties(
+            com.nuvio.app.features.player.SubtitleStyleMpvMapping.properties(
+                backgroundColorHex = subStyle.backgroundColor,
+                backgroundAlpha = style.backgroundColor.alpha,
+                outlineColorHex = subStyle.outlineColor,
+                outlineSize = subStyle.outlineSize.toDouble(),
+                sideMarginPercent = style.sideMarginPercent,
+            ),
+        )
+    }
+
+    /**
+     * F36 manual zoom for the Apple TV player UI (tvosApp, lane E): video-scale-x/y + video-pan-x/y
+     * through [com.nuvio.app.features.player.VideoZoomPolicy]. No-op until the bridge adopts
+     * NuvioPlayerPropertyBridge.
+     */
+    fun setVideoZoom(zoom: com.nuvio.app.features.player.VideoZoom) {
+        bridge?.setMpvProperties(com.nuvio.app.features.player.VideoZoomPolicy.mpvProperties(zoom))
     }
 
     // ---- Playback-issue report --------------------------------------------------------------

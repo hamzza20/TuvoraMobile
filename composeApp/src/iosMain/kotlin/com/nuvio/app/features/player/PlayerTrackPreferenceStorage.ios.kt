@@ -16,6 +16,12 @@ internal actual object PlayerTrackPreferenceStorage {
     private const val audioTrackIdKey = "audio_track_id"
     private const val subtitleIsForcedKey = "subtitle_is_forced"
     private const val subtitleDelayMsKey = "subtitle_delay_ms"
+    // F37/F36 per-series picture memory (PlayerPreferencePolicy).
+    private const val resizeModeKey = "resize_mode"
+    private const val zoomScaleXKey = "zoom_scale_x"
+    private const val zoomScaleYKey = "zoom_scale_y"
+    private const val zoomPanXKey = "zoom_pan_x"
+    private const val zoomPanYKey = "zoom_pan_y"
 
     actual fun load(contentId: String): PersistedPlayerTrackPreference? {
         val id = contentId.normalizedStorageId() ?: return null
@@ -31,6 +37,11 @@ internal actual object PlayerTrackPreferenceStorage {
             audioName = loadString(audioNameKey, id),
             audioTrackId = loadString(audioTrackIdKey, id),
             subtitleIsForced = loadBoolean(subtitleIsForcedKey, id),
+            resizeMode = loadString(resizeModeKey, id),
+            zoomScaleX = loadString(zoomScaleXKey, id)?.toFloatOrNull(),
+            zoomScaleY = loadString(zoomScaleYKey, id)?.toFloatOrNull(),
+            zoomPanX = loadString(zoomPanXKey, id)?.toFloatOrNull(),
+            zoomPanY = loadString(zoomPanYKey, id)?.toFloatOrNull(),
         )
         return preference.takeIf {
             listOf(
@@ -44,7 +55,9 @@ internal actual object PlayerTrackPreferenceStorage {
                 it.audioLanguage,
                 it.audioName,
                 it.audioTrackId,
-            ).any { value -> !value.isNullOrBlank() } || it.subtitleIsForced != null
+                it.resizeMode,
+            ).any { value -> !value.isNullOrBlank() } || it.subtitleIsForced != null ||
+                it.zoomScaleX != null || it.zoomScaleY != null || it.zoomPanX != null || it.zoomPanY != null
         }
     }
 
@@ -61,6 +74,11 @@ internal actual object PlayerTrackPreferenceStorage {
         saveOptionalString(audioNameKey, id, preference.audioName)
         saveOptionalString(audioTrackIdKey, id, preference.audioTrackId)
         saveOptionalBoolean(subtitleIsForcedKey, id, preference.subtitleIsForced)
+        saveOptionalString(resizeModeKey, id, preference.resizeMode)
+        saveOptionalString(zoomScaleXKey, id, preference.zoomScaleX?.toString())
+        saveOptionalString(zoomScaleYKey, id, preference.zoomScaleY?.toString())
+        saveOptionalString(zoomPanXKey, id, preference.zoomPanX?.toString())
+        saveOptionalString(zoomPanYKey, id, preference.zoomPanY?.toString())
     }
 
     actual fun loadSubtitleDelayMs(videoId: String): Int? {

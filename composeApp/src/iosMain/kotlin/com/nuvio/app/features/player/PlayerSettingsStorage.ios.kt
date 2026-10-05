@@ -27,6 +27,9 @@ actual object PlayerSettingsStorage {
     private const val showStreamInfoKey = "show_stream_info"
     private const val resizeModeKey = "resize_mode"
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
+    // Device-local (not in syncKeys): see PlayerSettingsUiState.rememberPlayerPreferences.
+    private const val rememberPlayerPreferencesKey = "remember_player_preferences"
+    private const val subtitleSideMarginPercentKey = "subtitle_side_margin_percent"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val pictureInPictureEnabledKey = "picture_in_picture_enabled"
@@ -297,6 +300,26 @@ actual object PlayerSettingsStorage {
 
     actual fun saveResizeMode(mode: String) {
         NSUserDefaults.standardUserDefaults.setObject(mode, forKey = ProfileScopedKey.of(resizeModeKey))
+    }
+
+    actual fun loadRememberPlayerPreferences(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(rememberPlayerPreferencesKey)
+        return if (defaults.objectForKey(key) != null) defaults.boolForKey(key) else null
+    }
+
+    actual fun saveRememberPlayerPreferences(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(rememberPlayerPreferencesKey))
+    }
+
+    actual fun loadSubtitleSideMarginPercent(): Int? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(subtitleSideMarginPercentKey)
+        return if (defaults.objectForKey(key) != null) defaults.integerForKey(key).toInt() else null
+    }
+
+    actual fun saveSubtitleSideMarginPercent(percent: Int) {
+        NSUserDefaults.standardUserDefaults.setInteger(percent.toLong(), forKey = ProfileScopedKey.of(subtitleSideMarginPercentKey))
     }
 
     actual fun loadHoldToSpeedEnabled(): Boolean? {

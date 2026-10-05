@@ -29,6 +29,9 @@ actual object PlayerSettingsStorage {
     private const val showStreamInfoKey = "show_stream_info"
     private const val resizeModeKey = "resize_mode"
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
+    // Device-local (not in syncKeys): see PlayerSettingsUiState.rememberPlayerPreferences.
+    private const val rememberPlayerPreferencesKey = "remember_player_preferences"
+    private const val subtitleSideMarginPercentKey = "subtitle_side_margin_percent"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val pictureInPictureEnabledKey = "picture_in_picture_enabled"
@@ -300,6 +303,36 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(resizeModeKey), mode)
+            ?.apply()
+    }
+
+    actual fun loadRememberPlayerPreferences(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(rememberPlayerPreferencesKey)
+            if (sharedPreferences.contains(key)) sharedPreferences.getBoolean(key, true) else null
+        }
+
+    actual fun saveRememberPlayerPreferences(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(rememberPlayerPreferencesKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadSubtitleSideMarginPercent(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(subtitleSideMarginPercentKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, SubtitleStyleState.DEFAULT.sideMarginPercent)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSubtitleSideMarginPercent(percent: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(subtitleSideMarginPercentKey), percent)
             ?.apply()
     }
 

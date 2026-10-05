@@ -66,6 +66,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
     showAudioModal = false
     showSubtitleModal = false
     showVideoSettingsModal = false
+    showVideoZoomPanel = false
     showStreamInfoOverlay = false
     showStreamInfo = false
     showSourcesPanel = false
@@ -222,6 +223,7 @@ internal fun PlayerScreenRuntime.cycleResizeMode() {
     resizeMode = nextMode
     lastSyncedSettingsResizeMode = nextMode
     PlayerSettingsRepository.setResizeMode(nextMode)
+    persistPicturePreference()
     showGestureMessage(
         when (nextMode) {
             PlayerResizeMode.Fit -> resizeModeFitLabel
