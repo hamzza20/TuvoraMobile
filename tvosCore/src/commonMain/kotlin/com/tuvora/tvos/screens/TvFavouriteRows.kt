@@ -43,6 +43,20 @@ object TvFavouriteRows {
         return rowIds.toMutableList().apply { add(pending.index.coerceIn(0, size), pending.contentId) }
     }
 
+    /**
+     * The row while a removed favourite is HELD past its window — Undo is saving it back, or the row
+     * still has focus. A focused row that vanishes throws focus to the sidebar on tvOS, and the hold-OK
+     * menu (opened inside the window) can still be open when the window closes.
+     */
+    fun heldIds(rowIds: List<String>, pending: PendingRemoval?): List<String> {
+        if (pending == null || pending.contentId in rowIds) return rowIds
+        return rowIds.toMutableList().apply { add(pending.index.coerceIn(0, size), pending.contentId) }
+    }
+
+    /** When the window closes: drop the removed row now, unless it is the focused row (held until focus leaves). */
+    fun dropsAtWindowClose(pending: PendingRemoval?, focusedId: String?): Boolean =
+        pending != null && pending.contentId != focusedId
+
     /** T4: the channels zapping walks from [playingId] — only those of its own playlist, in row order. */
     fun zapIds(rowIds: List<String>, playingId: String): List<String> {
         val account = XtreamItemRegistry.parseId(playingId)?.accountId ?: return rowIds

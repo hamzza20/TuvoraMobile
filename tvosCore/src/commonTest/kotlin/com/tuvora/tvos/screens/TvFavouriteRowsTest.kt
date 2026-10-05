@@ -48,6 +48,21 @@ class TvFavouriteRowsTest {
         assertEquals(1, pending.index)
     }
 
+    @Test
+    fun heldRowStaysPastTheWindow() {
+        val pending = TvFavouriteRows.pendingRemoval(listOf(a1, a2, a3), a2, savedAtEpochMs = 50, nowMs = 1_000)
+        assertEquals(listOf(a1, a2, a3), TvFavouriteRows.heldIds(listOf(a1, a3), pending))
+        assertEquals(listOf(a1, a2, a3), TvFavouriteRows.heldIds(listOf(a1, a2, a3), pending))
+    }
+
+    @Test
+    fun aFocusedRemovedRowIsNotDroppedUnderFocus() {
+        val pending = TvFavouriteRows.pendingRemoval(listOf(a1, a2), a2, savedAtEpochMs = 50, nowMs = 1_000)
+        assertFalse(TvFavouriteRows.dropsAtWindowClose(pending, focusedId = a2))
+        assertTrue(TvFavouriteRows.dropsAtWindowClose(pending, focusedId = a1))
+        assertFalse(TvFavouriteRows.dropsAtWindowClose(null, focusedId = a1))
+    }
+
     /** T4: zapping from All favorites stays inside the playing channel's own playlist. */
     @Test
     fun zapFromAllFavouritesStaysInThePlaylist() {

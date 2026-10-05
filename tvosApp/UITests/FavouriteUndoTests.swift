@@ -167,17 +167,15 @@ final class FavouriteUndoTests: XCTestCase {
         guard first.contains("Remove from Favorites") else { throw XCTSkip("first Favorites row offers \(first)") }
         pick("Remove from Favorites", in: first)
 
-        // Red before the fix: the row left the list, focus fell elsewhere and Undo was unreachable.
-        // Number + name (the ★ goes with the removal, so the rest of the label may change).
-        func rowKey(_ id: String) -> String { id.split(separator: ",").prefix(2).joined(separator: ",") }
-        XCTAssertEqual(rowKey(focusedId()), rowKey(row), "the removed favourite's row did not stay for Undo")
-        let notice = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Hold OK to undo")).firstMatch
-        XCTAssertTrue(notice.waitForExistence(timeout: 3), "no 'Hold OK to undo' notice after removing \(row)")
+        // Red before the fix: the row left the list, focus fell to the sidebar and Undo was unreachable.
+        // Hold OK again straight away — the way a viewer reaches Undo — inside the 6 s window (XCUITest
+        // element queries are slow; spending them here would let the window close first).
         let second = holdMenu()
         XCTAssertEqual(second.first, "Undo", "holding OK on the removed row did not offer Undo first: \(second)")
         pick("Undo", in: second)
-        Thread.sleep(forTimeInterval: 1.5)
-        XCTAssertEqual(rowKey(focusedId()), rowKey(row), "Undo did not put the favourite back in its place")
+        let rowLabel = String(row.dropFirst())                    // "#1, Test Pattern" -> "1, Test Pattern"
+        let back = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", rowLabel)).firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 2), "Undo did not put the favourite back in its place (row 1)")
         let third = holdMenu()
         XCTAssertTrue(third.contains("Remove from Favorites"), "Undo did not restore the favourite (menu \(third))")
         // Clean-up: leave the profile as it started.
