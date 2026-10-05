@@ -42,6 +42,22 @@ object TvLiveGuide {
         )
     }
 
+    /** P5: a favourite's order stamp (its place in the favourites rows); 0 when it is not saved. */
+    fun favoriteSavedAt(contentId: String): Long =
+        com.nuvio.app.features.library.LibraryRepository.localItems.value
+            .firstOrNull { it.id == contentId }?.savedAtEpochMs ?: 0L
+
+    /**
+     * P5: Undo of a favourite removal — saves it again AT ITS OLD PLACE ([savedAtEpochMs], see
+     * TvFavouriteRows.PendingRemoval) instead of at the top, where a fresh save would put it.
+     */
+    suspend fun restoreFavorite(channel: LiveGuideChannel, savedAtEpochMs: Long) {
+        if (!isFavorite(channel.contentId)) toggleFavorite(channel)
+        if (savedAtEpochMs > 0) {
+            com.nuvio.app.features.library.LibraryRepository.setSavedAt(mapOf(channel.contentId to savedAtEpochMs))
+        }
+    }
+
     /**
      * F03: the live favourites, in the synced favourites order — of one playlist ([accountId]), or of
      * every playlist on this profile (null: the All favorites row). Built from the library entries, so a

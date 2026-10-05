@@ -110,4 +110,45 @@ final class FavouriteUndoTests: XCTestCase {
         }
         XCTAssertGreaterThan(seen.count, 0)
     }
+
+    /// P5 (W2 device pass): removing a favourite INSIDE a favourites row used to drop the row at once,
+    /// so the "Hold OK to undo" the notice promised had no row to hold OK on. The row now stays (marked
+    /// as removed) for the Undo window, and Undo puts the favourite back in the same place.
+    /// Skips when the selected playlist has no favourites.
+    func testRemovingInsideFavoritesKeepsTheRowForUndo() throws {
+        app.launchArguments = ["-smokePickProfile", "1", "-smokeTab", "iptv"]
+        app.launch()
+        guard app.buttons["hubchip.Live TV"].waitForExistence(timeout: 40) else {
+            throw XCTSkip("needs a playlist on profile 1 (the IPTV hub has no Live TV chip)")
+        }
+        Thread.sleep(forTimeInterval: 4)
+        press(.down, settle: 1.5)
+        if !["#All favorites", "#Favorites", "#Recent", "#All channels"].contains(focusedId()) { press(.left, settle: 1) }
+        for _ in 0..<10 where focusedId() != "#Favorites" { press(.up, settle: 0.5) }
+        guard focusedId() == "#Favorites" else { throw XCTSkip("never reached Favorites (focus \(focusedId()))") }
+        press(.select, settle: 2)
+        press(.right, settle: 1.5)
+        let row = focusedId()
+        guard row.range(of: #"^#1, "#, options: .regularExpression) != nil else {
+            throw XCTSkip("Favorites is empty on this playlist (focus \(row))")
+        }
+        let first = holdMenu()
+        guard first.contains("Remove from Favorites") else { throw XCTSkip("first Favorites row offers \(first)") }
+        pick("Remove from Favorites", in: first)
+
+        // Red before the fix: the row left the list, focus fell elsewhere and Undo was unreachable.
+        // Number + name (the ★ goes with the removal, so the rest of the label may change).
+        func rowKey(_ id: String) -> String { id.split(separator: ",").prefix(2).joined(separator: ",") }
+        XCTAssertEqual(rowKey(focusedId()), rowKey(row), "the removed favourite's row did not stay for Undo")
+        let notice = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Hold OK to undo")).firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 3), "no 'Hold OK to undo' notice after removing \(row)")
+        let second = holdMenu()
+        XCTAssertEqual(second.first, "Undo", "holding OK on the removed row did not offer Undo first: \(second)")
+        pick("Undo", in: second)
+        Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertEqual(rowKey(focusedId()), rowKey(row), "Undo did not put the favourite back in its place")
+        let third = holdMenu()
+        XCTAssertTrue(third.contains("Remove from Favorites"), "Undo did not restore the favourite (menu \(third))")
+        press(.menu, settle: 1)
+    }
 }
