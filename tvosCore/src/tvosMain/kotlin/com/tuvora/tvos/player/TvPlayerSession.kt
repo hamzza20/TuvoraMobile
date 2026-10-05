@@ -318,7 +318,7 @@ class TvPlayerSession(
     fun subtitleTracks(): List<TvTrack> {
         val b = bridge ?: return emptyList()
         return (0 until b.getSubtitleTrackCount()).map { i ->
-            TvTrack(b.getSubtitleTrackId(i).toIntOrNull() ?: i, b.getSubtitleTrackLabel(i), b.getSubtitleTrackLang(i), b.isSubtitleTrackSelected(i))
+            TvTrackLanguagePolicy.subtitleTrack(b.getSubtitleTrackId(i).toIntOrNull() ?: i, b.getSubtitleTrackLabel(i), b.getSubtitleTrackLang(i), b.isSubtitleTrackSelected(i))
         }
     }
 
