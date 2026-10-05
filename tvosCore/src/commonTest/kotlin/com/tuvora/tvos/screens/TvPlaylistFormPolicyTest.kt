@@ -132,7 +132,35 @@ class TvPlaylistFormPolicyTest {
         assertEquals(pulled.serialNumber, input.serialNumber, "serial number")
         assertEquals(pulled.deviceId, input.deviceId, "device id")
         assertEquals(pulled.sendDeviceId, input.sendDeviceId, "send device id")
+        assertEquals(pulled.deviceId2, input.deviceId2, "device id 2")
+        assertEquals(pulled.signature, input.signature, "signature")
+        assertEquals(pulled.stbModel, input.stbModel, "stb model")
+        assertEquals(pulled.hwVersion, input.hwVersion, "hw version")
         assertEquals(pulled.sourceType, input.sourceType, "source type")
+    }
+
+    /** F46 on Apple TV: the four extra STB identity fields reach the shared input and pre-fill Edit. */
+    @Test
+    fun `stalker identity overrides reach the input and blank ones stay unset`() {
+        val form = TvPlaylistFormPolicy.empty(SOURCE_TYPE_STALKER).copy(
+            portalUrl = "http://portal", macAddress = "00:1A:79:AA:BB:CC",
+            deviceId2 = " d2 ", signature = " sig ", stbModel = " MAG254 ", hwVersion = "",
+        )
+        val input = assertNotNull(TvPlaylistFormPolicy.toInput(form))
+        assertEquals("d2", input.deviceId2)
+        assertEquals("sig", input.signature)
+        assertEquals("MAG254", input.stbModel)
+        assertNull(input.hwVersion, "blank = keep the preset")
+    }
+
+    @Test
+    fun `stalker identity overrides pre-fill edit`() {
+        val stalker = XtreamAccount(
+            id = "s", name = "Box", baseUrl = "http://p", username = "", password = "", sourceType = SOURCE_TYPE_STALKER,
+            macAddress = "00:1A:79:01:02:03", deviceId2 = "d2", signature = "sig", stbModel = "MAG322", hwVersion = "2.6-IB-00",
+        )
+        val f = TvPlaylistFormPolicy.fromAccount(stalker)
+        assertEquals(listOf("d2", "sig", "MAG322", "2.6-IB-00"), listOf(f.deviceId2, f.signature, f.stbModel, f.hwVersion))
     }
 
     @Test
@@ -161,6 +189,7 @@ class TvPlaylistFormPolicyTest {
             id = "ms", name = "Box", baseUrl = "HTTP://Portal.Example.COM:80/", username = "", password = "",
             sourceType = SOURCE_TYPE_STALKER, macAddress = "00:1a:79:aa:bb:cc", stalkerUsername = " su ", stalkerPassword = " sp ",
             serialNumber = " SN ", deviceId = " dev ", sendDeviceId = false, backupUrls = listOf("http://P2.example.com:80/"),
+            deviceId2 = " d2 ", signature = " sig ", stbModel = " MAG254 ", hwVersion = " 2.6 ",
         )
         val input = assertNotNull(TvPlaylistFormPolicy.toEditInput(TvPlaylistFormPolicy.fromAccount(pulled).copy(name = "Lounge"), pulled, managed = true))
         assertProviderFieldsUntouched(pulled, input)

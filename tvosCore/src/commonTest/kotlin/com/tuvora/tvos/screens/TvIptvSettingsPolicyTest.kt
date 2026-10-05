@@ -27,6 +27,14 @@ class TvIptvSettingsPolicyTest {
         assertEquals("2 of 3 selected", p.regionDialogSubtitle(2, 3))
     }
 
+    /** B119: the Apple TV picker had the same "All draws unchecked, one OK narrows to one" trap. */
+    @Test
+    fun `region rows under All read checked and OK removes only that one`() {
+        assertEquals(true, p.regionChecked(emptySet(), "France"), "All checks every row")
+        assertEquals(setOf("United Kingdom", "Other"), p.toggleRegion(emptySet(), regions, "France"), "All minus France")
+        assertEquals(emptySet(), p.toggleRegion(setOf("United Kingdom", "Other"), regions, "France"), "back to All")
+    }
+
     @Test
     fun `hidden list subtitle`() {
         assertEquals("Loading…", p.hiddenSubtitle(loading = true, count = 0))

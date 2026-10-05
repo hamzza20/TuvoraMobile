@@ -1,5 +1,7 @@
 package com.tuvora.tvos.screens
 
+import com.nuvio.app.features.epg.EpgRegionSelection
+
 /** A row of "Hidden channels & groups": what it is, and the id the facade unhides it by. */
 data class TvHiddenItem(val id: String, val name: String, val kindLabel: String)
 
@@ -35,6 +37,13 @@ object TvIptvSettingsPolicy {
             else "${selected.size} selected"
         }
     }
+
+    /** B119: whether a region row draws checked — under "All" (empty) every row is ([EpgRegionSelection]). */
+    fun regionChecked(selected: Set<String>, name: String): Boolean = EpgRegionSelection.isChecked(selected, name)
+
+    /** B119: the selection after OK on [name] — under "All" it removes that one region, never narrows to it. */
+    fun toggleRegion(selected: Set<String>, available: List<TvEpgRegion>, name: String): Set<String> =
+        EpgRegionSelection.toggle(selected, available.map { it.name }, name)
 
     fun regionDialogSubtitle(selectedCount: Int, total: Int): String =
         if (selectedCount == 0) "Using every region — pick the ones you watch to store less guide data on this device"
@@ -83,7 +92,7 @@ object TvIptvContentPolicy {
     /** −12 h … +14 h in 30-minute steps (CATCHUP_CORRECTION_OPTIONS). */
     fun correctionOptions(): List<Int> = generateSequence(-12 * 60) { it + 30 }.takeWhile { it <= 14 * 60 }.toList()
 
-    /** "+2h", "-1h 30m"; zero is the caller's word ("None (UTC)" for catch-up, "Auto" for the guide). */
+    /** "+2h", "-1h 30m"; zero is the caller's word ("None" for catch-up, "Auto" for the guide). */
     fun offsetText(minutes: Int): String {
         val sign = if (minutes < 0) "-" else "+"
         val abs = kotlin.math.abs(minutes)

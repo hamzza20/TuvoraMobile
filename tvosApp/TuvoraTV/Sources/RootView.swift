@@ -105,7 +105,8 @@ struct RootView: View {
         let form = TvPlaylistForm(
             sourceType: "m3u_url", pasteLink: false, playlistUrl: "", server: "", username: "", password: "",
             name: "Smoke M3U", userAgent: "", m3uUrl: args[i + 2], portalUrl: "", macAddress: "", stalkerUsername: "",
-            stalkerPassword: "", serialNumber: "", deviceId: "", sendDeviceId: true, epgUrl: "",
+            stalkerPassword: "", serialNumber: "", deviceId: "", sendDeviceId: true, deviceId2: "", signature: "",
+            stbModel: "", hwVersion: "", epgUrl: "",
             autoRefreshHours: TvPlaylistFormPolicy.shared.DEFAULT_AUTO_REFRESH_HOURS, backupUrls: backup)
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             #if DEBUG
