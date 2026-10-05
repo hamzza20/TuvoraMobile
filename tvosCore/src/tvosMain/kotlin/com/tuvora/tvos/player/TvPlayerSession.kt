@@ -14,6 +14,7 @@ import com.nuvio.app.features.player.PlayerStreamInfo
 import com.nuvio.app.features.player.PlayerTrackPreferenceStorage
 import com.nuvio.app.features.player.ResumeLoadPolicy
 import com.nuvio.app.features.player.setMpvProperties
+import androidx.compose.ui.graphics.toArgb
 import com.nuvio.app.features.player.SubtitleRepository
 import com.nuvio.app.features.player.addonSubtitleRequests
 import com.nuvio.app.features.addons.AddonRepository
@@ -580,8 +581,9 @@ class TvPlayerSession(
             com.nuvio.app.features.player.SubtitleStyleMpvMapping.properties(
                 backgroundColorHex = subStyle.backgroundColor,
                 backgroundAlpha = style.backgroundColor.alpha,
-                outlineColorHex = subStyle.outlineColor,
-                outlineSize = subStyle.outlineSize.toDouble(),
+                // The style's own outline: forMpv's opaque-box fallback must not become a real outline.
+                outlineColorHex = TvSubtitleStyle.mpvColor(style.outlineColor.toArgb()),
+                outlineSize = if (style.outlineEnabled) style.outlineWidth.toDouble() else 0.0,
                 sideMarginPercent = style.sideMarginPercent,
             ),
         )

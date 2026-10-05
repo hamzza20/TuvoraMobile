@@ -47,7 +47,9 @@ object TvSubtitleStyleEditor {
     /** SubtitleStyleSidePanel PANEL_TEXT_COLORS. */
     val TEXT_COLORS: List<Long> = listOf(0xFFFFFFFF, 0xFFD9D9D9, 0xFFFFD700, 0xFF00E5FF, 0xFFFF5C5C, 0xFF00FF88)
     /** Off, dim box, solid box. */
-    val BACKGROUNDS: List<Long> = listOf(0x00000000, 0x80000000, 0xE6000000)
+    // "dim" = the phone's dim swatch and the F47 default (Black @ 0.55 = #8C000000), so the default
+    // style shows as selected.
+    val BACKGROUNDS: List<Long> = listOf(0x00000000, 0x8C000000, 0xE6000000)
 
     const val SIZE_STEP = 2
     /** libmpv's usable range after TvSubtitleStyle's ×3 (18–96 px): 6–32 sp. */

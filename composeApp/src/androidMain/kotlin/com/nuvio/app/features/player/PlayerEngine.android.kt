@@ -443,6 +443,10 @@ private fun ExoPlayerSurface(
                 latestExternalSubtitleMimeType.value == MimeTypes.TEXT_VTT
             },
             shouldStripSdhProvider = { currentSubtitleStyle.stripSdh },
+            // F47: inner horizontal padding inside the cue box (only when a box is drawn).
+            boxPaddingCharsProvider = {
+                if (currentSubtitleStyle.backgroundColor.alpha > 0f) SubtitleBoxPadding.EXO_PAD_CHARS else 0
+            },
             videoBoundsFractionProvider = {
                 playerViewRef?.videoBoundsFraction(latestVideoAspectRatio.value)
             },
@@ -2700,10 +2704,13 @@ private fun PlayerView.applySubtitleStyle(style: SubtitleStyleState, pipScale: F
         setApplyEmbeddedFontSizes(false)
         setBottomPaddingFraction(bottomPaddingFraction)
         setStyle(
+            // F47: the background is drawn as ONE box per cue (window colour, inner horizontal
+            // padding built in + SubtitleBoxPadding), like libmpv's background-box — not as tight
+            // per-line strips. Media3 draws it with square corners; it has no corner radius.
             CaptionStyleCompat(
                 style.textColor.toArgb(),
-                style.backgroundColor.toArgb(),
                 android.graphics.Color.TRANSPARENT,
+                style.backgroundColor.toArgb(),
                 if (style.outlineEnabled) CaptionStyleCompat.EDGE_TYPE_OUTLINE else CaptionStyleCompat.EDGE_TYPE_NONE,
                 style.outlineColor.toArgb(),
                 if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT,
@@ -2910,6 +2917,7 @@ private class SubtitleOffsetRenderersFactory(
     private val subtitleDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
+    private val boxPaddingCharsProvider: () -> Int,
     private val videoBoundsFractionProvider: () -> RectF?,
 ) : DefaultRenderersFactory(context) {
     override fun buildTextRenderers(
@@ -2923,6 +2931,7 @@ private class SubtitleOffsetRenderersFactory(
             delegate = output,
             shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
             shouldStripSdhProvider = shouldStripSdhProvider,
+            boxPaddingCharsProvider = boxPaddingCharsProvider,
             videoBoundsFractionProvider = videoBoundsFractionProvider,
         )
         val startIndex = out.size
@@ -2940,6 +2949,7 @@ private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
+    private val boxPaddingCharsProvider: () -> Int,
     private val videoBoundsFractionProvider: () -> RectF?,
 ) : TextOutput {
     override fun onCues(cueGroup: CueGroup) {
@@ -2963,6 +2973,13 @@ private class CueNormalizingTextOutput(
         }
         if (shouldNormalizeCuePositionProvider()) {
             processed = normalizeCuePosition(processed)
+        }
+        val padChars = boxPaddingCharsProvider()
+        if (padChars > 0 && processed.bitmap == null) {
+            val text = processed.text?.toString()
+            if (!text.isNullOrEmpty()) {
+                processed = processed.buildUpon().setText(SubtitleBoxPadding.padLines(text, padChars)).build()
+            }
         }
         if (processed.bitmap != null) {
             val bounds = videoBoundsFractionProvider()
