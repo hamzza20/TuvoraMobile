@@ -48,13 +48,15 @@ object TvLiveGuide {
             .firstOrNull { it.id == contentId }?.savedAtEpochMs ?: 0L
 
     /**
-     * P5: Undo of a favourite removal — saves it again AT ITS OLD PLACE ([savedAtEpochMs], see
-     * TvFavouriteRows.PendingRemoval) instead of at the top, where a fresh save would put it.
+     * P5: after Undo saved a removed favourite again ([toggleFavorite]), put it back AT ITS OLD PLACE
+     * ([savedAtEpochMs], see TvFavouriteRows.PendingRemoval) instead of at the top, where a fresh save
+     * lands. Call on the main thread, like [moveFavorite]: run from a background coroutine, the library
+     * write (TieredUserDefaults posts its change notification to the main queue and waits) deadlocked
+     * against the main thread reading the library.
      */
-    suspend fun restoreFavorite(channel: LiveGuideChannel, savedAtEpochMs: Long) {
-        if (!isFavorite(channel.contentId)) toggleFavorite(channel)
+    fun restoreFavoriteOrder(contentId: String, savedAtEpochMs: Long) {
         if (savedAtEpochMs > 0) {
-            com.nuvio.app.features.library.LibraryRepository.setSavedAt(mapOf(channel.contentId to savedAtEpochMs))
+            com.nuvio.app.features.library.LibraryRepository.setSavedAt(mapOf(contentId to savedAtEpochMs))
         }
     }
 
