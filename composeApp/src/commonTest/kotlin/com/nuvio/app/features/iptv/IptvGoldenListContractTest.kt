@@ -1,9 +1,9 @@
 package com.nuvio.app.features.iptv
 
-import com.nuvio.app.core.contracts.IptvContentClassifier
 import com.nuvio.app.core.contracts.IptvContentClassifierAccess
 import com.nuvio.app.core.contracts.MetaSourceAccess
 import com.nuvio.app.core.contracts.StreamSourceAccess
+import com.nuvio.app.core.contracts.resetAllSourceRegistriesForTest
 import com.nuvio.app.features.addons.AddonSourcePolicy
 import com.nuvio.app.features.streams.PlaybackAvailability
 import com.nuvio.app.features.streams.StreamItem
@@ -26,27 +26,14 @@ import kotlin.test.assertEquals
  */
 class IptvGoldenListContractTest {
 
-    private object Unwired : IptvContentClassifier {
-        override fun isLiveId(id: String) = false
-        override fun isOrphaned(id: String) = false
-        override fun isXtreamId(id: String) = false
-        override fun posterFor(id: String): String? = null
-        override fun isXtreamStreamGroup(addonId: String) = false
-    }
-
     @BeforeTest
     fun wire() {
-        IptvContentClassifierAccess.register(XtreamContentClassifier)
-        StreamSourceAccess.register(XtreamStreamSourceProvider)
-        MetaSourceAccess.register(XtreamMetaSource)
+        resetAllSourceRegistriesForTest()
+        IptvSourceRegistrations.register()
     }
 
     @AfterTest
-    fun unwire() {
-        IptvContentClassifierAccess.register(Unwired)
-        StreamSourceAccess.resetForTest()
-        MetaSourceAccess.resetForTest()
-    }
+    fun unwire() = resetAllSourceRegistriesForTest()
 
     private val contentIds: List<String?> = listOf(
         "xtream:acc1:vod:101",

@@ -357,8 +357,14 @@ internal fun PlayerScreenRuntime.flushWatchProgress(
     scrobbleAction: TrackingScrobbleAction = TrackingScrobbleAction.STOP,
 ) {
     when (scrobbleAction) {
-        TrackingScrobbleAction.PAUSE -> emitTrackingScrobblePause()
-        TrackingScrobbleAction.STOP -> emitStopScrobbleForCurrentProgress()
+        TrackingScrobbleAction.PAUSE -> {
+            emitTrackingScrobblePause()
+            reportSessionProgress(paused = true)
+        }
+        TrackingScrobbleAction.STOP -> {
+            emitStopScrobbleForCurrentProgress()
+            reportSessionStop()
+        }
         TrackingScrobbleAction.START -> Unit
     }
     if (!admitProgressSave()) return
@@ -401,6 +407,8 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
                 snapshot = playbackSnapshot,
             )
         }
+        // The seek has landed: tell a source that keeps its own resume point where the viewer is now.
+        reportSessionProgress(paused = !playbackSnapshot.isPlaying)
 
         val progressPercent = currentPlaybackProgressPercent()
         if (
@@ -448,6 +456,7 @@ internal fun PlayerScreenRuntime.persistPlaybackProgressTick() {
     val now = WatchProgressClock.nowEpochMs()
     if (now - lastProgressPersistEpochMs < PlaybackProgressPersistIntervalMs) return
     lastProgressPersistEpochMs = now
+    reportSessionProgress(paused = false)
     if (!admitProgressSave()) return
     WatchProgressRepository.upsertPlaybackProgress(
         session = playbackSession,
