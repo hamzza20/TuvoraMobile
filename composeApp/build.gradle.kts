@@ -652,6 +652,8 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${libs.versions.kotlinx.coroutines.get()}")
+            // Media-server (Jellyfin/Emby) client tests run real Ktor requests against canned responses.
+            implementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
         }
         // Host unit tests run on the JVM with no Android Context, so the framework SQLite driver
         // can't open. Tests that exercise IptvContentDb install the bundled driver in-memory via
