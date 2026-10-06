@@ -112,4 +112,8 @@
     <string name="ms_approve_status_not_found">The server does not know that code. It may have expired, so ask the other device for a new one.</string>
     <string name="ms_approve_status_sign_in_again">This device is no longer signed in to that server. Sign in again first.</string>
     <string name="ms_approve_status_unreachable">Could not reach the server.</string>
+
+    <!-- Player -->
+    <string name="ms_resume_from_server_message">You watched further on your server. Continue at %1$s?</string>
+    <string name="ms_resume_from_server_action">Jump</string>
 </resources>

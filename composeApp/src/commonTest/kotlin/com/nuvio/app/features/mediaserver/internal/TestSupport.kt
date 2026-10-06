@@ -112,10 +112,11 @@ internal class FakeClient : com.nuvio.app.features.mediaserver.internal.client.M
     override suspend fun me() = com.nuvio.app.features.mediaserver.internal.client.mediabrowser.UserDto(id = "u")
     var viewsList = emptyList<com.nuvio.app.features.mediaserver.internal.client.mediabrowser.ItemDto>()
     var loggedOut = 0
+    val itemQueries = mutableListOf<com.nuvio.app.features.mediaserver.internal.client.ItemsQuery>()
     var authorized = mutableListOf<String>()
     override suspend fun views(): List<com.nuvio.app.features.mediaserver.internal.client.mediabrowser.ItemDto> { check(); return viewsList }
     override suspend fun items(query: com.nuvio.app.features.mediaserver.internal.client.ItemsQuery): com.nuvio.app.features.mediaserver.internal.client.ItemsPage {
-        check()
+        check(); itemQueries += query
         return com.nuvio.app.features.mediaserver.internal.client.ItemsPage(searchHits, searchHits.size, query.startIndex ?: 0)
     }
     override suspend fun item(itemId: String, fields: String?): com.nuvio.app.features.mediaserver.internal.client.mediabrowser.ItemDto? {

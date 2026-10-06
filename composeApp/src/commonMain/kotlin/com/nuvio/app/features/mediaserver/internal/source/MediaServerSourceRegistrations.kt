@@ -4,6 +4,7 @@ import com.nuvio.app.core.contracts.ContentClassifierRegistry
 import com.nuvio.app.core.contracts.HomeSectionContributorRegistry
 import com.nuvio.app.core.contracts.MetaSourceRegistry
 import com.nuvio.app.core.contracts.OwnSourcePolicy
+import com.nuvio.app.core.contracts.PlaybackResumeOfferRegistry
 import com.nuvio.app.core.contracts.PlaybackSessionReporterRegistry
 import com.nuvio.app.core.contracts.SearchProviderRegistry
 import com.nuvio.app.core.contracts.StreamSourceRegistry
@@ -44,6 +45,7 @@ internal object MediaServerSourceRegistrations {
         // ...and no event leaving the device may name the server or the user: telemetry gets the salted hash form.
         OwnSourcePolicy.registerTelemetryRewriter(NAME) { id, salt -> MediaServerIds.parse(id)?.let { MediaServerIds.telemetryId(it, salt) } }
         HomeSectionContributorRegistry.register(home)
+        PlaybackResumeOfferRegistry.register(MediaServerResumeOffers(store, services))
         PlaybackSessionReporterRegistry.register(
             MediaServerSessionReporter(store, services, runtime.nowMs, onReported = { sourceKey -> home.invalidate(sourceKey) }),
         )
