@@ -1164,7 +1164,8 @@ fun HomeScreen(
                     }
                 }
 
-                !hasActiveAddons && !hasRenderableCollectionRows -> {
+                // A source-contributed row (a media server) is renderable content even with no add-on: only an EMPTY Home gets the no-addons card.
+                isNoAddonsHome(hasActiveAddons, hasRenderableCollectionRows, homeUiState.sections.isNotEmpty()) -> {
                     homeContinueWatchingSections(
                         preferences = continueWatchingPreferences,
                         continueWatchingItems = continueWatchingItems,

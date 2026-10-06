@@ -29,7 +29,7 @@
     <string name="ms_status_checking">Checking...</string>
 
     <!-- Add + sign in -->
-    <string name="ms_add_intro">Type your server\'s address. Tuvora tries the usual ports and https or http for you.</string>
+    <string name="ms_add_intro">Type your server’s address. Tuvora tries the usual ports and https or http for you.</string>
     <string name="ms_add_type_auto">Detect</string>
     <string name="ms_add_address_label">Server address</string>
     <string name="ms_add_address_hint">192.168.1.20:8096 or media.example.com</string>
@@ -64,20 +64,20 @@
     <string name="ms_add_error_not_saved">The sign-in could not be stored securely on this device.</string>
     <string name="ms_add_error_unusable">This server reported an identity Tuvora cannot use.</string>
     <string name="ms_add_cert_title">Trust this certificate?</string>
-    <string name="ms_add_cert_body">This server\'s certificate was not issued by an authority your device trusts (a self-signed or private certificate). If this fingerprint matches your server, trust it. Tuvora will warn you if it ever changes.</string>
+    <string name="ms_add_cert_body">This server’s certificate was not issued by an authority your device trusts (a self-signed or private certificate). If this fingerprint matches your server, trust it. Tuvora will warn you if it ever changes.</string>
     <string name="ms_add_cert_fingerprint">Fingerprint</string>
     <string name="ms_add_cert_trust">Trust</string>
 
     <!-- Server details -->
     <string name="ms_details_gone">This server is no longer on your account.</string>
     <string name="ms_details_sign_in">Sign in</string>
-    <string name="ms_details_sign_in_hint_again">This device\'s sign-in ended (the server refused it). Sign in again to keep using this server.</string>
+    <string name="ms_details_sign_in_hint_again">This device’s sign-in ended (the server refused it). Sign in again to keep using this server.</string>
     <string name="ms_details_sign_in_hint_new">This server came from your account. Sign in once on this device to use it here.</string>
     <string name="ms_details_section_home">On Home</string>
-    <string name="ms_details_home_continue">Server\'s Continue Watching</string>
-    <string name="ms_details_home_next_up">Server\'s Next Up</string>
+    <string name="ms_details_home_continue">Server’s Continue Watching</string>
+    <string name="ms_details_home_next_up">Server’s Next Up</string>
     <string name="ms_details_home_recent">Recently added</string>
-    <string name="ms_details_home_hint">Tuvora\'s own Continue Watching already includes what you play from this server. These are the server\'s own shelves, off until you turn them on. Reorder or hide them under Appearance, then Homescreen.</string>
+    <string name="ms_details_home_hint">Tuvora’s own Continue Watching already includes what you play from this server. These are the server’s own shelves, off until you turn them on. Reorder or hide them under Appearance, then Homescreen.</string>
     <string name="ms_details_section_libraries">Libraries</string>
     <string name="ms_details_libraries_hint">Show as a row on Home</string>
     <string name="ms_details_libraries_empty">No movie or series libraries found.</string>

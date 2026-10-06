@@ -66,6 +66,7 @@ internal class MediaServerHomeContributor(
     fun isOffline(serverKey: String): Boolean = synchronized(lock) { states[serverKey]?.let(HomeRefreshPolicy::isOffline) == true }
 
     override suspend fun sections(forceRefresh: Boolean): List<HomeCatalogSection> {
+        prepareDeclaredRows()
         val entries = store.current().filter {
             it.enabled && (it.homeRows.isNotEmpty() || it.homeLibraries.isNotEmpty()) && !it.address.isNullOrBlank() && services.isSignedIn(it)
         }
@@ -91,12 +92,27 @@ internal class MediaServerHomeContributor(
             rows + libraries
         }
 
-    private fun declaredTitle(entry: MediaServerEntry, row: MediaServerHomeRow): String {
-        val cacheKey = "${row.name}|${entry.name}"
-        synchronized(lock) { declaredTitles[cacheKey] }?.let { return it }
-        val title = kotlinx.coroutines.runBlocking { titles.home(row, entry.name) }
-        synchronized(lock) { declaredTitles[cacheKey] = title }
-        return title
+    private fun declaredTitle(entry: MediaServerEntry, row: MediaServerHomeRow): String =
+        synchronized(lock) { declaredTitles["${row.name}|${entry.name}"] } ?: fallbackTitle(row)
+
+    /** English stand-ins until [prepareDeclaredRows] has fetched the localized titles (never resource I/O on a caller's thread). */
+    private fun fallbackTitle(row: MediaServerHomeRow): String = when (row) {
+        MediaServerHomeRow.CONTINUE_WATCHING -> "Continue Watching"
+        MediaServerHomeRow.NEXT_UP -> "Next Up"
+        MediaServerHomeRow.RECENTLY_ADDED -> "Recently Added"
+    }
+
+    /** Fetches the localized titles of every configured row so [declaredRows] (synchronous) can name them. */
+    suspend fun prepareDeclaredRows() {
+        store.current().filter { it.enabled }.forEach { entry ->
+            entry.homeRows.forEach { row ->
+                val key = "${row.name}|${entry.name}"
+                if (synchronized(lock) { declaredTitles[key] } == null) {
+                    val title = titles.home(row, entry.name)
+                    synchronized(lock) { declaredTitles[key] = title }
+                }
+            }
+        }
     }
 
     private suspend fun librarySections(entry: MediaServerEntry, force: Boolean): List<HomeCatalogSection> =

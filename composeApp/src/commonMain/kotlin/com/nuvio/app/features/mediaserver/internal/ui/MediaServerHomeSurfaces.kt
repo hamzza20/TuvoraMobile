@@ -4,6 +4,7 @@ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.HomeRepository
 import com.nuvio.app.features.mediaserver.api.MediaServerEntry
 import com.nuvio.app.features.mediaserver.internal.MediaServerRuntime
+import kotlinx.coroutines.launch
 
 /**
  * What a change to a server (a sign-in, a row switched on, a removal) must tell the rest of the app: the Home
@@ -11,9 +12,16 @@ import com.nuvio.app.features.mediaserver.internal.MediaServerRuntime
  * contributed rows (TTL-gated by the contributor - a change invalidated it, so this is one fetch, not a loop).
  */
 internal object MediaServerHomeSurfaces {
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+
     fun changed(runtime: MediaServerRuntime, entry: MediaServerEntry) {
-        runtime.homeContributor?.invalidate(entry.sourceKey)
-        HomeCatalogSettingsRepository.syncContributed()
-        HomeRepository.refreshContributed()
+        val contributor = runtime.homeContributor
+        contributor?.invalidate(entry.sourceKey)
+        scope.launch {
+            // localized row titles first (resource reads are suspending), then the layout list, then the rows themselves
+            contributor?.prepareDeclaredRows()
+            HomeCatalogSettingsRepository.syncContributed()
+            HomeRepository.refreshContributed()
+        }
     }
 }

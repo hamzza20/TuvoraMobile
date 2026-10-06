@@ -183,6 +183,12 @@ object HomeRepository {
         lastPublishedCatalogHeroEmpty = true
         lastErrorMessage = null
         _uiState.value = HomeUiState()
+        // A profile (re)activation wipes Home after the first refresh already ran: the source-contributed rows (a media
+        // server's) have no add-on request key to re-trigger them, so pull them again (a no-op with no contributor, and
+        // TTL-gated by the contributor, so never a network loop).
+        // ...and the Home layout list (reset by the same profile activation) must list them again, or Home has no slot to draw them in.
+        HomeCatalogSettingsRepository.syncContributed()
+        refreshContributedSections(force = false)
     }
 
     /**

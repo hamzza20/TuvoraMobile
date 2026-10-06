@@ -103,9 +103,12 @@ class MediaServerHomeLibrariesTest {
     }
 
     @Test
-    fun declaredRowsListEveryConfiguredRowRegardlessOfItsItems() {
+    fun declaredRowsListEveryConfiguredRowRegardlessOfItsItems() = runTest {
         val rig = rig(homeRows = setOf(MediaServerHomeRow.NEXT_UP), libraries = mapOf("view1" to "Films"))
-        val declared = contributor(rig).declaredRows()
+        val c = contributor(rig)
+        assertEquals("Next Up", c.declaredRows().first().title, "before the localized titles are fetched: an English stand-in, never blocking resource I/O")
+        c.prepareDeclaredRows()
+        val declared = c.declaredRows()
         assertEquals(
             listOf(
                 ContributedRowDeclaration("ms:jellyfin:$M:next_up", "NEXT_UP@Home", "Home"),
