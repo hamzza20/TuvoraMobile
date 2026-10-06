@@ -168,6 +168,12 @@ fun HomeScreen(
         homeLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) { announcements.refreshIfDue() }
     }
 
+    // Media-server rows: re-pulled each time Home becomes RESUMED (never a timer); the contributor's own
+    // TTL gate (HomeRefreshPolicy) makes a quick return a no-op, and a server with no rows enabled costs nothing.
+    LaunchedEffect(homeLifecycleOwner) {
+        homeLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) { HomeRepository.refreshContributed() }
+    }
+
     val addonsUiState by AddonRepository.uiState.collectAsStateWithLifecycle()
     val homeUiState by HomeRepository.uiState.collectAsStateWithLifecycle()
     val homeSettingsUiState by remember {

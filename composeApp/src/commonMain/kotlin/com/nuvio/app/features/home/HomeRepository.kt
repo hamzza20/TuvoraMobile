@@ -146,6 +146,13 @@ object HomeRepository {
         }
     }
 
+    /**
+     * Re-pulls the rows source contributors supply (media servers) without touching the add-on catalogs: Home just
+     * became visible, or a source's settings changed. The contributors TTL-gate their own network work, so a
+     * visit inside the TTL is free; there is no timer here.
+     */
+    fun refreshContributed(force: Boolean = false) = refreshContributedSections(force)
+
     fun applyCurrentSettings() {
         publishCurrentState(
             isLoading = _uiState.value.isLoading,

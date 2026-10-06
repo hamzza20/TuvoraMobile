@@ -39,6 +39,10 @@ internal object MediaServerSourceRegistrations {
         SearchProviderRegistry.register(NAME, MediaServerSearchProvider(store, services))
         OwnSourcePolicy.registerContentIdPredicate(NAME, MediaServerIds::isOwnContentId)
         OwnSourcePolicy.registerProviderIdPredicate(NAME, MediaServerIds::isOwnProviderId)
+        // v1: a server's own items are never scrobbled to Trakt/Simkl/MDBList (owner decision 2026-10-06).
+        OwnSourcePolicy.registerScrobbleExclusion(NAME, MediaServerIds::isContentId)
+        // ...and no event leaving the device may name the server or the user: telemetry gets the salted hash form.
+        OwnSourcePolicy.registerTelemetryRewriter(NAME) { id, salt -> MediaServerIds.parse(id)?.let { MediaServerIds.telemetryId(it, salt) } }
         HomeSectionContributorRegistry.register(home)
         PlaybackSessionReporterRegistry.register(
             MediaServerSessionReporter(store, services, runtime.nowMs, onReported = { sourceKey -> home.invalidate(sourceKey) }),
