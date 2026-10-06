@@ -12,7 +12,7 @@ import com.nuvio.app.core.rec.HomeRecBinderImpl
 import com.nuvio.app.core.contracts.IptvSettingsSectionAccess
 import com.nuvio.app.features.iptv.IptvSettingsSectionImpl
 import com.nuvio.app.core.contracts.MediaServerSettingsSectionAccess
-import com.nuvio.app.features.mediaserver.internal.ui.MediaServerSettingsSectionImpl
+import com.nuvio.app.features.mediaserver.api.MediaServerSettingsSectionImpl
 import com.nuvio.app.core.contracts.HomeSportsSectionAccess
 import com.nuvio.app.features.radar.RadarHomeSportsSection
 import com.nuvio.app.core.contracts.IptvHubContentAccess

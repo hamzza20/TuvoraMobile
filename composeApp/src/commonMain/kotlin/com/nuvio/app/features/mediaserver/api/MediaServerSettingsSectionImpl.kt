@@ -1,10 +1,14 @@
-package com.nuvio.app.features.mediaserver.internal.ui
+package com.nuvio.app.features.mediaserver.api
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.nuvio.app.core.contracts.MediaServerSettingsSection
 import com.nuvio.app.features.mediaserver.internal.MediaServerRuntime
+import com.nuvio.app.features.mediaserver.internal.ui.mediaServerAddContent
+import com.nuvio.app.features.mediaserver.internal.ui.mediaServerApproveContent
+import com.nuvio.app.features.mediaserver.internal.ui.mediaServerDetailsContent
+import com.nuvio.app.features.mediaserver.internal.ui.mediaServerListContent
 import com.nuvio.app.features.settings.SettingsPage
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.ms_sign_in_to_title
@@ -14,7 +18,7 @@ import org.jetbrains.compose.resources.stringResource
  * Which server the details / sign-in pages are about - set right before navigating (a plain var like the IPTV
  * pages' targets; a page that finds it lost after a process restart bounces back).
  */
-internal object MediaServerPages {
+object MediaServerPages {
     var detailsKey: String? = null
         private set
 

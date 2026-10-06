@@ -53,6 +53,7 @@ import com.nuvio.app.features.mediaserver.internal.flow.AddServerController
 import com.nuvio.app.features.mediaserver.internal.flow.AddServerState
 import com.nuvio.app.features.mediaserver.internal.flow.AddStage
 import com.nuvio.app.features.mediaserver.internal.policy.QuickConnectPolicy
+import com.nuvio.app.features.mediaserver.api.MediaServerPages
 import com.nuvio.app.features.settings.SettingsGroup
 import com.nuvio.app.features.settings.SettingsGroupDivider
 import com.nuvio.app.features.settings.SettingsNavigationRow
