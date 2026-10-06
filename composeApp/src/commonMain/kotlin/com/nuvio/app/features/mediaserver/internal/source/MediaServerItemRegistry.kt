@@ -29,11 +29,22 @@ internal object MediaServerItemRegistry {
     )
 
     private val lock = SynchronizedObject()
-    private val items = mutableMapOf<String, Item>()
+    private val items = LinkedHashMap<String, Item>()
 
-    fun register(item: Item) = synchronized(lock) { items[item.contentId] = item }
+    /** The cache is bounded: browsing a huge library must not grow memory without limit (oldest entries go first; a miss is one fetch). */
+    internal const val MAX_ITEMS = 6_000
 
-    fun registerAll(batch: List<Item>) = synchronized(lock) { batch.forEach { items[it.contentId] = it } }
+    fun register(item: Item) = synchronized(lock) { put(item) }
+
+    fun registerAll(batch: List<Item>) = synchronized(lock) { batch.forEach(::put) }
+
+    private fun put(item: Item) {
+        items.remove(item.contentId)
+        items[item.contentId] = item
+        while (items.size > MAX_ITEMS) items.remove(items.keys.first())
+    }
+
+    internal fun sizeForTest(): Int = synchronized(lock) { items.size }
 
     fun get(contentId: String): Item? = synchronized(lock) { items[contentId] }
 

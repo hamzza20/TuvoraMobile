@@ -82,7 +82,7 @@ internal class MediaServerStreamSourceProvider(
         val address = entry.address?.takeIf { it.isNotBlank() } ?: return null
         val client = services.clientFor(entry) ?: return null
         return try {
-            val negotiation = client.playbackInfo(deferred.itemId, PlaybackInfoRequest(mediaSourceId = deferred.mediaSourceId))
+            val negotiation = client.playbackInfo(deferred.itemId, PlaybackInfoRequest(mediaSourceId = deferred.mediaSourceId, forceTranscode = forceMint))
             val chosen = negotiation.sources.firstOrNull { s -> deferred.mediaSourceId != null && s.id.equals(deferred.mediaSourceId, ignoreCase = true) }
                 ?: negotiation.sources.firstOrNull()
                 ?: return null

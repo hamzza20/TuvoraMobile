@@ -48,7 +48,7 @@ class KtorMediaServerHttpTest {
         var sent: String? = null
         val h = http { req ->
             contentType = req.body.contentType
-            sent = String(req.body.toByteArray())
+            sent = req.body.toByteArray().decodeToString()
             respond("", HttpStatusCode.NoContent)
         }
         h.execute(MediaServerRequest("POST", "http://nas:8096/Sessions/Playing", body = """{"ItemId":"x"}"""))

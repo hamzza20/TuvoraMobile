@@ -44,6 +44,17 @@ class MediaServerStreamSourceProviderTest {
     }
 
     @Test
+    fun theItemRegistryIsBoundedAndKeepsTheNewest() {
+        val e = entry()
+        repeat(MediaServerItemRegistry.MAX_ITEMS + 50) { i ->
+            MediaServerItemMapper.registered(e, item("i$i"))?.let(MediaServerItemRegistry::register)
+        }
+        assertEquals(MediaServerItemRegistry.MAX_ITEMS, MediaServerItemRegistry.sizeForTest())
+        assertNull(MediaServerItemRegistry.get(id(item = "i0")), "the oldest went first")
+        assertNotNull(MediaServerItemRegistry.get(id(item = "i${MediaServerItemRegistry.MAX_ITEMS + 49}")))
+    }
+
+    @Test
     fun ownershipIsBySourceIdPrefixAndNeverClaimsIptvOrAddons() {
         val p = provider(rig())
         assertTrue(p.isHandledId(id())); assertFalse(p.isHandledId("xtream:http://a|b:vod:1")); assertFalse(p.isHandledId("tt0133093")); assertFalse(p.isHandledId(null))
@@ -105,6 +116,15 @@ class MediaServerStreamSourceProviderTest {
         val url = provider(rig).resolveDeferredUrl(deferred(), forceMint = true)
         assertEquals("http://nas:8096/videos/i/master.m3u8?MediaSourceId=src1&ApiKey=SERVER-BUILT", url, "the server's own URL, token and all, kept verbatim")
         assertEquals(PlaybackPlayMethod.TRANSCODE, MediaServerPlaybackSessions.latestFor("jellyfin:$M:$U")!!.playMethod)
+        assertTrue(client.playbackRequests.single().second.forceTranscode, "the server only builds a TranscodingUrl when asked not to direct play")
+    }
+
+    @Test
+    fun theFirstAttemptNeverForcesATranscode() = runTest {
+        val rig = rig()
+        client.negotiation = PlaybackNegotiation(listOf(source("srcA")), "ps")
+        provider(rig).resolveDeferredUrl(deferred(), forceMint = false)
+        assertFalse(client.playbackRequests.single().second.forceTranscode)
     }
 
     @Test

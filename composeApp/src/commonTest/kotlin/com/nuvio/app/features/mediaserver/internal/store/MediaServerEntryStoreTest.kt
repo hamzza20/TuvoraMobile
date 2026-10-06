@@ -174,6 +174,23 @@ class MediaServerEntryStoreTest {
     }
 
     @Test
+    fun aStorageThatIsNotReadyYetIsRetriedNotCachedAsEmpty() {
+        val rig = TestRig()
+        rig.store.applyFromRemote(1, listOf(entry()))
+        var ready = false
+        val late = object : MediaServerEntriesPersistence {
+            override fun load(profileId: Int): String? = if (ready) rig.persistence.load(profileId) else error("not initialised")
+            override fun save(profileId: Int, json: String) = rig.persistence.save(profileId, json)
+            override fun remove(profileId: Int) = rig.persistence.remove(profileId)
+        }
+        val store = MediaServerEntryStore(late, { null }, { 1 }, { _, _ -> })
+        assertTrue(store.current().isEmpty())
+        assertFalse(store.canPushFullReplace(), "an unready store never pushes")
+        ready = true
+        assertEquals(listOf(entry()), store.current(), "the next call loads for real (the empty answer was not cached)")
+    }
+
+    @Test
     fun clearAllWipesEveryProfile() {
         val rig = TestRig()
         rig.store.add(entry())

@@ -176,6 +176,19 @@ class MediaBrowserClientTest {
     }
 
     @Test
+    fun aForcedTranscodeDisablesDirectPlayAndDirectStreamInTheRequest() = runTest {
+        val http = FakeHttp { json("""{"MediaSources":[{"Id":"s1","SupportsTranscoding":true,"TranscodingUrl":"/videos/i/master.m3u8"}],"PlaySessionId":"p"}""") }
+        client(http).playbackInfo("item1", PlaybackInfoRequest(forceTranscode = true))
+        val req = http.requests.single()
+        assertEquals("false", query(req.url)["EnableDirectPlay"]); assertEquals("false", query(req.url)["EnableDirectStream"])
+        val body = Json.parseToJsonElement(req.body!!).jsonObject
+        assertFalse(body.getValue("EnableDirectPlay").jsonPrimitive.boolean); assertFalse(body.getValue("EnableDirectStream").jsonPrimitive.boolean)
+        val plain = FakeHttp { json("""{"MediaSources":[{"Id":"s1"}]}""") }
+        client(plain).playbackInfo("item1", PlaybackInfoRequest())
+        assertNull(query(plain.requests.single().url)["EnableDirectPlay"], "a normal negotiation leaves the choice to the server")
+    }
+
+    @Test
     fun theDeviceProfileOffersExternalSubtitlesUnlessTheyAreBurnedIn() = runTest {
         fun methods(burn: Boolean): List<String> {
             val p = com.nuvio.app.features.mediaserver.internal.client.mediabrowser.MediaBrowserDeviceProfile.build(null, burn)

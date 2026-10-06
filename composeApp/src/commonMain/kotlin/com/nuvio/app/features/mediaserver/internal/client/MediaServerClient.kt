@@ -63,6 +63,12 @@ internal data class PlaybackInfoRequest(
     val audioStreamIndex: Int? = null,
     val subtitleStreamIndex: Int? = null,
     val burnSubtitles: Boolean = false,
+    /**
+     * Ask the server for a transcode: direct play and direct stream are disabled in the request. Needed because the
+     * server only builds a `TranscodingUrl` when it decided NOT to direct play (verified live on Jellyfin 12.2 - a
+     * source that direct-plays comes back with `TranscodingUrl: null` however many times it is asked).
+     */
+    val forceTranscode: Boolean = false,
 )
 
 internal data class PlaybackNegotiation(val sources: List<MediaSourceDto>, val playSessionId: String?)

@@ -219,8 +219,19 @@ internal class MediaServerEntryStore(
     }
 
     private fun loadLocked(profileId: Int) {
+        val raw = try {
+            persistence.load(profileId)
+        } catch (e: Throwable) {
+            // The platform storage is not ready yet (Android hands it a Context a moment after the registrations
+            // run): show nothing, never push, and TRY AGAIN on the next call instead of caching an empty list.
+            log.w { "media-server storage not ready: ${e::class.simpleName}" }
+            loadedProfile = null
+            mutableEntries.value = emptyList()
+            authoritative = false
+            damaged = false
+            return
+        }
         loadedProfile = profileId
-        val raw = persistence.load(profileId)
         if (raw == null) {
             mutableEntries.value = emptyList()
             authoritative = false // absent: never persisted - must not full-replace the server

@@ -327,6 +327,7 @@ internal class MediaBrowserClient(
             request.startTimeTicks?.let { add("StartTimeTicks" to it.toString()) }
             request.audioStreamIndex?.let { add("AudioStreamIndex" to it.toString()) }
             request.subtitleStreamIndex?.let { add("SubtitleStreamIndex" to it.toString()) }
+            if (request.forceTranscode) { add("EnableDirectPlay" to "false"); add("EnableDirectStream" to "false") }
         }
         val body = buildJsonObject {
             put("UserId", userId)
@@ -335,6 +336,7 @@ internal class MediaBrowserClient(
             request.startTimeTicks?.let { put("StartTimeTicks", it) }
             request.audioStreamIndex?.let { put("AudioStreamIndex", it) }
             request.subtitleStreamIndex?.let { put("SubtitleStreamIndex", it) }
+            if (request.forceTranscode) { put("EnableDirectPlay", false); put("EnableDirectStream", false) }
             put("DeviceProfile", MediaBrowserDeviceProfile.build(request.maxStreamingBitrate, request.burnSubtitles))
         }
         val dto = decodeBody<PlaybackInfoDto>(post("/Items/${MediaBrowserPaths.segment(itemId)}/PlaybackInfo", query, body))
