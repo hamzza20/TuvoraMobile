@@ -375,7 +375,7 @@ struct DisconnectTrackingDialog: View {
 // MARK: - Integrations hub
 
 enum IntegrationSection: String {
-    case hub, debrid, tmdb, mdblist, animeskip, iptv
+    case hub, debrid, tmdb, mdblist, animeskip, iptv, mediaservers
 
     /// Store builds compile debrid out (AppFeaturePolicy.debridEnabled; Apple TV compiles the App Store
     /// policy, guideline 5.2.3): Connected Services is not listed and cannot be opened, even by a hook.
@@ -413,6 +413,9 @@ struct IntegrationsSettingsDetail: View {
                     SettingsActionRow(title: "MDBList Ratings", subtitle: "External ratings providers") { nav.section = .mdblist }
                     SettingsActionRow(title: "Anime-Skip", subtitle: "Anime intro/outro skip timestamps") { nav.section = .animeskip }
                     SettingsActionRow(title: "IPTV (Xtream Codes)", subtitle: "Add a live TV / VOD provider by URL") { nav.section = .iptv }
+                    SettingsActionRow(title: MS("ms_settings_page_servers", "Media servers"),
+                                      subtitle: MS("ms_settings_integrations_description", "Movies and series from your own Jellyfin or Emby server")) { nav.section = .mediaservers }
+                        .accessibilityIdentifier("integrations.mediaServers")
                 }
             }
         case .debrid: DebridSettingsDetail(model: model)
@@ -420,6 +423,7 @@ struct IntegrationsSettingsDetail: View {
         case .mdblist: MdbListSettingsDetail(model: model)
         case .animeskip: AnimeSkipSettingsDetail(settings: settings)
         case .iptv: IptvSettingsDetail(model: settings)
+        case .mediaservers: MediaServersSettingsDetail()
         }
     }
 }

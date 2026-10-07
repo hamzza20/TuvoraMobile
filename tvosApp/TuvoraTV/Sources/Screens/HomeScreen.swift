@@ -50,6 +50,8 @@ struct HomeScreen: View {
             TvHome.shared.start()
             for await next in TvHome.shared.rows { rows = next; ContentFocusActivity.contentChanged(); if hero == nil, let first = next.heroItems.first ?? next.sections.first?.items.first { hero = HeroContent(preview: first) } }
         }
+        // Media-server rows: re-pulled when Home appears (never a timer); the contributor's own TTL makes a quick return free.
+        .task { TvMediaServers.shared.refreshHomeRows() }
         .task { for await next in TvHome.shared.continueWatching { continueWatching = next; ContentFocusActivity.contentChanged() } }
         .task {
             TvCollections.shared.start()

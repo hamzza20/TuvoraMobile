@@ -1,6 +1,9 @@
 package com.tuvora.tvos.player
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.contracts.PlaybackResumeOfferRegistry
+import com.nuvio.app.core.contracts.PlaybackSessionReporterRegistry
+import com.nuvio.app.core.contracts.PlaybackSessionState
 import com.nuvio.app.features.player.LivePlaybackRejoinPolicy
 import com.nuvio.app.features.player.MpvStartPosition
 import com.nuvio.app.features.player.NuvioPlayerBridge
@@ -94,6 +97,11 @@ data class TvPlayerState(
      * its frame rate. The fullscreen player hands it to LiveDisplayCriteriaController (Swift).
      */
     val displayCriteria: TvDisplayCriteria? = null,
+    /**
+     * A media server's own position is newer than Tuvora's record: "You watched further on your server.
+     * Continue at hh:mm?" Swift shows it for a few seconds; [TvPlayerSession.acceptServerResume] takes it.
+     */
+    val serverResumeOfferMs: Long? = null,
 )
 
 /**
@@ -176,6 +184,13 @@ class TvPlayerSession(
     }
     private var wantsToPlay = true
 
+    // Sources that keep their own watched state (media servers): the neutral session-reporter registry,
+    // fed from the same moments as the phone (start once playing, a tick, pause/seek landing, stop on flush).
+    private val sessionVideoId = launch.videoId ?: launch.parentMetaId
+    private var sessionReported = false
+    private var lastSessionTickAtMs = 0L
+    private var resumeOfferAsked = false
+
     // Skip segments (IntroDB / AniSkip / Anime-Skip through the phone's SkipIntroRepository).
     private var skipIntervals: List<SkipInterval> = emptyList()
     private val autoSkipped = mutableSetOf<SkipInterval>()
@@ -238,7 +253,7 @@ class TvPlayerSession(
         if (launch.seasonNumber == null || launch.episodeNumber == null || seriesMeta != null) return
         scope.launch {
             val meta = runCatching {
-                com.nuvio.app.features.details.MetaDetailsRepository.fetch(launch.parentMetaType, launch.parentMetaId)
+                com.tuvora.tvos.screens.TvMetaLookup.fetch(launch.parentMetaType, launch.parentMetaId)
             }.getOrNull() ?: return@launch
             seriesMeta = meta
             val next = com.nuvio.app.features.player.skip.PlayerNextEpisodeRules.resolveNextEpisode(
@@ -267,6 +282,7 @@ class TvPlayerSession(
         pollJob?.cancel()
         pollJob = null
         save(flush = true)
+        reportSessionStop()
     }
 
     fun close() {
@@ -293,8 +309,14 @@ class TvPlayerSession(
     }
 
     fun togglePlayPause() = if (_state.value.isPlaying) pause() else play()
-    fun play() { if (!closed) { wantsToPlay = true; bridge?.play() } }
-    fun pause() { wantsToPlay = false; bridge?.pause() }
+    fun play() { if (!closed) { wantsToPlay = true; bridge?.play(); reportAfterToggle() } }
+    fun pause() { wantsToPlay = false; bridge?.pause(); reportAfterToggle() }
+
+    /** A pause / resume is told to a source that keeps its own state once the engine has caught up (the next poll). */
+    private fun reportAfterToggle() {
+        if (!sessionReported) return
+        scope.launch { delay(TOGGLE_REPORT_DELAY_MS); poll(); reportSessionProgress() }
+    }
 
     fun seekBy(offsetMs: Long) {
         if (isLive) return
@@ -726,6 +748,7 @@ class TvPlayerSession(
             bufferedMs = snapshot.bufferedPositionMs,
             displayCriteria = if (isLive) LiveDisplayCriteriaPolicy.criteria((b as? TvVideoFormatSource)?.videoFormat()) else null,
         )
+        driveSessionReports()
         if (isLive) {
             // While the TV switches display mode the video is idled on purpose (displayModeSwitch).
             if (!displayModeSwitching) when (monitor.sample(clock.elapsedNow().inWholeMilliseconds, snapshot, wantsToPlay)) {
@@ -789,12 +812,87 @@ class TvPlayerSession(
         }
     }
 
+    private fun sessionState() = PlaybackSessionState(
+        videoId = sessionVideoId,
+        parentMetaId = launch.parentMetaId,
+        providerAddonId = launch.providerAddonId,
+        positionMs = snapshot.positionMs.coerceAtLeast(0L),
+        durationMs = snapshot.durationMs.coerceAtLeast(0L),
+    )
+
+    private fun ownedBySource(): Boolean =
+        !liveChannel && !PlaybackSessionReporterRegistry.isEmpty &&
+            PlaybackSessionReporterRegistry.handlersFor(sessionVideoId, launch.providerAddonId).isNotEmpty()
+
+    /** Start once playing, then a local tick: the reporter's pure policy decides whether anything is sent. */
+    private fun driveSessionReports() {
+        val now = clock.elapsedNow().inWholeMilliseconds
+        val owned = !closed && ownedBySource()
+        when (TvSessionReportPolicy.decide(owned, liveChannel, closed, sessionReported, snapshot.isPlaying, snapshot.isEnded, snapshot.durationMs, now, lastSessionTickAtMs)) {
+            TvSessionReportPolicy.Action.NONE -> Unit
+            TvSessionReportPolicy.Action.START -> {
+                sessionReported = true
+                lastSessionTickAtMs = now
+                val state = sessionState()
+                scope.launch { PlaybackSessionReporterRegistry.start(state) }
+                askServerResume()
+            }
+            TvSessionReportPolicy.Action.TICK -> {
+                lastSessionTickAtMs = now
+                reportSessionProgress()
+            }
+        }
+    }
+
+    private fun reportSessionProgress() {
+        if (!sessionReported) return
+        val state = sessionState()
+        val paused = !snapshot.isPlaying && !snapshot.isLoading
+        scope.launch { PlaybackSessionReporterRegistry.progress(state, paused) }
+    }
+
+    /** The session ended (detach, close): survives the session's own scope being cancelled right after. */
+    private fun reportSessionStop() {
+        if (!sessionReported) return
+        sessionReported = false
+        val state = sessionState()
+        reportScope.launch { PlaybackSessionReporterRegistry.stop(state) }
+    }
+
+    /** "Resume from server": once per playback, one item fetch inside the source, never a poll (design D3). */
+    private fun askServerResume() {
+        if (resumeOfferAsked || !PlaybackResumeOfferRegistry.handles(sessionVideoId, launch.providerAddonId)) return
+        resumeOfferAsked = true
+        val record = WatchProgressRepository.uiState.value.entries.firstOrNull { it.videoId == sessionVideoId }
+        val tuvoraPositionMs = launch.initialPositionMs.takeIf { it > 0L } ?: record?.lastPositionMs
+        val updatedAt = record?.lastUpdatedEpochMs
+        val duration = snapshot.durationMs.takeIf { it > 0L }
+        scope.launch {
+            val offer = PlaybackResumeOfferRegistry.offerFor(sessionVideoId, launch.providerAddonId, tuvoraPositionMs, updatedAt, duration) ?: return@launch
+            if (!TvSessionReportPolicy.shouldOfferResume(snapshot.positionMs, offer.positionMs)) return@launch
+            if (offer.autoStart) {
+                seekTo(offer.positionMs)
+            } else {
+                _state.value = _state.value.copy(serverResumeOfferMs = offer.positionMs)
+                delay(RESUME_OFFER_VISIBLE_MS)
+                _state.value = _state.value.copy(serverResumeOfferMs = null)
+            }
+        }
+    }
+
+    fun acceptServerResume() {
+        val to = _state.value.serverResumeOfferMs ?: return
+        _state.value = _state.value.copy(serverResumeOfferMs = null)
+        seekTo(to)
+    }
+
     private fun scheduleSeekSave() {
         seekSaveJob?.cancel()
         seekSaveJob = scope.launch {
             delay(SEEK_SAVE_DELAY_MS)
             poll()
             save(flush = false, syncRemote = true)
+            reportSessionProgress() // the seek has landed: tell the server where the viewer is now
         }
     }
 
@@ -814,6 +912,10 @@ class TvPlayerSession(
     }
 
     private companion object {
+        /** Reports outlive the session scope (close cancels it right after the stop is queued). */
+        val reportScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        const val TOGGLE_REPORT_DELAY_MS = 700L
+        const val RESUME_OFFER_VISIBLE_MS = 12_000L
         const val POLL_MS = 500L
         const val SAVE_INTERVAL_MS = 60_000L
         const val SEEK_SAVE_DELAY_MS = 1_000L

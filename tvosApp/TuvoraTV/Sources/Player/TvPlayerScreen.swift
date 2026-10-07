@@ -57,7 +57,7 @@ struct TvPlayerScreen: View {
         guard let segment = state?.skipSegment, panel == nil, overlay == nil, state?.startOverAtMs == nil else { return false }
         return controlsVisible || skipHiddenFor != segment.startMs
     }
-    private var startOverVisible: Bool { state?.startOverAtMs != nil && panel == nil && overlay == nil }
+    private var startOverVisible: Bool { (state?.startOverAtMs != nil || state?.serverResumeOfferMs != nil) && panel == nil && overlay == nil }
 
     private var isLive: Bool { state?.isLive ?? false }
 
@@ -132,6 +132,13 @@ struct TvPlayerScreen: View {
                         try? await Task.sleep(nanoseconds: 10_000_000_000)
                         if !Task.isCancelled, !controlsVisible { skipHiddenFor = segment.startMs }
                     }
+                }
+                if startOverVisible, state.startOverAtMs == nil, let at = state.serverResumeOfferMs {
+                    // A media server's own position is newer than Tuvora's record (design D3): offered, never forced.
+                    ServerResumeCard(at: SeekBar.clock(at.int64Value)) { session.acceptServerResume() }
+                        .focused($startOverFocused)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .padding(.top, dp(160))
                 }
                 if startOverVisible, let at = state.startOverAtMs {
                     StartOverCard(resumeAt: SeekBar.clock(at.int64Value)) { session.startFromBeginning() }
@@ -934,6 +941,34 @@ private struct StartOverCard: View {
             }
             .buttonStyle(PlainNoChromeButtonStyle())
             .focused($focused)
+        }
+        .padding(.horizontal, dp(16)).padding(.vertical, dp(12))
+        .frame(maxWidth: dp(460))
+        .background(RoundedRectangle(cornerRadius: dp(16), style: .continuous).fill(Color.black.opacity(0.72)))
+    }
+}
+
+/// "You watched further on your server. Continue at 41:07?" - the same card as StartOverCard.
+private struct ServerResumeCard: View {
+    let at: String
+    let action: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(spacing: dp(8)) {
+            Text(verbatim: MS("ms_resume_from_server_message", "You watched further on your server. Continue at %1$s?", at))
+                .font(NuvioType.bodyMedium).foregroundStyle(.white.opacity(0.86)).multilineTextAlignment(.center)
+            Button(action: action) {
+                Text(verbatim: MS("ms_resume_from_server_action", "Continue")).font(NuvioType.labelLargeSemi)
+                    .foregroundStyle(focused ? Color.black : Color.white)
+                    .padding(.horizontal, dp(20)).padding(.vertical, dp(10))
+                    .background(Capsule().fill(focused ? Color.white : Color.white.opacity(0.12)))
+                    .scaleEffect(focused ? 1.04 : 1)
+                    .animation(NuvioTokens.Motion.fast, value: focused)
+            }
+            .buttonStyle(PlainNoChromeButtonStyle())
+            .focused($focused)
+            .accessibilityIdentifier("player.serverResume")
         }
         .padding(.horizontal, dp(16)).padding(.vertical, dp(12))
         .frame(maxWidth: dp(460))
