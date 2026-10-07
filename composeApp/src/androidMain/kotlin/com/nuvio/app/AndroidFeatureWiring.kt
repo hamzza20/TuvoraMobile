@@ -27,6 +27,7 @@ fun registerAndroidStartup() {
     // process start, so by the time any of these DB inits (or the worker) run, the gate is decided.
     AndroidStartup.registerTask { RecEventStorage.initialize(it) }
     AndroidStartup.registerTask { XtreamAccountStorage.initialize(it) }
+    AndroidStartup.registerTask { com.nuvio.app.features.mediaserver.api.MediaServerAndroid.initialize(it) }
     AndroidStartup.registerTask { M3UFilePicker.initialize(it) }
     AndroidStartup.registerTask { MatchDbDriver.initialize(it) }
     AndroidStartup.registerTask { IptvContentDbDriver.initialize(it) }
