@@ -167,7 +167,7 @@ object TvHome {
         today: String,
     ): TvCwItem? {
         if (nextUpDismissKey(seed.contentId, seed.seasonNumber, seed.episodeNumber) in prefs.dismissedNextUpKeys) return null
-        val meta = runCatching { MetaDetailsRepository.fetch(seed.contentType, seed.contentId) }.getOrNull() ?: return null
+        val meta = runCatching { TvMetaLookup.fetch(seed.contentType, seed.contentId) }.getOrNull() ?: return null
         val progress = WatchProgressRepository.prepareNextUpProgressEntries(entries = entries, contentId = seed.contentId)
         val action = meta.seriesPrimaryAction(
             content = WatchingContentRef(type = seed.contentType, id = seed.contentId),
@@ -184,7 +184,7 @@ object TvHome {
 
     /** Opens a card: the title's details and, for an episode, the video to play. */
     suspend fun resolve(item: TvCwItem): TvCwTarget? {
-        val meta = runCatching { MetaDetailsRepository.fetch(item.parentMetaType, item.parentMetaId) }.getOrNull() ?: return null
+        val meta = runCatching { TvMetaLookup.fetch(item.parentMetaType, item.parentMetaId) }.getOrNull() ?: return null
         val video = if (item.seasonNumber != null) meta.videoFor(item.seasonNumber, item.episodeNumber, item.videoId) else null
         return TvCwTarget(meta, video)
     }

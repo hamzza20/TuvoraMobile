@@ -227,6 +227,8 @@ struct SettingsScreen: View {
         case "stalker":
             let form = PlaylistFormModel(editing: nil); form.sourceType = "stalker"; dialogs.push(.playlistForm(form))
         case "signOut": dialogs.push(.signOut)
+        case "mediaServerAdd": dialogs.push(.mediaServerAdd(nil))
+        case "mediaServerDetails": if let key = TvMediaServers.shared.firstKey() { dialogs.push(.mediaServerDetails(key)) }
         case "traktConnect": dialogs.push(.custom(AnyView(TrackingAccountDialog(provider: .trakt, model: integrations, dialogs: dialogs))))
         case "simklConnect": dialogs.push(.custom(AnyView(TrackingAccountDialog(provider: .simkl, model: integrations, dialogs: dialogs))))
         case "mdblistConnect": dialogs.push(.custom(AnyView(TrackingAccountDialog(provider: .mdblist, model: integrations, dialogs: dialogs))))
@@ -320,6 +322,9 @@ enum SettingsDialogKind {
     case playlistDetails(String, banner: String?)
     /// Step 2: "Enter setup code", full screen.
     case setupCode
+    /// Media servers: add / sign in (a dialog), and one server's page (full screen).
+    case mediaServerAdd(String?)
+    case mediaServerDetails(String)
     /// Detach / Remove: Cancel first, the destructive button needs OK held for two seconds.
     case holdConfirm(HoldConfirmSpec)
     case hiddenItems(XtreamAccount)
@@ -351,7 +356,7 @@ extension SettingsDialogKind {
     /// Full-screen pages fill the content area (they are not centred cards) and stay visible behind a dialog opened over them.
     var isFullScreen: Bool {
         switch self {
-        case .playlistDetails, .setupCode: return true
+        case .playlistDetails, .setupCode, .mediaServerDetails: return true
         default: return false
         }
     }
@@ -400,6 +405,10 @@ private struct SettingsDialogView: View {
             PlaylistDetailsPage(accountId: accountId, banner: banner, model: model, dialogs: dialogs)
         case .setupCode:
             SetupCodeScreen(dialogs: dialogs)
+        case .mediaServerAdd(let existingKey):
+            MediaServerAddDialog(existingKey: existingKey, dialogs: dialogs)
+        case .mediaServerDetails(let key):
+            MediaServerDetailsPage(key: key, dialogs: dialogs)
         case .holdConfirm(let spec):
             HoldConfirmDialog(spec: spec, dialogs: dialogs)
         case .hiddenItems(let account):
