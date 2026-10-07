@@ -252,7 +252,7 @@ object PlayerStreamsRepository {
             val isStalkerSource = streamProvider.isStalkerSource(videoId)
             stateFlow.value = StreamsUiState(isAnyLoading = true)
             val job = scope.launch {
-                if (isStalkerSource || streamProvider.directStreamItem(videoId) == null) {
+                if (isStalkerSource || streamProvider.directStreamItems(videoId).isEmpty()) {
                     runCatchingUnlessCancelled {
                         MetaDetailsRepository.ensureXtreamStreamRegistered(
                             videoId,
@@ -261,9 +261,10 @@ object PlayerStreamsRepository {
                         )
                     }
                 }
-                val stream = streamProvider.directStreamItem(videoId)
+                val directStreams = streamProvider.directStreamItems(videoId)
+                val stream = directStreams.firstOrNull()
                 stateFlow.value = if (stream != null) {
-                    val group = stream.asDirectSourceGroup()
+                    val group = directStreams.asDirectSourceGroup()
                     val presentedGroup = StreamBadgePresentation.apply(
                         groups = listOf(group),
                         rules = streamBadgeRules,
