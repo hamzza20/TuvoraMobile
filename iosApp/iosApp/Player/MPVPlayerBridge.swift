@@ -1114,7 +1114,15 @@ final class MPVPlayerViewController: UIViewController {
         guard let ctx = mpv else { return }
         mpv = nil  // nil first so event loop stops reading
         detachVideoLayerForVoTeardown(reason: "destroy")
-        mpv_terminate_destroy(ctx)
+        // Profile changes and Compose disposal run on Main. Demuxer shutdown can block on a
+        // dead provider, so drain the event reader and terminate off Main. Retain the controller
+        // until the C wakeup callback has been cleared: its context is passUnretained(self).
+        eventQueue.async { [self] in
+            withExtendedLifetime(self) {
+                mpv_set_wakeup_callback(ctx, nil, nil)
+                mpv_terminate_destroy(ctx)
+            }
+        }
     }
 
     private func activateAudioSessionForPlayback() {
