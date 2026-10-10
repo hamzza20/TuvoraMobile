@@ -20,6 +20,16 @@ internal data class AuthRequest(
 )
 
 @Serializable
+internal data class QuickConnectResult(
+    @SerialName("Code") val code: String? = null,
+    @SerialName("Secret") val secret: String? = null,
+    @SerialName("Authenticated") val authenticated: Boolean = false,
+)
+
+@Serializable
+internal data class QuickConnectAuthRequest(@SerialName("Secret") val secret: String)
+
+@Serializable
 internal data class AuthResult(
     @SerialName("User") val user: UserInfo? = null,
     @SerialName("AccessToken") val accessToken: String? = null,

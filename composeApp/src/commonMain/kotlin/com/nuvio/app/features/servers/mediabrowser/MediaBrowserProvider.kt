@@ -3,6 +3,7 @@ package com.nuvio.app.features.servers.mediabrowser
 import com.nuvio.app.features.servers.ServerCandidate
 import com.nuvio.app.features.servers.ServerCapability
 import com.nuvio.app.features.servers.ServerEpisode
+import com.nuvio.app.features.servers.ServerCertificateException
 import com.nuvio.app.features.servers.ServerException
 import com.nuvio.app.features.servers.ServerFailure
 import com.nuvio.app.features.servers.ServerIndexEntry
@@ -23,6 +24,10 @@ import com.nuvio.app.features.servers.ServerTitle
 import com.nuvio.app.features.servers.ServerTrack
 import com.nuvio.app.features.streams.StreamSubtitle
 import io.ktor.client.HttpClient
+import com.nuvio.app.features.servers.FixedServerHttp
+import com.nuvio.app.features.servers.QuickConnectChallenge
+import com.nuvio.app.features.servers.QuickConnectPoll
+import com.nuvio.app.features.servers.ServerHttp
 import io.ktor.http.HttpMethod
 import io.ktor.http.Url
 import io.ktor.http.decodeURLQueryComponent
@@ -42,9 +47,12 @@ internal data class Endpoint(
 internal abstract class MediaBrowserProvider(
     authorizationHeader: String,
     private val apiPath: String,
-    http: HttpClient,
+    http: ServerHttp,
 ) : ServerProvider {
-    override val capabilities: Set<ServerCapability> = ServerCapability.entries.toSet()
+    constructor(authorizationHeader: String, apiPath: String, http: HttpClient) :
+        this(authorizationHeader, apiPath, FixedServerHttp(http))
+
+    override val capabilities: Set<ServerCapability> = ServerCapability.entries.toSet() - ServerCapability.QUICK_CONNECT
 
     private val client = MediaBrowserClient(authorizationHeader, http)
     private val lock = SynchronizedObject()
@@ -74,7 +82,11 @@ internal abstract class MediaBrowserProvider(
             token = null,
             body = client.json.encodeToString(AuthRequest.serializer(), AuthRequest(username, password)),
         )
-        val result = client.json.decodeFromString(AuthResult.serializer(), response.body)
+        return signInFrom(response.body, baseUrl, info, fallbackUserName = username)
+    }
+
+    private fun signInFrom(body: String, baseUrl: String, info: PublicInfo, fallbackUserName: String): ServerSignIn {
+        val result = client.json.decodeFromString(AuthResult.serializer(), body)
         val user = result.user ?: throw ServerException(ServerFailure.AUTH_REQUIRED)
         val token = result.accessToken?.takeIf { it.isNotBlank() } ?: throw ServerException(ServerFailure.AUTH_REQUIRED)
         val serverId = result.serverId ?: info.id ?: throw ServerException(ServerFailure.FAILED)
@@ -83,9 +95,76 @@ internal abstract class MediaBrowserProvider(
             serverName = info.serverName?.takeIf { it.isNotBlank() } ?: Url(baseUrl).host,
             serverId = serverId,
             userId = user.id,
-            userName = user.name ?: username,
+            userName = user.name ?: fallbackUserName,
             token = token,
         )
+    }
+
+    // Quick Connect, verified against the Jellyfin 12.2.0 OpenAPI + QuickConnectManager/QuickConnectController source:
+    // GET /QuickConnect/Enabled (anonymous bool), POST /QuickConnect/Initiate (needs the client Authorization header; 401 = disabled),
+    // GET /QuickConnect/Connect?secret= (Authenticated flag; 404 = unknown/expired, requests live 10 minutes),
+    // POST /Users/AuthenticateWithQuickConnect {"Secret"} -> AuthenticationResult.
+    override suspend fun quickConnectAvailable(address: String): Boolean {
+        if (ServerCapability.QUICK_CONNECT !in capabilities) return false
+        val normalized = normalizeServerAddress(address, apiPath) ?: return false
+        return try {
+            val (baseUrl, _) = publicInfo(normalized)
+            client.execute(HttpMethod.Get, baseUrl + apiPath, "/QuickConnect/Enabled", token = null).body.trim().equals("true", ignoreCase = true)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: ServerCertificateException) {
+            throw error
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    override suspend fun quickConnectStart(address: String): QuickConnectChallenge {
+        if (ServerCapability.QUICK_CONNECT !in capabilities) throw ServerException(ServerFailure.UNSUPPORTED)
+        val normalized = normalizeServerAddress(address, apiPath) ?: throw ServerException(ServerFailure.NOT_FOUND)
+        val (baseUrl, info) = publicInfo(normalized)
+        if (!isSupported(info)) throw ServerException(ServerFailure.UNSUPPORTED)
+        val response = client.execute(HttpMethod.Post, baseUrl + apiPath, "/QuickConnect/Initiate", token = null)
+        val result = client.json.decodeFromString(QuickConnectResult.serializer(), response.body)
+        val code = result.code?.takeIf { it.isNotBlank() }
+        val secret = result.secret?.takeIf { it.isNotBlank() }
+        if (code == null || secret == null) throw ServerException(ServerFailure.FAILED)
+        return QuickConnectChallenge(
+            code = code,
+            secret = secret,
+            baseUrl = baseUrl,
+            serverId = info.id.orEmpty(),
+            serverName = info.serverName?.takeIf { it.isNotBlank() } ?: Url(baseUrl).host,
+        )
+    }
+
+    override suspend fun quickConnectPoll(challenge: QuickConnectChallenge): QuickConnectPoll {
+        val response = try {
+            client.execute(
+                HttpMethod.Get,
+                challenge.baseUrl + apiPath,
+                "/QuickConnect/Connect",
+                token = null,
+                query = mapOf("secret" to challenge.secret),
+            )
+        } catch (error: ServerException) {
+            if (error.failure == ServerFailure.NOT_FOUND) return QuickConnectPoll.EXPIRED
+            throw error
+        }
+        val result = client.json.decodeFromString(QuickConnectResult.serializer(), response.body)
+        return if (result.authenticated) QuickConnectPoll.AUTHORISED else QuickConnectPoll.PENDING
+    }
+
+    override suspend fun quickConnectComplete(challenge: QuickConnectChallenge): ServerSignIn {
+        val response = client.execute(
+            method = HttpMethod.Post,
+            baseUrl = challenge.baseUrl + apiPath,
+            path = "/Users/AuthenticateWithQuickConnect",
+            token = null,
+            body = client.json.encodeToString(QuickConnectAuthRequest.serializer(), QuickConnectAuthRequest(challenge.secret)),
+        )
+        val info = PublicInfo(serverName = challenge.serverName, id = challenge.serverId.ifBlank { null })
+        return signInFrom(response.body, challenge.baseUrl, info, fallbackUserName = "")
     }
 
     private suspend fun publicInfo(baseUrl: String): Pair<String, PublicInfo> {

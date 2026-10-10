@@ -15,7 +15,10 @@ import kotlin.test.assertTrue
 /** Media-server access tokens are device-local: never pushed, never imported (decision 2026-10-10). */
 class ServerTokenSyncTest {
     @AfterTest
-    fun tearDown() = removeFakeServer()
+    fun tearDown() {
+        ServerRepository.remove("other") // the server that "arrived from another device"
+        removeFakeServer()
+    }
 
     private val connection = ServerConnection(
         id = "c1", providerId = "fake", name = "Box", address = "https://fake.example",
