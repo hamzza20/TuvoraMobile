@@ -37,5 +37,15 @@ fi
 
 export POSTHOG_CLI_HOST="${POSTHOG_CLI_HOST:-https://us.posthog.com}"
 export POSTHOG_CLI_PROJECT_ID="${POSTHOG_CLI_PROJECT_ID:-494529}"
-"$upload_helper"
+# Same call as PostHog's upload-symbols.sh helper (found above, which also proves the package is present), plus
+# --skip-on-conflict: a dSYM whose UUID was already uploaded (an unchanged framework, or a re-archive of the same
+# binary from another path) differs only in recorded paths, and the helper's plain upload failed the whole
+# archive on it ("Content mismatch", 2026-10-10). The existing set is kept, and still symbolicates: the UUID
+# identifies the binary.
+ph_cli="$HOME/.posthog/posthog-cli"
+[ -x "$ph_cli" ] || ph_cli="$(command -v posthog-cli 2>/dev/null || true)"
+[ -n "$ph_cli" ] || fail_or_warn "posthog-cli not found (npm install -g @posthog/cli@latest)"
+"$ph_cli" dsym upload --directory "$DWARF_DSYM_FOLDER_PATH" --main-dsym "$DWARF_DSYM_FILE_NAME" \
+  --release-name "$PRODUCT_BUNDLE_IDENTIFIER" --release-version "$MARKETING_VERSION" --build "$CURRENT_PROJECT_VERSION" \
+  --skip-on-conflict || fail_or_warn "PostHog dSYM upload failed for UUID $debug_uuid"
 echo "PostHog dSYM upload completed for UUID $debug_uuid"
