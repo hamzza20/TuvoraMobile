@@ -123,6 +123,7 @@ private struct IptvShelf: View {
     let category: XtreamHubCategory
     let onOpen: (MetaPreview) -> Void
     @State private var seeAll: String?
+    @State private var deadlineTick = 0
 
     var body: some View {
         let size = NuvioCardSize.hubPortrait
@@ -132,7 +133,14 @@ private struct IptvShelf: View {
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: NuvioTokens.Layout.itemGap) {
-                    if category.items.isEmpty {
+                    if category.items.isEmpty && TvIptvBrowse.shared.rowFailed(category: category) {
+                        // The row stays, with Retry: a failure used to read as "empty" and the row vanished.
+                        let _ = deadlineTick
+                        NuvioPosterCard(title: "Couldn’t load · Retry", subtitle: nil, imageURL: nil,
+                                        width: size.width, height: size.height) {
+                            TvIptvBrowse.shared.retryCategory(categoryId: category.id)
+                        }
+                    } else if category.items.isEmpty {
                         ForEach(0..<8, id: \.self) { _ in NuvioShimmer().frame(width: size.width, height: size.height) }
                     } else {
                         ForEach(category.items, id: \.id) { item in
@@ -154,6 +162,13 @@ private struct IptvShelf: View {
             .focusSection()
         }
         .onAppear { if !category.loaded && !category.loading { TvIptvBrowse.shared.loadCategory(categoryId: category.id) } }
+        // Wake once at the row's own deadline so a wait that never returns still ends on Retry (no polling).
+        .task(id: "\(category.id)|\(category.loading)") {
+            if let ms = TvIptvBrowse.shared.msUntilRowDeadline(category: category)?.int64Value {
+                try? await Task.sleep(nanoseconds: UInt64(ms) * 1_000_000)
+                deadlineTick += 1
+            }
+        }
         .fullScreenCover(item: Binding(get: { seeAll.map(CategoryBox.init) }, set: { seeAll = $0?.id })) { box in
             IptvCategoryScreen(categoryId: box.id, onOpen: onOpen)
         }
@@ -216,6 +231,9 @@ private struct LiveGuideView: View {
 
     @State private var channels: [LiveGuideChannel] = []
     @State private var loading = true
+    /// The channel load failed or stalled (bounded in TvLiveGuide.channels): show the error and Retry,
+    /// never "this category is empty on your provider".
+    @State private var channelsFailed = false
     @State private var category: String = "all"
     @State private var focusedChannel: LiveGuideChannel?
     @State private var previewing: LiveGuideChannel?
@@ -515,7 +533,9 @@ private struct LiveGuideView: View {
     }
 
     private func reloadChannels() async {
-        channels = (try? await TvLiveGuide.shared.channels(accountId: accountId)) ?? []
+        let loaded = try? await TvLiveGuide.shared.channels(accountId: accountId)
+        channelsFailed = loaded == nil
+        channels = loaded ?? []
         refreshFavorites()
     }
 
@@ -629,6 +649,11 @@ private struct LiveGuideView: View {
         Group {
             if loading {
                 VStack(spacing: dp(4)) { ForEach(0..<6, id: \.self) { _ in NuvioShimmer(cornerRadius: dp(8)).frame(height: Self.rowHeight) } }
+            } else if channelsFailed && channels.isEmpty {
+                NuvioStateMessage(title: "Couldn't load channels",
+                                  message: "Your provider didn't answer in time.") {
+                    Task { loading = true; await reloadChannels(); loading = false }
+                }
             } else if visible.isEmpty {
                 NuvioStateMessage(title: "No channels here", message: category == "recent" ? "Channels you watch show up here." : "This category is empty on your provider.")
             } else {

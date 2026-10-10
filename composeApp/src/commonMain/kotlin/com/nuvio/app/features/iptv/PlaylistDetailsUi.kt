@@ -133,7 +133,10 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
             return@item
         }
         val controller = remember { PlaylistDetailsController() }
-        val live by controller.live.collectAsStateWithLifecycle()
+        val liveState by controller.live.collectAsStateWithLifecycle()
+        // The wait ends at the check's own deadline even if the panel never answers (BoundedLoad).
+        val liveStatus = rememberEffectiveLoadStatus(liveState.load)
+        val live = if (liveStatus != liveState.load) liveState.copy(load = liveStatus) else liveState
         val managedMap by ManagedInfoRepository.state.collectAsStateWithLifecycle()
         val profileId = com.nuvio.app.features.profiles.ProfileRepository.activeProfileId
         val info = managedMap[profileId]?.get(account.id) ?: ManagedInfoRepository.infoFor(profileId, account.id)
@@ -193,6 +196,7 @@ internal fun LazyListScope.xtreamPlaylistDetailsContent(
                 playlistName = PlaylistAddress.displayName(target.name),
                 state = hiddenState,
                 onUnhide = { hiddenController.unhide(target, it) },
+                onRetry = { hiddenController.open(target) },
                 onDismiss = { hiddenFor = null },
             )
         }

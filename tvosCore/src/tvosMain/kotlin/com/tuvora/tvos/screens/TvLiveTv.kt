@@ -38,6 +38,22 @@ object TvIptvBrowse {
     fun loadCategory(categoryId: String) = XtreamHubRepository.loadCategory(categoryId)
     fun loadMore(categoryId: String) = XtreamHubRepository.loadMore(categoryId)
     fun retry() = XtreamHubRepository.retryCategories()
+
+    /** A failed row's Retry (the only way, besides a finished import, a failed row is asked again). */
+    fun retryCategory(categoryId: String) = XtreamHubRepository.retryCategory(categoryId)
+
+    /**
+     * Whether [category]'s row shows its Retry now: failed, or still loading past its own deadline (the
+     * guarantee that a wait ends even if the work behind it never returns — the phone's rememberEffectiveLoadStatus).
+     */
+    fun rowFailed(category: com.nuvio.app.features.iptv.XtreamHubCategory): Boolean =
+        com.nuvio.app.features.iptv.BoundedLoad.effectiveAt(category.load, com.nuvio.app.features.iptv.BoundedLoad.clock()) is
+            com.nuvio.app.features.iptv.LoadStatus.Failed
+
+    /** Milliseconds until [category]'s loading deadline, or null when it is not loading (wake once, then re-check). */
+    fun msUntilRowDeadline(category: com.nuvio.app.features.iptv.XtreamHubCategory): Long? =
+        (category.load as? com.nuvio.app.features.iptv.LoadStatus.Loading)
+            ?.let { (it.deadlineAtMs - com.nuvio.app.features.iptv.BoundedLoad.clock()).coerceAtLeast(0) }
     fun ensureEpg(contentId: String) = XtreamHubRepository.ensureEpg(contentId)
 
     val isOffline: Boolean

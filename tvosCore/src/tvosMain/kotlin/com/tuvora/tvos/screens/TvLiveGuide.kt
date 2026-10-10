@@ -1,5 +1,8 @@
 package com.tuvora.tvos.screens
 
+import com.nuvio.app.features.iptv.BoundedLoad
+import com.nuvio.app.features.iptv.IptvImportProgress
+import com.nuvio.app.features.iptv.LoadSurface
 import com.nuvio.app.features.iptv.XtreamItemRegistry
 import com.nuvio.app.features.iptv.XtreamLiveRecent
 import com.nuvio.app.features.iptv.XtreamLiveRecents
@@ -15,9 +18,21 @@ import com.nuvio.app.features.library.toLibraryItem
  * for rows on screen — one request per composed row, as on the other clients.
  */
 object TvLiveGuide {
-    suspend fun channels(accountId: String): List<LiveGuideChannel> =
-        // guideChannels is keyed by a channel id only to find its playlist; any live id of it works.
-        LiveTvData.guideChannels(XtreamItemRegistry.liveId(accountId, 0))
+    /**
+     * The guide's channels, or null when the load failed or stalled (BoundedLoad: the guide shows its error
+     * and Retry instead of shimmering forever). For M3U/Stalker this can be the playlist import itself: its
+     * progress keeps the deadline open, and it keeps running if the deadline still passes.
+     */
+    suspend fun channels(accountId: String): List<LiveGuideChannel>? =
+        BoundedLoad.run(
+            surface = LoadSurface.HUB_CATEGORIES,
+            progress = IptvImportProgress.of(accountId),
+            cancelOnTimeout = false,
+            report = mapOf("row" to "tvos_guide_channels"),
+        ) {
+            // guideChannels is keyed by a channel id only to find its playlist; any live id of it works.
+            LiveTvData.guideChannels(XtreamItemRegistry.liveId(accountId, 0))
+        }.valueOrNull()
 
     suspend fun programmes(contentId: String): List<XtreamProgram> = LiveTvData.programmes(contentId, limit = 8)
 

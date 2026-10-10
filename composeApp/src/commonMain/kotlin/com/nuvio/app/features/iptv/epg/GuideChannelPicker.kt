@@ -43,9 +43,15 @@ internal fun GuideChannelPickerHost() {
 private fun GuideChannelPickerDialog(req: GuideChannelPickerController.Request) {
     var query by remember(req) { mutableStateOf("") }
     var state by remember(req) { mutableStateOf<GuideChannelPickerController.State?>(null) }
+    var failed by remember(req) { mutableStateOf(false) }
     LaunchedEffect(req, query) {
         if (query.isNotEmpty()) delay(250)   // debounce typing; the read is local but not free
-        state = GuideChannelPickerController.load(req, query)
+        // Bounded: a wedged read ends as "Couldn't read the guide" rather than "Loading…" forever.
+        val outcome = com.nuvio.app.features.iptv.BoundedLoad.run(
+            com.nuvio.app.features.iptv.LoadSurface.SETTINGS, report = mapOf("row" to "guide_picker"),
+        ) { GuideChannelPickerController.load(req, query) }
+        failed = outcome.valueOrNull() == null
+        outcome.valueOrNull()?.let { state = it }
     }
     AlertDialog(
         onDismissRequest = { GuideChannelPickerController.close() },
@@ -54,6 +60,7 @@ private fun GuideChannelPickerDialog(req: GuideChannelPickerController.Request) 
             Column {
                 val s = state
                 when {
+                    s == null && failed -> Text("Couldn’t read the guide on this device. Close and try again.", fontSize = 13.sp)
                     s == null -> Text("Loading guide channels…", fontSize = 13.sp)
                     !s.hasGuide -> Text(
                         "No guide is loaded for this playlist on this device yet. Add an EPG URL in the " +
