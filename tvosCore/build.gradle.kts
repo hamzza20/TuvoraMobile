@@ -233,7 +233,11 @@ kotlin {
                 implementation(libs.ksoup)
             }
         }
-        commonTest { kotlin.srcDir(composeAppSrc.resolve("commonTest/kotlin/com/nuvio/app/features/mediaserver")) }
+        commonTest {
+            kotlin.srcDir(composeAppSrc.resolve("commonTest/kotlin/com/nuvio/app/features/mediaserver"))
+            kotlin.srcDir(composeAppSrc.resolve("commonTest/kotlin/com/nuvio/app/features/epg"))
+            kotlin.srcDir(composeAppSrc.resolve("commonTest/kotlin/com/nuvio/app/features/iptv/epg"))
+        }
         commonTest.dependencies {
             implementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
             implementation(libs.kotlin.test)
