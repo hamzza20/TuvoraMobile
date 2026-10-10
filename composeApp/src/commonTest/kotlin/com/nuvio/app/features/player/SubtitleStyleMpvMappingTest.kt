@@ -50,7 +50,16 @@ class SubtitleStyleMpvMappingTest {
         assertEquals(64.0, SubtitleStyleMpvMapping.marginX(5))
         assertEquals(SubtitleStyleMpvMapping.MPV_DEFAULT_MARGIN_X, SubtitleStyleMpvMapping.marginX(0))
         assertEquals(256.0, SubtitleStyleMpvMapping.marginX(99)) // clamped to 20%
-        assertEquals("64.0", props("#00000000", 0f, margin = 5)["sub-margin-x"])
+        assertEquals("64", props("#00000000", 0f, margin = 5)["sub-margin-x"])
+    }
+
+    @Test
+    fun sideMarginIsSentAsAnIntegerBecauseMpvRejectsAFractionalMarginX() {
+        // mpv declares sub-margin-x OPT_INT (sub/osd.c); "19.0" is rejected and the padding silently dropped.
+        assertEquals("19", props("#00000000", 0f, margin = 0)["sub-margin-x"])
+        assertEquals("256", props("#00000000", 0f, margin = 20)["sub-margin-x"])
+        assertEquals("38", props("#00000000", 0f, margin = 3)["sub-margin-x"]) // 38.4 rounds
+
     }
 
     @Test

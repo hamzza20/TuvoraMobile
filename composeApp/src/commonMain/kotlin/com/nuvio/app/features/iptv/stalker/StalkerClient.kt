@@ -228,14 +228,24 @@ object StalkerClient : IptvClient {
         }
 
     override suspend fun liveChannels(acc: XtreamAccount, categoryId: String?): Result<List<XtreamChannel>> = runCatching {
-        if (!ensureLineup(acc)) return@runCatching emptyList()
+        if (!ensureLineup(acc)) return@runCatching emptyOrUnavailable(acc)
         IptvContentDb.channelsFor(acc.id, categoryId).map { it.toChannel(acc) }
     }
 
     /** Windowed lineup read for the hub (item 5). Ensures the mirror, then a paged indexed read. */
     suspend fun liveChannelsPage(acc: XtreamAccount, categoryId: String?, offset: Int, limit: Int): List<XtreamChannel> {
-        if (!ensureLineup(acc)) return emptyList()
+        if (!ensureLineup(acc)) return emptyOrUnavailable(acc)
         return IptvContentDb.pageChannels(acc.id, categoryId, offset, limit).map { it.toChannel(acc) }
+    }
+
+    /**
+     * No usable lineup: a stored lineup with zero channels really is empty, but NO stored lineup means the
+     * fetch failed — that must surface as a failure (the IPTV page's Retry), never as "this category is empty"
+     * (CLAUDE.md: a failure is never "empty").
+     */
+    private suspend fun emptyOrUnavailable(acc: XtreamAccount): List<XtreamChannel> {
+        if (IptvContentDb.ingestMeta(acc.id) != null) return emptyList()
+        throw IllegalStateException("Stalker lineup unavailable")
     }
 
     private fun com.nuvio.app.features.iptv.content.IptvStreamRow.toChannel(acc: XtreamAccount) = XtreamChannel(
@@ -288,6 +298,7 @@ object StalkerClient : IptvClient {
                 return@withLock (IptvContentDb.ingestMeta(acc.id)?.liveCount ?: 0) > 0
             }
             IptvContentDb.replaceLiveLineup(acc.id, rows, cats.orEmpty().map { it.id to it.name })
+            com.nuvio.app.features.iptv.IptvImportProgress.finished(acc.id)
             true
         }
     }
@@ -329,6 +340,7 @@ object StalkerClient : IptvClient {
                 onChunk = {
                     delivered = true
                     parser.accept(it)
+                    com.nuvio.app.features.iptv.IptvImportProgress.tick(acc.id)
                 },
             )
         }

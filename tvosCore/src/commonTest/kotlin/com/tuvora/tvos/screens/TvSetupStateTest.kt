@@ -70,7 +70,7 @@ class TvSetupStateTest {
 
     @Test
     fun `checking the code is its own phase`() {
-        assertEquals(TvSetupPhase.CHECKING, build(SetupCodeUiState(previewLoading = true)).phase)
+        assertEquals(TvSetupPhase.CHECKING, build(SetupCodeUiState(previewLoad = com.nuvio.app.features.iptv.BoundedLoad.begin(com.nuvio.app.features.iptv.LoadSurface.SETTINGS))).phase)
     }
 
     @Test

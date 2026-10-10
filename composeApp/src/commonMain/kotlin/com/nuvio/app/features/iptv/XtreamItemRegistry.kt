@@ -193,6 +193,9 @@ object XtreamItemRegistry {
                 M3UClient.ensureIngested(account)
                 M3UClient.liveUrlFor(account, streamId)
             }
+            // A file playlist's lines live only in the content DB (nothing to re-fetch). It used to fall
+            // into the Xtream branch and build /live///<sid>.ts from its blank base URL.
+            SOURCE_TYPE_M3U_FILE -> M3UClient.liveUrlFor(account, streamId)
             SOURCE_TYPE_STALKER -> com.nuvio.app.features.iptv.stalker.StalkerClient.resolveLiveUrl(account, streamId, forceMint)
             else -> {
                 // The saved sid is a hint, not the truth: bind the channel's identity to whatever sid

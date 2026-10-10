@@ -134,6 +134,22 @@ object TvHome {
 
     fun refresh() = HomeRepository.refresh(AddonRepository.uiState.value.addons.enabledAddons(), force = true)
 
+    /** Fetches again only what failed on an earlier load (Home appeared, or Retry); no request when nothing did. */
+    fun retryFailed() {
+        AddonRepository.retryFailedManifests()
+        HomeRepository.retryFailed()
+    }
+
+    /** Whether Home says some rows are missing instead of silently showing fewer (the phone's card). */
+    fun showsPartialFailure(state: HomeUiState): Boolean {
+        val addons = AddonRepository.uiState.value.addons.enabledAddons()
+        return com.nuvio.app.features.addons.AddonLoadRetryPolicy.showsPartialFailure(
+            failedRowCount = state.failedRowCount,
+            failedManifestCount = com.nuvio.app.features.addons.AddonLoadRetryPolicy.manifestsToRetry(addons).size,
+            isLoading = state.isLoading || addons.any { it.isRefreshing },
+        )
+    }
+
     /** What an empty Home should say; a store build must not ask a playlist owner to add one (UX38). */
     fun emptyHomeHint(): TvEmptyHomeHint {
         XtreamRepository.ensureLoaded()

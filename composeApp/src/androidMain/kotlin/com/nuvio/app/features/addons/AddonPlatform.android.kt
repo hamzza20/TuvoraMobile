@@ -142,6 +142,14 @@ private fun buildAddonHttpClient(cache: Cache? = null): OkHttpClient =
 
 private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
+/**
+ * Whole-call limit for a text request (DNS + connect + headers + the whole body), matching iOS's
+ * `requestTimeoutMillis`. The client's read timeout only fires after 60 s of SILENCE, so a provider that
+ * trickles a byte now and then held a request — and the screen waiting on it — forever. Set per call, never
+ * on the client: streamed downloads (a 190 MB M3U, an XMLTV guide) legitimately run longer.
+ */
+internal var textRequestCallTimeoutMs = 60_000L   // a test shortens it
+
 private data class LimitedReadResult(
     val bytes: ByteArray,
     val truncated: Boolean,
@@ -296,6 +304,7 @@ private suspend fun executeTextRequest(
     }.build()
 
     val call = clientForAttempt(dnsProvider).newCall(request)
+    call.timeout().timeout(textRequestCallTimeoutMs, TimeUnit.MILLISECONDS)
     // Step 0.3b: a racing failover attempt that lost must stop NOW — cancel the socket, not just the coroutine.
     val cancelHook = cancelCallWithJob(call)
     try {
@@ -404,6 +413,7 @@ actual suspend fun httpRequestRaw(
         }
 
         val call = client.newCall(request)
+        call.timeout().timeout(textRequestCallTimeoutMs, TimeUnit.MILLISECONDS)
         val cancelHandle = coroutineContext[Job]?.invokeOnCompletion { cause ->
             if (cause is CancellationException) {
                 call.cancel()

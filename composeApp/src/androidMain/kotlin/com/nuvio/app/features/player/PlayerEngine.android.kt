@@ -1604,7 +1604,9 @@ private class NuvioLibmpvView(
     // getPropertyBoolean → pthread_cond_wait while exiting a live stream).
     @Volatile private var obsPaused = true
     @Volatile private var obsPausedForCache = false
-    @Volatile private var obsCoreIdle = false
+    // Idle until mpv says otherwise (iOS MPVPropertyShadow does the same): starting "busy" made a
+    // not-yet-loaded file read as playing the moment setPaused(false) echoed into the shadow.
+    @Volatile private var obsCoreIdle = true
     @Volatile private var obsEofReached = false
     @Volatile private var obsSeeking = false
     @Volatile private var obsCacheBufferingState: Int? = null
@@ -1654,7 +1656,7 @@ private class NuvioLibmpvView(
             when (property) {
                 "pause" -> obsPaused = true
                 "paused-for-cache" -> obsPausedForCache = false
-                "core-idle" -> obsCoreIdle = false
+                "core-idle" -> obsCoreIdle = true
                 "eof-reached" -> obsEofReached = false
                 "seeking" -> obsSeeking = false
                 "cache-buffering-state" -> obsCacheBufferingState = null

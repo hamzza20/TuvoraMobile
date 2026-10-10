@@ -303,6 +303,7 @@ final class MPVPlayerViewController: UIViewController {
 
     private let errorStateLock = NSLock()
     var metalLayer = MetalLayer()
+    private var videoLayerDetachedByRenderThreadExit = false
     private var lastAppliedDrawableSize: CGSize = .zero
     private var externallyManagedViewSize: CGSize?
     private var pendingSurfaceLayoutWorkItems: [DispatchWorkItem] = []
@@ -462,6 +463,7 @@ final class MPVPlayerViewController: UIViewController {
         metalLayer.position = .zero
         view.layer.addSublayer(metalLayer)
         layoutMetalLayer()
+        installRenderThreadExitGuard()
 
         setupMpv()
         // Must run after setupMpv (it needs the live metalLayer) and before the view is on screen.
@@ -612,6 +614,24 @@ final class MPVPlayerViewController: UIViewController {
         metalLayer.removeFromSuperlayer()
         CATransaction.commit()
         InAppLogBridge.shared.debug(tag: "MPV/iOS", message: "Video layer detached for vo teardown reason=\(reason)")
+    }
+
+    // A vo teardown mpv started on its own (see RenderThreadExitGuard): the layer leaves the window
+    // before the render thread's transaction commits, and comes back when mpv starts a new one.
+    private func installRenderThreadExitGuard() {
+        let exitGuard = metalLayer.renderThreadExitGuard
+        exitGuard.onDetachNeeded = { [weak self] in
+            guard let self, self.metalLayer.superlayer != nil else { return }
+            self.detachVideoLayerForVoTeardown(reason: "render-thread-exit")
+            self.videoLayerDetachedByRenderThreadExit = self.metalLayer.superlayer == nil
+        }
+        exitGuard.onRenderThreadStarted = { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.videoLayerDetachedByRenderThreadExit else { return }
+                self.videoLayerDetachedByRenderThreadExit = false
+                self.reattachVideoLayerAfterVoTeardown(reason: "render-thread-restart")
+            }
+        }
     }
 
     func reattachVideoLayerAfterVoTeardown(reason: String) {

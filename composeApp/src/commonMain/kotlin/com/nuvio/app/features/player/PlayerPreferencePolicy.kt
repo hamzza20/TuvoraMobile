@@ -279,7 +279,8 @@ object SubtitleStyleMpvMapping {
             "sub-border-size" to outlineSize.coerceAtLeast(0.0).mpvNumber(),
             "sub-border-style" to borderStyle(backgroundAlpha),
             "sub-shadow-offset" to (if (box) BOX_PADDING else 0.0).mpvNumber(),
-            "sub-margin-x" to marginX(sideMarginPercent).mpvNumber(),
+            // OPT_INT in mpv (sub/osd.c): a fractional "19.0" is rejected and the padding dropped.
+            "sub-margin-x" to marginX(sideMarginPercent).roundToInt().toString(),
         )
     }
 

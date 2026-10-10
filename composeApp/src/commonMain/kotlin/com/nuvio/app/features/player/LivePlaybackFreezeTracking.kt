@@ -38,7 +38,7 @@ fun LivePlaybackFreezeReporter.onLiveSnapshot(
     resetVideo: (() -> Boolean)? = null,
 ) {
     val nowMs = TraktPlatformClock.nowEpochMs()
-    val started = snapshot.positionMs > 0L || snapshot.isPlaying
+    val started = LivePlaybackStartupPolicy.hasStarted(snapshot)
 
     if (!isArmed && started) {
         onLivePlaybackStarted(

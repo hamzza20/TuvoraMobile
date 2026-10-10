@@ -23,6 +23,9 @@ class MetalLayer: CAMetalLayer {
 
     var onRenderingSuspensionChanged: ((Bool, String) -> Void)?
 
+    // LOCAL: detaches this layer before a render thread the bridge did not stop exits on screen.
+    let renderThreadExitGuard = RenderThreadExitGuard()
+
     var isDrawableCaptureArmed: Bool {
         get {
             captureLock.lock()
@@ -161,6 +164,7 @@ class MetalLayer: CAMetalLayer {
     }
 
     override func nextDrawable() -> CAMetalDrawable? {
+        renderThreadExitGuard.noteRenderThread(layer: self) // LOCAL
         captureLock.lock()
         nextDrawableCallCount &+= 1
         // Apply a resize handed over from Main on THIS (render) thread, before acquiring a drawable,

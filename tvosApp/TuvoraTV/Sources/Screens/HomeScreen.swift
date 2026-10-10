@@ -52,6 +52,9 @@ struct HomeScreen: View {
         }
         // Media-server rows: re-pulled when Home appears (never a timer); the contributor's own TTL makes a quick return free.
         .task { TvMediaServers.shared.refreshHomeRows() }
+        // What failed on an earlier load (an add-on manifest, a catalog row) is fetched again when Home appears;
+        // only the failures, and no request at all when nothing failed.
+        .task { TvHome.shared.retryFailed() }
         .task { for await next in TvHome.shared.continueWatching { continueWatching = next; ContentFocusActivity.contentChanged() } }
         .task {
             TvCollections.shared.start()
@@ -125,6 +128,12 @@ struct HomeScreen: View {
                                         onFocus: focusCw, onOpen: open)
                 }
                 if let rows {
+                    if TvHome.shared.showsPartialFailure(state: rows) {
+                        NuvioStateMessage(title: "Some rows didn’t load",
+                                          message: "Tuvora tries again each time you come back to Home.",
+                                          retry: { TvHome.shared.retryFailed() })
+                            .frame(height: dp(200))
+                    }
                     if rows.sections.isEmpty && rows.isLoading {
                         ForEach(0..<2, id: \.self) { _ in shimmerRow }
                     }
