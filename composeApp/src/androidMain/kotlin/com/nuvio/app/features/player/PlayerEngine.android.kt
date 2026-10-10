@@ -39,6 +39,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
@@ -121,6 +122,59 @@ private class PlaybackDiagnostics {
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 actual fun PlatformPlayerSurface(
+    sourceUrl: String,
+    sourceAudioUrl: String?,
+    sourceHeaders: Map<String, String>,
+    sourceResponseHeaders: Map<String, String>,
+    externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
+    streamType: String?,
+    isCatchUpPlayback: Boolean,
+    playbackSurface: String?,
+    useYoutubeChunkedPlayback: Boolean,
+    modifier: Modifier,
+    playWhenReady: Boolean,
+    initialPositionMs: Long?,
+    initialPositionRequestKey: String?,
+    resizeMode: PlayerResizeMode,
+    videoZoom: VideoZoom,
+    playbackEngine: AndroidPlaybackEngine?,
+    useNativeController: Boolean,
+    onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
+    onControllerReady: (PlayerEngineController) -> Unit,
+    onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
+    onError: (String?) -> Unit,
+) {
+    // A source on a pinned (self-signed) media server reaches the engine through a verified loopback relay.
+    val relayFailedMessage = stringResource(Res.string.servers_playback_failed)
+    val engineUrl = com.nuvio.app.features.servers.rememberPinnedPlaybackUrl(sourceUrl) { onError(relayFailedMessage) } ?: return
+    PlatformPlayerSurfaceInner(
+        sourceUrl = engineUrl,
+        sourceAudioUrl = sourceAudioUrl,
+        sourceHeaders = sourceHeaders,
+        sourceResponseHeaders = sourceResponseHeaders,
+        externalSubtitles = externalSubtitles,
+        streamType = streamType,
+        isCatchUpPlayback = isCatchUpPlayback,
+        playbackSurface = playbackSurface,
+        useYoutubeChunkedPlayback = useYoutubeChunkedPlayback,
+        modifier = modifier,
+        playWhenReady = playWhenReady,
+        initialPositionMs = initialPositionMs,
+        initialPositionRequestKey = initialPositionRequestKey,
+        resizeMode = resizeMode,
+        videoZoom = videoZoom,
+        playbackEngine = playbackEngine,
+        useNativeController = useNativeController,
+        onInitialPositionHandled = onInitialPositionHandled,
+        onControllerReady = onControllerReady,
+        onSnapshot = onSnapshot,
+        onError = onError,
+    )
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+private fun PlatformPlayerSurfaceInner(
     sourceUrl: String,
     sourceAudioUrl: String?,
     sourceHeaders: Map<String, String>,

@@ -37,6 +37,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
 import nuvio.composeapp.generated.resources.player_error_mpv_unavailable
 import org.jetbrains.compose.resources.getString
+import nuvio.composeapp.generated.resources.servers_playback_failed
 import org.jetbrains.compose.resources.stringResource
 
 private const val TAG = "NuvioiOSPlayer"
@@ -44,6 +45,61 @@ private const val TAG = "NuvioiOSPlayer"
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun PlatformPlayerSurface(
+    sourceUrl: String,
+    sourceAudioUrl: String?,
+    sourceHeaders: Map<String, String>,
+    sourceResponseHeaders: Map<String, String>,
+    externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
+    streamType: String?,
+    isCatchUpPlayback: Boolean,
+    // Accepted for signature parity; iOS renders through the Swift MPVPlayerBridge, which has no
+    // Android SurfaceTexture stage and therefore none of the per-frame fence leak this drives.
+    @Suppress("UNUSED_PARAMETER") playbackSurface: String?,
+    useYoutubeChunkedPlayback: Boolean,
+    modifier: Modifier,
+    playWhenReady: Boolean,
+    initialPositionMs: Long?,
+    initialPositionRequestKey: String?,
+    resizeMode: PlayerResizeMode,
+    videoZoom: VideoZoom,
+    playbackEngine: AndroidPlaybackEngine?,
+    useNativeController: Boolean,
+    onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
+    onControllerReady: (PlayerEngineController) -> Unit,
+    onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
+    onError: (String?) -> Unit,
+) {
+    // A source on a pinned (self-signed) media server reaches the engine through a verified loopback relay.
+    val relayFailedMessage = stringResource(Res.string.servers_playback_failed)
+    val engineUrl = com.nuvio.app.features.servers.rememberPinnedPlaybackUrl(sourceUrl) { onError(relayFailedMessage) } ?: return
+    PlatformPlayerSurfaceInner(
+        sourceUrl = engineUrl,
+        sourceAudioUrl = sourceAudioUrl,
+        sourceHeaders = sourceHeaders,
+        sourceResponseHeaders = sourceResponseHeaders,
+        externalSubtitles = externalSubtitles,
+        streamType = streamType,
+        isCatchUpPlayback = isCatchUpPlayback,
+        playbackSurface = playbackSurface,
+        useYoutubeChunkedPlayback = useYoutubeChunkedPlayback,
+        modifier = modifier,
+        playWhenReady = playWhenReady,
+        initialPositionMs = initialPositionMs,
+        initialPositionRequestKey = initialPositionRequestKey,
+        resizeMode = resizeMode,
+        videoZoom = videoZoom,
+        playbackEngine = playbackEngine,
+        useNativeController = useNativeController,
+        onInitialPositionHandled = onInitialPositionHandled,
+        onControllerReady = onControllerReady,
+        onSnapshot = onSnapshot,
+        onError = onError,
+    )
+}
+
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+private fun PlatformPlayerSurfaceInner(
     sourceUrl: String,
     sourceAudioUrl: String?,
     sourceHeaders: Map<String, String>,
