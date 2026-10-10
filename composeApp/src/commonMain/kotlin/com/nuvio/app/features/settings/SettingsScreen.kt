@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.contracts.IptvSettingsSectionAccess
-import com.nuvio.app.core.contracts.MediaServerSettingsSectionAccess
 import com.nuvio.app.core.ui.LocalScreenActive
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.AppTheme
@@ -74,6 +73,7 @@ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
 import com.nuvio.app.features.mdblist.MdbListSettings
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
+import com.nuvio.app.features.mdblist.MdbListTracker
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsUiState
 import com.nuvio.app.features.player.PlayerSettingsRepository
@@ -119,7 +119,6 @@ private fun SettingsPage.isEnabledByPolicy(): Boolean =
 @Composable
 private fun settingsPageHeaderTitle(page: SettingsPage): String =
     IptvSettingsSectionAccess.current()?.headerTitleOrNull(page)
-        ?: MediaServerSettingsSectionAccess.current()?.headerTitleOrNull(page)
         ?: stringResource(page.titleRes)
 
 @Composable
@@ -204,6 +203,10 @@ fun SettingsScreen(
             TraktCommentsSettings.ensureLoaded()
             TraktCommentsSettings.enabled
         }.collectAsStateWithLifecycle()
+        val mdbListConnected by remember {
+            MdbListTracker.ensureLoaded()
+            MdbListTracker.isAuthenticated
+        }.collectAsStateWithLifecycle()
         val trackingSettingsUiState by remember {
             TrackingSettingsRepository.ensureLoaded()
             TrackingSettingsRepository.uiState
@@ -268,10 +271,9 @@ fun SettingsScreen(
         val pageTitles = if (onNavigatePage != null) settingsPageTitles() else emptyMap()
         // UX19: feature-owned title overrides (Edit vs Add Playlist), read when navigating.
         val iptvTitleOverride = IptvSettingsSectionAccess.current()?.rememberNavigationTitleOverride()
-        val mediaServerTitleOverride = MediaServerSettingsSectionAccess.current()?.rememberNavigationTitleOverride()
         val navigationTitleOverride: ((SettingsPage) -> String?)? =
-            if (iptvTitleOverride == null && mediaServerTitleOverride == null) null
-            else { target -> iptvTitleOverride?.invoke(target) ?: mediaServerTitleOverride?.invoke(target) }
+            if (iptvTitleOverride == null) null
+            else { target -> iptvTitleOverride.invoke(target) }
         val page = remember(currentPage) {
             runCatching { SettingsPage.valueOf(currentPage) }
                 .getOrDefault(SettingsPage.Root)
@@ -429,6 +431,7 @@ fun SettingsScreen(
                         traktAuthUiState = traktAuthUiState,
                         simklAuthUiState = simklAuthUiState,
                         traktCommentsEnabled = traktCommentsEnabled,
+                        mdbListConnected = mdbListConnected,
                         trackingSettingsUiState = trackingSettingsUiState,
                         homescreenHeroEnabled = homescreenSettingsUiState.heroEnabled,
                         homescreenShowCatalogType = homescreenSettingsUiState.showCatalogType,
@@ -492,6 +495,7 @@ fun SettingsScreen(
                         traktAuthUiState = traktAuthUiState,
                         simklAuthUiState = simklAuthUiState,
                         traktCommentsEnabled = traktCommentsEnabled,
+                        mdbListConnected = mdbListConnected,
                         trackingSettingsUiState = trackingSettingsUiState,
                         homescreenHeroEnabled = homescreenSettingsUiState.heroEnabled,
                         homescreenShowCatalogType = homescreenSettingsUiState.showCatalogType,
@@ -567,6 +571,7 @@ private fun MobileSettingsScreen(
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
+    mdbListConnected: Boolean,
     trackingSettingsUiState: TrackingSettingsUiState,
     homescreenHeroEnabled: Boolean,
     homescreenShowCatalogType: Boolean,
@@ -594,7 +599,6 @@ private fun MobileSettingsScreen(
     val saveableStateHolder = rememberSaveableStateHolder()
     val iptvSection = IptvSettingsSectionAccess.current()
     val iptvSettingsState = if (iptvSection != null) iptvSection.rememberState() else null
-    val mediaServerSection = MediaServerSettingsSectionAccess.current()
     saveableStateHolder.SaveableStateProvider(page.name) {
         var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
         var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
@@ -805,8 +809,17 @@ private fun MobileSettingsScreen(
                     showPluginsEntry = AppFeaturePolicy.pluginsEnabled,
                     onAddonsClick = onAddonsClick,
                     onPluginsClick = onPluginsClick,
+                    onMediaServersClick = { onPageChange(SettingsPage.MediaServers) },
                 )
                 SettingsPage.Addons -> addonsSettingsContent()
+                SettingsPage.MediaServers -> mediaServersSettingsContent(
+                    isTablet = false,
+                    onServerClick = { onPageChange(SettingsPage.MediaServer) },
+                )
+                SettingsPage.MediaServer -> mediaServerSettingsContent(
+                    isTablet = false,
+                    onBack = onNavigateBack,
+                )
                 SettingsPage.Plugins -> if (AppFeaturePolicy.pluginsEnabled) pluginsSettingsContent() else addonsSettingsContent()
                 SettingsPage.Homescreen -> homescreenSettingsContent(
                     isTablet = false,
@@ -830,7 +843,7 @@ private fun MobileSettingsScreen(
                     onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
                     onDebridClick = { onPageChange(SettingsPage.Debrid) },
                     onIptvClick = { onPageChange(SettingsPage.Iptv) },
-                    onMediaServersClick = if (mediaServerSection != null) { { onPageChange(SettingsPage.MediaServers) } } else null,
+                    onMediaServersClick = { onPageChange(SettingsPage.MediaServers) },
                 )
                 SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                     isTablet = false,
@@ -866,24 +879,13 @@ private fun MobileSettingsScreen(
                         }
                     }
                 }
-                                SettingsPage.MediaServers,
-                SettingsPage.MediaServerAdd,
-                SettingsPage.MediaServerDetails,
-                SettingsPage.MediaServerApprove -> {
-                    // Media-server pages live in the fork's MediaServerSettingsSection (firewall); forwarded like IPTV's.
-                    val section = mediaServerSection
-                    if (section != null) {
-                        with(section) {
-                            renderPage(page, isTablet = false, onPageChange = onPageChange, onNavigateBack = onNavigateBack)
-                        }
-                    }
-                }
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
                     traktUiState = traktAuthUiState,
                     simklUiState = simklAuthUiState,
                     settingsUiState = trackingSettingsUiState,
                     commentsEnabled = traktCommentsEnabled,
+                    mdbListConnected = mdbListConnected,
                     onCommentsEnabledChange = TraktCommentsSettings::setEnabled,
                 )
             }
@@ -978,6 +980,7 @@ private fun TabletSettingsScreen(
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
+    mdbListConnected: Boolean,
     trackingSettingsUiState: TrackingSettingsUiState,
     homescreenHeroEnabled: Boolean,
     homescreenShowCatalogType: Boolean,
@@ -999,7 +1002,6 @@ private fun TabletSettingsScreen(
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val iptvSection = IptvSettingsSectionAccess.current()
     val iptvSettingsState = if (iptvSection != null) iptvSection.rememberState() else null
-    val mediaServerSection = MediaServerSettingsSectionAccess.current()
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val topOffset = max(statusBarPadding + 24.dp, 48.dp) + 64.dp
@@ -1272,8 +1274,17 @@ private fun TabletSettingsScreen(
                         showPluginsEntry = AppFeaturePolicy.pluginsEnabled,
                         onAddonsClick = { openInlinePage(SettingsPage.Addons) },
                         onPluginsClick = { openInlinePage(SettingsPage.Plugins) },
+                        onMediaServersClick = { openInlinePage(SettingsPage.MediaServers) },
                     )
                     SettingsPage.Addons -> addonsSettingsContent()
+                    SettingsPage.MediaServers -> mediaServersSettingsContent(
+                        isTablet = true,
+                        onServerClick = { openInlinePage(SettingsPage.MediaServer) },
+                    )
+                    SettingsPage.MediaServer -> mediaServerSettingsContent(
+                        isTablet = true,
+                        onBack = onNavigateBack,
+                    )
                     SettingsPage.Plugins -> if (AppFeaturePolicy.pluginsEnabled) pluginsSettingsContent() else addonsSettingsContent()
                     SettingsPage.Homescreen -> homescreenSettingsContent(
                         isTablet = true,
@@ -1297,7 +1308,7 @@ private fun TabletSettingsScreen(
                         onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
                         onDebridClick = { onPageChange(SettingsPage.Debrid) },
                         onIptvClick = { onPageChange(SettingsPage.Iptv) },
-                        onMediaServersClick = if (mediaServerSection != null) { { onPageChange(SettingsPage.MediaServers) } } else null,
+                        onMediaServersClick = { onPageChange(SettingsPage.MediaServers) },
                     )
                     SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                         isTablet = true,
@@ -1333,24 +1344,13 @@ private fun TabletSettingsScreen(
                             }
                         }
                     }
-                                        SettingsPage.MediaServers,
-                    SettingsPage.MediaServerAdd,
-                    SettingsPage.MediaServerDetails,
-                    SettingsPage.MediaServerApprove -> {
-                        // Media-server pages live in the fork's MediaServerSettingsSection (firewall); forwarded like IPTV's.
-                        val section = mediaServerSection
-                        if (section != null) {
-                            with(section) {
-                                renderPage(page, isTablet = true, onPageChange = onPageChange, onNavigateBack = onNavigateBack)
-                            }
-                        }
-                    }
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
                         isTablet = true,
                         traktUiState = traktAuthUiState,
                         simklUiState = simklAuthUiState,
                         settingsUiState = trackingSettingsUiState,
                         commentsEnabled = traktCommentsEnabled,
+                        mdbListConnected = mdbListConnected,
                         onCommentsEnabledChange = TraktCommentsSettings::setEnabled,
                     )
                 }

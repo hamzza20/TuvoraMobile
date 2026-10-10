@@ -56,8 +56,8 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.ForwardingRenderer
 import androidx.media3.exoplayer.Renderer
@@ -396,8 +396,12 @@ private fun ExoPlayerSurface(
         sanitizedSourceResponseHeaders,
         useYoutubeChunkedPlayback,
         externalSubtitles,
+        normalizedStreamType,
+        playerSettings.vodCacheEnabled,
+        playerSettings.vodCacheSizeMode,
+        playerSettings.vodCacheSizeMb,
     ) {
-        PlatformPlaybackDataSourceFactory.create(
+        val upstream = PlatformPlaybackDataSourceFactory.create(
             context = context,
             streamUrl = sourceUrl,
             defaultRequestHeaders = sanitizedSourceHeaders,
@@ -406,6 +410,26 @@ private fun ExoPlayerSurface(
             useLongReadTimeout = isLoopbackPlaybackSource(sourceUrl),
             externalSubtitles = externalSubtitles,
         )
+        val mimeType = playbackMediaItemFromUrl(
+            url = sourceUrl,
+            responseHeaders = sanitizedSourceResponseHeaders,
+            streamType = normalizedStreamType,
+        ).localConfiguration?.mimeType
+        val adaptive = mimeType == MimeTypes.APPLICATION_M3U8 ||
+            mimeType == MimeTypes.APPLICATION_MPD ||
+            mimeType == MimeTypes.APPLICATION_SS
+        if (!playerSettings.vodCacheEnabled || useYoutubeChunkedPlayback || adaptive) {
+            upstream
+        } else {
+            VodCache.wrap(
+                context = context,
+                upstream = upstream,
+                url = sourceUrl,
+                enabled = true,
+                sizeMode = playerSettings.vodCacheSizeMode,
+                sizeMb = playerSettings.vodCacheSizeMb,
+            )
+        }
     }
 
     fun ExoPlayer.setPlaybackMediaItem(videoMediaItem: MediaItem, startPositionMs: Long? = null) {
@@ -435,7 +459,16 @@ private fun ExoPlayerSurface(
         useYoutubeChunkedPlayback,
         effectiveDecoderPriority,
         initialPositionRequestKey,
+        playerSettings.exoNativeMemoryEnabled,
+        playerSettings.bufferEngineEnabled,
+        playerSettings.minBufferMs,
+        playerSettings.maxBufferMs,
+        playerSettings.bufferForPlaybackMs,
+        playerSettings.bufferForPlaybackAfterRebufferMs,
+        playerSettings.backBufferDurationMs,
+        playerSettings.targetBufferSizeMb,
     ) {
+        applyExoPlayerNativeMemory(playerSettings.exoNativeMemoryEnabled)
         val renderersFactory = SubtitleOffsetRenderersFactory(
             context = context,
             subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
@@ -489,7 +522,26 @@ private fun ExoPlayerSurface(
         val maxBufferMs = liveBufferPlan?.maxBufferMs ?: 70_000
         val bufferForPlaybackMs = liveBufferPlan?.startMs ?: DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS
         val bufferForPlaybackAfterRebufferMs = liveBufferPlan?.rebufferMs ?: 5_000
-        val loadControl = DefaultLoadControl.Builder()
+        // Merge 13 (upstream 36228818b): the user-facing buffer engine / native-memory toggles drive
+        // upstream's NuvioExoPlayerPerformanceHelper, but only when the user opted in and this is not a
+        // live channel with its own F13 plan. Both default OFF, so the fork's heap-capped load control
+        // below stays the default.
+        val useUpstreamLoadControl = liveBufferPlan == null &&
+            (playerSettings.bufferEngineEnabled || playerSettings.exoNativeMemoryEnabled)
+        val loadControl = if (useUpstreamLoadControl) {
+            NuvioExoPlayerPerformanceHelper.buildLoadControl(
+                context,
+                PlaybackBufferSettings(
+                    enabled = playerSettings.bufferEngineEnabled,
+                    minBufferMs = playerSettings.minBufferMs,
+                    maxBufferMs = playerSettings.maxBufferMs,
+                    bufferForPlaybackMs = playerSettings.bufferForPlaybackMs,
+                    bufferForPlaybackAfterRebufferMs = playerSettings.bufferForPlaybackAfterRebufferMs,
+                    backBufferDurationMs = playerSettings.backBufferDurationMs,
+                    targetBufferSizeMb = playerSettings.targetBufferSizeMb,
+                ),
+            )
+        } else DefaultLoadControl.Builder()
             .setTargetBufferBytes(playerTargetBufferBytes())
             // Pinned to media3 1.8.0's default, because the heap/4 byte cap above only bounds
             // memory while it holds: shouldContinueLoading keeps loading below minBufferMs
@@ -834,6 +886,32 @@ private fun ExoPlayerSurface(
             lifecycleOwner.lifecycle.removeObserver(observer)
             playerViewRef?.releaseLibassOverlay()
             exoPlayer.releaseWithAssSupportCompat()
+            if (VodCache.playheadBytesProvider != null) {
+                VodCache.playheadBytesProvider = null
+            }
+            VodCache.evictCachedSession()
+        }
+    }
+
+    DisposableEffect(exoPlayer, playerSettings.vodCacheEnabled) {
+        if (!playerSettings.vodCacheEnabled) {
+            return@DisposableEffect onDispose { }
+        }
+        val provider = {
+            val duration = exoPlayer.duration
+            val position = exoPlayer.currentPosition
+            val bitrate = exoPlayer.videoFormat?.bitrate ?: 0
+            if (duration > 0L && position > 0L && bitrate > 0) {
+                position * bitrate.toLong() / 8_000L
+            } else {
+                0L
+            }
+        }
+        VodCache.playheadBytesProvider = provider
+        onDispose {
+            if (VodCache.playheadBytesProvider === provider) {
+                VodCache.playheadBytesProvider = null
+            }
         }
     }
 

@@ -31,6 +31,8 @@ import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
 import nuvio.composeapp.generated.resources.compose_settings_page_licenses_attributions
 import nuvio.composeapp.generated.resources.compose_settings_page_mdblist_ratings
+import nuvio.composeapp.generated.resources.compose_settings_page_media_server
+import nuvio.composeapp.generated.resources.compose_settings_page_media_servers
 import nuvio.composeapp.generated.resources.compose_settings_page_meta_screen
 import nuvio.composeapp.generated.resources.compose_settings_page_notifications
 import nuvio.composeapp.generated.resources.compose_settings_page_playback
@@ -130,6 +132,16 @@ internal enum class SettingsPage(
         category = SettingsCategory.General,
         parentPage = ContentDiscovery,
     ),
+    MediaServers(
+        titleRes = Res.string.compose_settings_page_media_servers,
+        category = SettingsCategory.General,
+        parentPage = ContentDiscovery,
+    ),
+    MediaServer(
+        titleRes = Res.string.compose_settings_page_media_server,
+        category = SettingsCategory.General,
+        parentPage = MediaServers,
+    ),
     Homescreen(
         titleRes = Res.string.compose_settings_page_homescreen,
         category = SettingsCategory.General,
@@ -190,27 +202,6 @@ internal enum class SettingsPage(
         titleRes = Res.string.provider_setup_page_preview,
         category = SettingsCategory.General,
         parentPage = Iptv,
-    ),
-    // Jellyfin / Emby servers as sources (design 5.4): the list, add + sign in, one server, "approve a code".
-    MediaServers(
-        titleRes = Res.string.ms_settings_page_servers,
-        category = SettingsCategory.General,
-        parentPage = Integrations,
-    ),
-    MediaServerAdd(
-        titleRes = Res.string.ms_settings_page_add,
-        category = SettingsCategory.General,
-        parentPage = MediaServers,
-    ),
-    MediaServerDetails(
-        titleRes = Res.string.ms_settings_page_details,
-        category = SettingsCategory.General,
-        parentPage = MediaServers,
-    ),
-    MediaServerApprove(
-        titleRes = Res.string.ms_settings_page_approve,
-        category = SettingsCategory.General,
-        parentPage = MediaServers,
     ),
     TraktAuthentication(
         // Keep the enum name for saved navigation-state compatibility.

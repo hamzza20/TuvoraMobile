@@ -7,8 +7,10 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.CommandLineArgumentProvider
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.util.Properties
 
@@ -586,6 +588,10 @@ kotlin {
                     exclude(group = "org.checkerframework", module = "checker-qual")
                     exclude(group = "com.google.errorprone", module = "error_prone_annotations")
                 }
+                // VodCache (upstream 36228818b) uses SimpleCache; media3-database arrives via media3-exoplayer
+                // transitively upstream, but the fork exoplayer AAR (a flat file) carries no POM.
+                implementation("androidx.media3:media3-database:${libs.versions.androidx.media3.get()}")
+                implementation("androidx.annotation:annotation-experimental:1.3.1")
                 implementation(libs.mpv.android.lib)
                 implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
                 if (androidDistribution == "full") {
@@ -666,6 +672,18 @@ kotlin {
             implementation(libs.konsist)
         }
     }
+}
+
+val bootIosTestSimulator by tasks.registering(Exec::class) {
+    val device = tasks.named<KotlinNativeSimulatorTest>("iosSimulatorArm64Test").flatMap { it.device }
+    commandLine("xcrun", "simctl", "boot")
+    argumentProviders.add(CommandLineArgumentProvider { listOf(device.get()) })
+    isIgnoreExitValue = true
+}
+
+tasks.withType<KotlinNativeSimulatorTest>().configureEach {
+    standalone.set(false)
+    dependsOn(bootIosTestSimulator)
 }
 
 configurations.matching { it.name == "iosMainImplementation" }.configureEach {

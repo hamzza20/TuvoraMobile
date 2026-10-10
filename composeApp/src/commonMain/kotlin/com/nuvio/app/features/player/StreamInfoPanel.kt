@@ -42,6 +42,7 @@ internal fun StreamInfoPanel(
     streamName: String,
     streamDescription: String?,
     playbackEngine: AndroidPlaybackEngine?,
+    serverPlayback: String?,
     mediaInfo: PlayerMediaInfo,
     audioTrack: AudioTrack?,
     subtitleTrack: SubtitleTrack?,
@@ -91,12 +92,12 @@ internal fun StreamInfoPanel(
                 if (!streamDescription.isNullOrBlank()) {
                     StreamInfoSecondaryText(streamDescription, Modifier.padding(top = 2.dp))
                 }
-                if (playbackEngine != null) {
-                    StreamInfoItem(
-                        label = stringResource(Res.string.stream_info_player_engine),
-                        value = playbackEngine.label,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
+                if (playbackEngine != null || serverPlayback != null) {
+                    Spacer(Modifier.height(6.dp))
+                    StreamInfoRow {
+                        StreamInfoItem(stringResource(Res.string.stream_info_player_engine), playbackEngine?.label)
+                        StreamInfoItem(stringResource(Res.string.stream_info_server), serverPlayback)
+                    }
                 }
             }
 
