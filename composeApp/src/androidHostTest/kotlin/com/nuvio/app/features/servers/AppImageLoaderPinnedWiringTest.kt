@@ -4,8 +4,6 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import coil3.fetch.Fetcher
 import com.nuvio.app.buildAppImageLoader
-import com.nuvio.app.core.contracts.MemoryPortAccess
-import com.nuvio.app.core.memory.MemoryPortImpl
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,7 +20,6 @@ import kotlin.test.assertTrue
 class AppImageLoaderPinnedWiringTest {
     @Test
     fun `the app image loader fetches pinned server artwork before the normal network fetcher`() {
-        MemoryPortAccess.register(MemoryPortImpl)
         val context = ApplicationProvider.getApplicationContext<Application>()
         val loader = buildAppImageLoader(context)
         val factories: List<Fetcher.Factory<*>> = loader.components.fetcherFactories.map { it.first }
