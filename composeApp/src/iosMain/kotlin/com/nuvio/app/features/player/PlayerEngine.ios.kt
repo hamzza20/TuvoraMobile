@@ -71,13 +71,20 @@ actual fun PlatformPlayerSurface(
 ) {
     // A source on a pinned (self-signed) media server reaches the engine through a verified loopback relay.
     val relayFailedMessage = stringResource(Res.string.servers_playback_failed)
-    val engineUrl = com.nuvio.app.features.servers.rememberPinnedPlaybackUrl(sourceUrl) { onError(relayFailedMessage) } ?: return
+    val pinned = com.nuvio.app.features.servers.rememberPinnedPlayback(sourceUrl) { onError(relayFailedMessage) } ?: return
+    // External subtitle files of the same pinned server reach the engine through the same relay.
+    val engineSubtitles = remember(externalSubtitles, pinned) { pinned.rewriteSubtitles(externalSubtitles) }
+    val engineOnControllerReady = remember(onControllerReady, pinned) {
+        if (!pinned.isRelayed) onControllerReady else { controller: PlayerEngineController ->
+            onControllerReady(RelayedSubtitleController(controller, pinned::rewrite))
+        }
+    }
     PlatformPlayerSurfaceInner(
-        sourceUrl = engineUrl,
+        sourceUrl = pinned.url,
         sourceAudioUrl = sourceAudioUrl,
         sourceHeaders = sourceHeaders,
         sourceResponseHeaders = sourceResponseHeaders,
-        externalSubtitles = externalSubtitles,
+        externalSubtitles = engineSubtitles,
         streamType = streamType,
         isCatchUpPlayback = isCatchUpPlayback,
         playbackSurface = playbackSurface,
@@ -91,7 +98,7 @@ actual fun PlatformPlayerSurface(
         playbackEngine = playbackEngine,
         useNativeController = useNativeController,
         onInitialPositionHandled = onInitialPositionHandled,
-        onControllerReady = onControllerReady,
+        onControllerReady = engineOnControllerReady,
         onSnapshot = onSnapshot,
         onError = onError,
     )

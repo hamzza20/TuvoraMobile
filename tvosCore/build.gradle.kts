@@ -59,6 +59,8 @@ val tvosExcludedCommon = listOf(
     "com/nuvio/app/features/player/PlayerNextEpisodeAutoPlay.kt",
     "com/nuvio/app/features/player/PlayerScreenModalHosts.kt", "com/nuvio/app/features/player/ResumeLoadingUi.kt",
     "com/nuvio/app/features/player/PlayerScreenRuntime*.kt",
+    // Wraps the engine controller (PlayerEngine.kt is Compose-side); Apple TV has no loopback-relayed subtitles.
+    "com/nuvio/app/features/player/RelayedSubtitleController.kt",
     // Compose player toast text (uses PlayerLayout's time formatter); Apple TV shows its own skip feedback.
     "com/nuvio/app/features/player/PlayerAutoSkipNotification.kt",
     // Compose settings page whose UI moved behind shared Chip/Settings* helpers; Apple TV settings are SwiftUI.

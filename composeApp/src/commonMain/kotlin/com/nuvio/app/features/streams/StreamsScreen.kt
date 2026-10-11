@@ -1057,7 +1057,7 @@ private fun StreamActionsSheet(
                     }
                 },
             )
-            if (externalPlayerAvailable) {
+            if (externalPlayerAvailable && ExternalPlayerAvailability.canHandOff(stream)) {
                 NuvioBottomSheetDivider()
                 NuvioBottomSheetActionRow(
                     icon = Icons.AutoMirrored.Rounded.OpenInNew,

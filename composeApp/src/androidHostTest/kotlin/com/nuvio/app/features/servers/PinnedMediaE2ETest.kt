@@ -47,6 +47,7 @@ class PinnedMediaE2ETest {
 
     private val video = ByteArray(300_000) { (it % 253).toByte() }
     private val jpeg = ByteArray(2_048) { (it % 199).toByte() }
+    private val subtitle = "1\n00:00:01,000 --> 00:00:02,000\nHello\n".encodeToByteArray()
     private var server: HttpsServer? = null
     private var fingerprint = ""
     private var port = 0
@@ -74,6 +75,7 @@ class PinnedMediaE2ETest {
         https.httpsConfigurator = HttpsConfigurator(ctx)
         https.createContext("/video.mp4") { serve(it, video, "video/mp4") }
         https.createContext("/img.jpg") { serve(it, jpeg, "image/jpeg") }
+        https.createContext("/sub.srt") { serve(it, subtitle, "application/x-subrip") }
         https.start()
         dir.deleteRecursively()
         server = https
@@ -155,6 +157,26 @@ class PinnedMediaE2ETest {
             val (changed, changedBody) = fetchViaRelay(session, url)
             assertTrue(changed >= 400, "refused after the certificate changed (was $changed)")
             assertTrue(changedBody.isEmpty(), "no media bytes")
+        } finally {
+            session.dispose()
+        }
+    }
+
+    @Test
+    fun `an external subtitle file of a pinned server is read through the relay`() = runBlocking {
+        port = start()
+        val authority = "127.0.0.1:$port"
+        val trust = trust()
+        trust.pin(authority, fingerprint)
+        val session = PinnedMediaRelay(TrustedServerHttp(trust)).open(authority)
+        try {
+            val playback = PinnedPlayback(session.rewrite("https://$authority/video.mp4")!!, session)
+            val rewritten = playback.rewriteSubtitles(
+                listOf(com.nuvio.app.features.streams.StreamSubtitle(url = "https://$authority/sub.srt?api_key=k", language = "eng")),
+            ).single()
+            val conn = URL(rewritten.url).openConnection() as HttpURLConnection
+            assertEquals(200, conn.responseCode, "subtitle status")
+            assertContentEquals(subtitle, conn.inputStream.use { it.readBytes() }, "subtitle text over the pinned TLS")
         } finally {
             session.dispose()
         }
