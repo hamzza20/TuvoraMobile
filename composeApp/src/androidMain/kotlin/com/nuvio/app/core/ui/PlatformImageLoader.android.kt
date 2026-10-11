@@ -18,6 +18,10 @@ import okhttp3.OkHttpClient
 
 internal actual fun ImageLoader.Builder.configurePlatformImageLoader(context: PlatformContext): ImageLoader.Builder =
     components {
+        // This `components {}` REPLACES the registry App.kt built (Coil keeps only the last one set), so everything the
+        // Android loader needs has to be added here. Artwork of a pinned (self-signed) media server must come before any
+        // normal network fetcher, which would reject its certificate: the pinned factory steps aside for every other host.
+        add(com.nuvio.app.features.servers.PinnedServerImageFetcherFactory())
         // Explicit fetcher so image loads share the app's IPv4-first DNS ordering — badge/poster
         // CDNs advertise AAAA records that dead-end on broken-IPv6 routes (same fix as TV's
         // image loader; the service-loaded default fetcher uses a stock client without it).

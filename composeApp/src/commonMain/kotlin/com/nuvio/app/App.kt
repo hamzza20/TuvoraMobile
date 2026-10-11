@@ -103,6 +103,7 @@ internal fun buildAppImageLoader(context: coil3.PlatformContext): ImageLoader =
             add(CustomPosterFallbackInterceptor())
             add(SvgDecoder.Factory())
             // Artwork of a pinned (self-signed) media server goes through the pinned client; other hosts fall through.
+            // (Android's platform hook replaces this registry and adds the factory itself - AppImageLoaderPinnedWiringTest.)
             add(com.nuvio.app.features.servers.PinnedServerImageFetcherFactory())
             add(
                 coil3.network.ktor3.KtorNetworkFetcherFactory(
