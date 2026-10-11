@@ -1,5 +1,14 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.servers.PinnedMediaPolicy
+import com.nuvio.app.features.servers.TrustedServerHttp
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.contentLength
+import io.ktor.http.isSuccess
+import kotlinx.coroutines.runBlocking
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -450,7 +459,23 @@ private fun buildContentIntent(context: Context): PendingIntent? {
     )
 }
 
+/**
+ * The artwork of a pinned (self-signed) media server cannot be fetched by a plain connection - the system rejects its
+ * certificate - so it goes through the pinned client (verifies the certificate this device pinned); every other host
+ * keeps the plain download below. Runs on the artwork executor thread, never the main thread.
+ */
+private fun downloadPinnedArtwork(urlString: String): Bitmap? = runBlocking {
+    val response = TrustedServerHttp.shared.clientFor(urlString).get(urlString) { header("Accept", "image/*") }
+    if (!response.status.isSuccess()) return@runBlocking null
+    val declared = response.contentLength() ?: -1L
+    if (declared > MAX_ARTWORK_DOWNLOAD_BYTES) return@runBlocking null
+    val bytes = response.body<ByteArray>()
+    if (bytes.size > MAX_ARTWORK_DOWNLOAD_BYTES) return@runBlocking null
+    decodeSampledBitmap(bytes, MAX_ARTWORK_EDGE_PX)
+}
+
 private fun downloadArtwork(urlString: String): Bitmap? {
+    if (PinnedMediaPolicy.route(urlString) is PinnedMediaPolicy.Route.Pinned) return downloadPinnedArtwork(urlString)
     val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
         connectTimeout = 10_000
         readTimeout = 15_000
