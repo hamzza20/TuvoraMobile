@@ -719,6 +719,9 @@ val testJavaLauncher = extensions.getByType<org.gradle.jvm.toolchain.JavaToolcha
     languageVersion.set(JavaLanguageVersion.of(21))
 }
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    // MpvTlsOptionsGuardTest reads the Apple mpv bridges and their CA list: edits there must re-run it.
+    inputs.files(fileTree(rootProject.file("iosApp")) { include("**/*.swift", "**/cacert.pem") }).withPropertyName("appleMpvBridgeSources")
+    inputs.files(fileTree(rootProject.file("tvosApp")) { include("**/*.swift", "project.yml") }).withPropertyName("tvosMpvBridgeSources")
     javaLauncher.set(testJavaLauncher)
     maxHeapSize = "4g"
     maxParallelForks = 1

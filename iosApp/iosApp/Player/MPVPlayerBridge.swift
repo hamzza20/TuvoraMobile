@@ -732,6 +732,18 @@ final class MPVPlayerViewController: UIViewController {
         // ffmpeg re-open the URL itself — that heals a transient drop before the app-level
         // reconnect (LivePlaybackFreezeTracking) has to tear playback down and rebuild it.
         checkError(mpv_set_option_string(mpv, "network-timeout", "15"))
+        // Verify peer certificates (Android sets the same). MPVKit's FFmpeg/GnuTLS does NOT verify by default - mpv's
+        // tls-verify default is "no" when built without libcurl and libavformat < 63, so a self-signed or intercepted
+        // https stream used to load - and on iOS/tvOS the system trust store is not visible to GnuTLS, so
+        // "tls-verify=yes" alone refuses EVERY https URL. The bundled CA list (the same cacert.pem Android ships in
+        // mpv-android-lib) makes public certificates verify. Verified on the iOS simulator slice with a self-signed
+        // server (refused) and a public CA server (plays). Fail closed: no CA file means https is refused.
+        checkError(mpv_set_option_string(mpv, "tls-verify", "yes"))
+        if let caPath = Bundle.main.path(forResource: "cacert", ofType: "pem") {
+            checkError(mpv_set_option_string(mpv, "tls-ca-file", caPath))
+        } else {
+            print("[MPV] Bundled CA list (cacert.pem) is missing: https streams will be refused")
+        }
         checkError(mpv_set_option_string(
             mpv,
             "stream-lavf-o",
