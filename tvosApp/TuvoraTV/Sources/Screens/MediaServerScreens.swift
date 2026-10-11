@@ -205,6 +205,7 @@ struct MediaServerAddDialog: View {
             HStack(spacing: dp(8)) {
                 Spacer()
                 SettingsDialogButton(title: L("Cancel")) { model.session.declineCertificate() }.focused($focus, equals: .decline)
+                    .accessibilityIdentifier("mediaServers.decline")
                 SettingsDialogButton(title: changed ? MS("servers_cert_trust_new", "Trust the new certificate") : MS("servers_cert_trust", "Trust certificate"),
                                      primary: true, destructive: changed) { model.session.trustCertificate() }
                     .focused($focus, equals: .trust)

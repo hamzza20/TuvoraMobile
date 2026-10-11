@@ -112,21 +112,22 @@ final class MediaServerTests: XCTestCase {
 
     // MARK: Tests
 
-    /// A self-signed https server: the trust-on-first-use prompt names the server and its fingerprint, declining ends the
-    /// attempt (nothing is saved), trusting goes on to the sign-in choice.
+    /// A self-signed https server: the trust-on-first-use prompt names the server and its fingerprint, and declining ends
+    /// the attempt without saving or pinning anything (so the test repeats: a pin from "Trust" would persist on the
+    /// device and skip the prompt next time). Trusting was run by hand once: it went on to the sign-in choice.
     func testSelfSignedServerAsksToTrustItsCertificate() throws {
         _ = try requireServer()
         launchToMediaServers()
-        enterAddressAndConnect("https://localhost:18097")
+        enterAddressAndConnect("https://127.0.0.1:18097")
         XCTAssertTrue(el("mediaServers.trust").waitForExistence(timeout: 20), "no certificate prompt; on \(focusedId()); ids: \(visibleIds())")
         snap("tofu-prompt")
         XCTAssertTrue(waitFocus(20) { $0 == "mediaServers.decline" || $0 == "mediaServers.trust" }, "the prompt took no focus; on \(focusedId())")
-        if focusedId() != "mediaServers.trust" { press(.right, settle: 0.6) }
-        XCTAssertEqual(focusedId(), "mediaServers.trust")
-        press(.select, settle: 3)
-        XCTAssertTrue(waitFocus(20) { $0.hasPrefix("mediaServers.") && $0 != "mediaServers.trust" }, "trusting did not reach the sign-in choice; on \(focusedId())")
-        snap("tofu-trusted-choice")
-        XCTAssertTrue(el("mediaServers.usePassword").exists, "the sign-in choice is missing after trusting")
+        if focusedId() != "mediaServers.decline" { press(.left, settle: 0.6) }
+        XCTAssertEqual(focusedId(), "mediaServers.decline")
+        press(.select, settle: 2)
+        XCTAssertFalse(el("mediaServers.trust").waitForExistence(timeout: 3), "the prompt is still up after Cancel")
+        XCTAssertTrue(el("mediaServers.address").exists, "declining did not return to the address step")
+        snap("tofu-declined")
     }
 
     /// Add by Quick Connect: the code is on screen, "another device" approves it and the server joins the list signed in.
