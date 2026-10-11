@@ -31,7 +31,7 @@ class PinnedSubtitleRoutingTest {
     private val srt = "1\n00:00:01,000 --> 00:00:02,000\nHello\n"
 
     private val upstream = object : ServerHttp {
-        override fun clientFor(url: String) = HttpClient(MockEngine { respond(srt, HttpStatusCode.OK) }) { install(HttpTimeout) }
+        override fun clientFor(url: String) = HttpClient(MockEngine { respond(srt, HttpStatusCode.OK) }) { followRedirects = false; install(HttpTimeout) }
     }
 
     private class Recording : PlayerEngineController {
