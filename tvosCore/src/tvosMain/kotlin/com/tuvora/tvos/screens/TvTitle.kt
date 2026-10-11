@@ -17,6 +17,11 @@ import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.servers.PinnedMediaPolicy
+import com.nuvio.app.features.servers.PinnedMediaRelay
+import com.nuvio.app.features.servers.RelaySession
+import com.nuvio.app.features.servers.ServerPlayback
+import com.nuvio.app.features.servers.serverPlaybackMessage
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamsRepository
 import com.nuvio.app.features.streams.StreamsUiState
@@ -127,6 +132,27 @@ object TvTitle {
                 ?: return TvOpenResult.Message("This source isn't available right now.")
             playable = playable.copy(url = minted)
         }
+        // A media-server stream is prepared on the server first (direct play / transcode decision, play session), then played
+        // from its session URL; progress goes back to the server through ServerPlayback.
+        var serverPlaybackUrl: String? = null
+        var resume = resumeMs
+        if (playable.serverTarget != null) {
+            playable = try {
+                ServerPlayback.prepare(playable)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                return TvOpenResult.Message(error.serverPlaybackMessage())
+            }
+            serverPlaybackUrl = playable.playableDirectUrl
+            val saved = WatchProgressRepository.progressForVideo(
+                videoId = video?.id ?: meta.id,
+                parentMetaId = meta.id,
+                seasonNumber = video?.season,
+                episodeNumber = video?.episode,
+            )
+            resume = ServerPlayback.newerResumePositionMs(serverPlaybackUrl, saved?.lastUpdatedEpochMs) ?: resumeMs
+        }
         if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(playable)) {
             when (val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(playable, video?.season, video?.episode)) {
                 is DirectDebridPlayableResult.Success -> playable = resolved.stream
@@ -138,15 +164,33 @@ object TvTitle {
         if (playable.needsLocalDebridResolve) return TvOpenResult.Message("Torrent sources aren't supported on Apple TV yet.")
         if (playable.shouldOpenExternally) return TvOpenResult.Message("This source opens in another app, which Apple TV doesn't support.")
         val url = playable.playableDirectUrl ?: return TvOpenResult.Message("This source has no playable link.")
+        // A server this device pinned a (self-signed) certificate for is read through the verified loopback relay.
+        var relay: RelaySession? = null
+        var playUrl = url
+        var subtitles = playable.externalSubtitles
+        val pinned = PinnedMediaPolicy.route(url) as? PinnedMediaPolicy.Route.Pinned
+        if (pinned != null) {
+            val opened = try {
+                PinnedMediaRelay.shared.open(pinned.authority)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                ServerPlayback.stop(serverPlaybackUrl)
+                return TvOpenResult.Message("Could not open a secure connection to the server.")
+            }
+            relay = opened
+            playUrl = opened.rewrite(url) ?: url
+            subtitles = subtitles.map { it.copy(url = opened.rewrite(it.url) ?: it.url) }
+        }
 
         val videoId = video?.id ?: meta.id
         val launch = PlayerLaunch(
             profileId = ProfileRepository.activeProfileId,
             title = meta.name,
-            sourceUrl = url,
+            sourceUrl = playUrl,
             sourceHeaders = TvPlaybackHeaders.sanitize(playable.behaviorHints.proxyHeaders?.request),
             sourceResponseHeaders = TvPlaybackHeaders.sanitize(playable.behaviorHints.proxyHeaders?.response),
-            externalSubtitles = playable.externalSubtitles,
+            externalSubtitles = subtitles,
             streamType = playable.streamType,
             logo = meta.logo,
             poster = meta.poster,
@@ -164,7 +208,7 @@ object TvTitle {
             videoId = videoId,
             parentMetaId = meta.id,
             parentMetaType = meta.type,
-            initialPositionMs = resumeMs,
+            initialPositionMs = resume,
         )
         StreamsRepository.cancelLoading()
         val retryResolver: (suspend () -> com.tuvora.tvos.player.TvResolvedSource?)? = when {
@@ -182,6 +226,9 @@ object TvTitle {
             }
             else -> null
         }
-        return TvOpenResult.Play(TvPlayerSession(launch, vodReresolve = retryResolver))
+        return TvOpenResult.Play(
+            TvPlayerSession(launch, vodReresolve = retryResolver)
+                .bindServer(serverPlaybackUrl) { relay?.dispose() },
+        )
     }
 }

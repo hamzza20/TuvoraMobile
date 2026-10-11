@@ -1,45 +1,45 @@
 package com.tuvora.tvos.screens
 
-import com.nuvio.app.features.mediaserver.api.MediaServerEntry
-import com.nuvio.app.features.mediaserver.api.MediaServerHomeRow
-import com.nuvio.app.features.mediaserver.api.MediaServerType
-import com.nuvio.app.features.mediaserver.internal.MediaServerAccounts
-import com.nuvio.app.features.mediaserver.internal.MediaServerRuntime
-import com.nuvio.app.features.mediaserver.internal.client.HealthStatus
-import com.nuvio.app.features.mediaserver.internal.client.MediaServerException
-import com.nuvio.app.features.mediaserver.internal.client.MediaServerTrust
-import com.nuvio.app.features.mediaserver.internal.flow.AddError
-import com.nuvio.app.features.mediaserver.internal.flow.AddServerController
-import com.nuvio.app.features.mediaserver.internal.flow.AddStage
-import com.nuvio.app.features.mediaserver.internal.flow.MediaServerListController
-import com.nuvio.app.features.mediaserver.internal.flow.MediaServerManagement
-import com.nuvio.app.features.mediaserver.internal.flow.MediaServerStatusPolicy
-import com.nuvio.app.features.mediaserver.internal.flow.ServerStatus
-import com.nuvio.app.features.mediaserver.internal.policy.QuickConnectPolicy
-import com.nuvio.app.features.mediaserver.internal.source.MediaServerLibraries
-import com.nuvio.app.features.mediaserver.internal.ui.MediaServerHomeSurfaces
+import com.nuvio.app.features.servers.QuickConnectDriver
+import com.nuvio.app.features.servers.QuickConnectFailure
+import com.nuvio.app.features.servers.QuickConnectPolicy
+import com.nuvio.app.features.servers.QuickConnectState
+import com.nuvio.app.features.servers.ServerCapability
+import com.nuvio.app.features.servers.ServerCatalog
+import com.nuvio.app.features.servers.ServerCertificateException
+import com.nuvio.app.features.servers.ServerConnection
+import com.nuvio.app.features.servers.ServerException
+import com.nuvio.app.features.servers.ServerFailure
+import com.nuvio.app.features.servers.ServerProvider
+import com.nuvio.app.features.servers.ServerProviders
+import com.nuvio.app.features.servers.ServerRepository
+import com.nuvio.app.features.servers.ServerTrust
+import com.nuvio.app.features.servers.supports
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 /**
- * Settings -> Integrations -> Media servers for Apple TV (design 5.9: shared Kotlin, SwiftUI screens). The
- * flows are the SAME controllers the phone's Compose pages drive ([AddServerController],
- * [MediaServerListController], [MediaServerManagement]); this file only reshapes their internal state
- * into public value types Swift can read. No I/O decisions live in the views.
+ * Settings -> Integrations -> Media servers for Apple TV, over the SAME shared stack the phones use (features/servers):
+ * [ServerRepository] (connections, device-local tokens), the providers' discover / sign-in / Quick Connect, [ServerTrust]
+ * (trust-on-first-use pins, device-local). This file only reshapes that state into public value types Swift can read;
+ * no I/O decision lives in the views.
  */
-enum class TvServerStatus { SIGNED_IN, SIGN_IN_AGAIN, NEEDS_SIGN_IN, OFFLINE, DISABLED }
-
 data class TvServerRow(
     val key: String,
     val name: String,
@@ -49,187 +49,330 @@ data class TvServerRow(
     val checking: Boolean,
 )
 
-private fun ServerStatus.toTv() = when (this) {
-    ServerStatus.SIGNED_IN -> TvServerStatus.SIGNED_IN
-    ServerStatus.SIGN_IN_AGAIN -> TvServerStatus.SIGN_IN_AGAIN
-    ServerStatus.NEEDS_SIGN_IN -> TvServerStatus.NEEDS_SIGN_IN
-    ServerStatus.OFFLINE -> TvServerStatus.OFFLINE
-    ServerStatus.DISABLED -> TvServerStatus.DISABLED
-}
+private fun ServerConnection.subtitle(): String = TvServerStatusPolicy.subtitle(
+    product = ServerRepository.provider(this)?.displayName ?: providerId,
+    userName = userName,
+    address = address,
+)
 
-private fun subtitleOf(entry: MediaServerEntry): String {
-    val host = entry.address?.substringAfter("://")?.substringBefore('/')?.takeIf { it.isNotBlank() }
-    return listOfNotNull(entry.type.productName, entry.userName?.takeIf { it.isNotBlank() }, host).joinToString(" · ")
-}
+private fun ServerConnection.status(failure: ServerFailure?): TvServerStatus =
+    TvServerStatusPolicy.of(enabled, hasLocalToken = !ServerRepository.needsSignIn(id), failure = failure)
 
 object TvMediaServers {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val runtime get() = MediaServerRuntime.production
-    private val listController by lazy { MediaServerListController(runtime.services, scope) }
+    private val checking = MutableStateFlow<Set<String>>(emptySet())
 
-    /** The saved servers with their status badge; re-emitted when entries, tokens, health checks or expiries change. */
+    /** The saved servers with their status badge; re-emitted when connections, failures or a health check change. */
     val rows: StateFlow<List<TvServerRow>> by lazy {
-        val r = runtime
-        r.entryStore.ensureLoaded()
-        combine(
-            r.entryStore.entries, r.services.expiredSessions, r.services.credentialVersion,
-            listController.healthState, listController.checkingState,
-        ) { entries, expired, _, health, checking ->
-            listController.rows(entries, expired, health, checking).map {
-                TvServerRow(it.entry.key, it.entry.name, subtitleOf(it.entry), it.status.toTv(), it.checking)
+        ServerRepository.ensureLoaded()
+        combine(ServerRepository.uiState, checking) { state, busy ->
+            state.connections.map { c ->
+                TvServerRow(c.id, c.name, c.subtitle(), c.status(state.failures[c.id]), checking = c.id in busy)
             }
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
     }
 
-    fun ensureLoaded() = runtime.entryStore.ensureLoaded()
+    fun ensureLoaded() = ServerRepository.ensureLoaded()
 
     /**
-     * One reachability + token check per visit (never a timer): the Settings page calls this when it
-     * becomes visible. CLAUDE.md recurring-network rule: delta, lifecycle-bound, decision in the controller.
+     * One authenticated check per visit (never a timer): the Settings pane calls this when it becomes visible. A revoked token
+     * or an unreachable server shows on the row afterwards. CLAUDE.md recurring-network rule: one request per server, only
+     * while visible, none for a server that is off or has no sign-in on this device.
      */
     fun checkOnce() {
         ensureLoaded()
-        listController.checkOnce(runtime.entryStore.current())
+        ServerRepository.uiState.value.connections
+            .filter { it.enabled && !ServerRepository.needsSignIn(it.id) && it.id !in checking.value }
+            .forEach { connection ->
+                checking.update { it + connection.id }
+                scope.launch {
+                    try {
+                        runCatching { ServerRepository.refreshLibraries(connection.id) }
+                            .onFailure { if (it is CancellationException) throw it }
+                    } finally {
+                        checking.update { it - connection.id }
+                    }
+                }
+            }
     }
 
-    /** Whether a Home server row exists for any server (drives nothing visual; here for tests / smoke). */
-    fun serverCount(): Int = runtime.entryStore.current().size
+    fun serverCount(): Int = ServerRepository.uiState.value.connections.size
 
-    /** Ask Home to re-pull the contributed rows once (TTL-gated by the contributor; no timer). */
-    fun refreshHomeRows() = com.nuvio.app.features.home.HomeRepository.refreshContributed()
+    /** Ask Home to re-pull its rows once (a server was added, changed or removed). */
+    fun refreshHomeRows() = TvHome.refresh()
 
-    /** Smoke/UI-test hook: the sign-in key of the first server (for -smoke deep links). */
-    fun firstKey(): String? { ensureLoaded(); return runtime.entryStore.current().firstOrNull()?.key }
+    /** Smoke/UI-test hook: the id of the first server (for -smoke deep links). */
+    fun firstKey(): String? { ensureLoaded(); return ServerRepository.uiState.value.connections.firstOrNull()?.id }
 }
 
 // ---------------------------------------------------------------- add / sign in
 
-enum class TvAddStage { ADDRESS, CHOOSE_SIGN_IN, QUICK_CONNECT, PASSWORD, OFFER_HOME_ROW, DONE }
-
-enum class TvAddError {
-    INVALID_ADDRESS, NOT_A_MEDIA_SERVER, UNREACHABLE, WRONG_CREDENTIALS, QUICK_CONNECT_FAILED,
-    SIGN_IN_FAILED, DIFFERENT_SERVER, NOT_SAVED, UNUSABLE_SERVER,
-}
+enum class TvAddStage { ADDRESS, CHOOSE_SIGN_IN, QUICK_CONNECT, PASSWORD, DONE }
 
 data class TvAddState(
     val stage: TvAddStage,
     val address: String,
-    /** "jellyfin" / "emby" / null = detect. */
-    val selectedType: String?,
+    /** "jellyfin" or "emby". */
+    val selectedType: String,
     val busy: Boolean,
     val error: TvAddError?,
+    /** Set while the certificate must be trusted (or re-trusted) before going on. */
     val certAuthority: String?,
-    /** Colon-grouped hex when the controller gave plain hex. */
+    /** Colon-grouped hex. */
     val certFingerprint: String?,
+    /** The device had pinned a DIFFERENT certificate for this server: show the stronger warning. */
+    val certChanged: Boolean,
     val foundName: String?,
     /** "Jellyfin 10.9.0". */
     val foundProduct: String?,
-    val serverName: String,
-    val typeCorrection: String?,
     val quickConnectAvailable: Boolean,
-    val publicUsers: List<String>,
     val quickConnectCode: String?,
     val quickConnectStartedAtMs: Long,
-    val signedInName: String?,
+    /** Bumped every time a Quick Connect request starts: the screen re-runs its poll on it. */
+    val quickConnectAttempt: Int,
     val signingInExisting: Boolean,
+    /** The viewer's server types offered on the address step (Quick Connect only exists on Jellyfin). */
+    val providerNames: List<String>,
 )
 
 /**
- * One add-server (or sign-in-existing) session. Swift creates it when the dialog opens and calls [close] when it
- * goes away. The Quick Connect poll is the suspend [runQuickConnect]: Swift runs it in a `.task(id:)` bound to the
- * code screen being visible and the scene active, and task cancellation cancels the coroutine (SKIE), so nothing
- * polls in the background (Swiftfin's QuickConnectView does the same with `.task`).
+ * One add-server (or sign-in-existing) session. Swift creates it when the dialog opens and calls [close] when it goes away.
+ * The Quick Connect poll is the suspend [runQuickConnect]: Swift runs it in a `.task(id:)` bound to the code screen being
+ * visible and the scene active, and task cancellation cancels the coroutine (SKIE), so nothing polls in the background.
  */
-class TvAddServerSession(existingKey: String? = null) {
+class TvAddServerSession(existingId: String? = null) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val runtime = MediaServerRuntime.production.also { it.entryStore.ensureLoaded() }
-    private val controller = AddServerController(
-        services = runtime.services,
-        accounts = MediaServerAccounts(runtime.entryStore, runtime.services),
-        trust = MediaServerTrust.shared,
-        scope = scope,
-        existing = existingKey?.let(runtime.entryStore::entryByKey),
-        onSignedIn = { entry -> MediaServerHomeSurfaces.changed(runtime, entry) },
-    )
-
-    val state: StateFlow<TvAddState> = controller.state.map { s ->
+    private val existing: ServerConnection? = existingId?.let { ServerRepository.connection(it) }
+    private val mutable = MutableStateFlow(
         TvAddState(
-            stage = when (s.stage) {
-                AddStage.ADDRESS -> TvAddStage.ADDRESS
-                AddStage.CHOOSE_SIGN_IN -> TvAddStage.CHOOSE_SIGN_IN
-                AddStage.QUICK_CONNECT -> TvAddStage.QUICK_CONNECT
-                AddStage.PASSWORD -> TvAddStage.PASSWORD
-                AddStage.OFFER_HOME_ROW -> TvAddStage.OFFER_HOME_ROW
-                AddStage.DONE -> TvAddStage.DONE
-            },
-            address = s.address,
-            selectedType = s.selectedType?.wire,
-            busy = s.busy,
-            error = s.error?.let { e ->
-                when (e) {
-                    AddError.INVALID_ADDRESS -> TvAddError.INVALID_ADDRESS
-                    AddError.NOT_A_MEDIA_SERVER -> TvAddError.NOT_A_MEDIA_SERVER
-                    AddError.UNREACHABLE -> TvAddError.UNREACHABLE
-                    AddError.WRONG_CREDENTIALS -> TvAddError.WRONG_CREDENTIALS
-                    AddError.QUICK_CONNECT_FAILED -> TvAddError.QUICK_CONNECT_FAILED
-                    AddError.SIGN_IN_FAILED -> TvAddError.SIGN_IN_FAILED
-                    AddError.DIFFERENT_SERVER -> TvAddError.DIFFERENT_SERVER
-                    AddError.NOT_SAVED -> TvAddError.NOT_SAVED
-                    AddError.UNUSABLE_SERVER -> TvAddError.UNUSABLE_SERVER
-                }
-            },
-            certAuthority = s.certPrompt?.authority,
-            certFingerprint = s.certPrompt?.fingerprint?.let { f ->
-                if (f.length % 2 == 0 && ':' !in f) f.chunked(2).joinToString(":") else f
-            },
-            foundName = s.found?.info?.name,
-            foundProduct = s.found?.let { listOfNotNull(it.type.productName, it.info.version).joinToString(" ") },
-            serverName = s.serverName,
-            typeCorrection = s.typeCorrectedFrom?.let { "${it.productName}|${s.found?.type?.productName.orEmpty()}" },
-            quickConnectAvailable = s.quickConnectAvailable,
-            publicUsers = s.publicUsers.map { it.name },
-            quickConnectCode = s.quickConnect?.displayCode,
-            quickConnectStartedAtMs = s.quickConnect?.startedAtMs ?: 0L,
-            signedInName = s.signedIn?.name,
-            signingInExisting = s.signingInExisting,
-        )
-    }.stateIn(scope, SharingStarted.Eagerly, controller.state.value.let { initialState() })
-
-    private fun initialState() = TvAddState(
-        TvAddStage.ADDRESS, controller.state.value.address, controller.state.value.selectedType?.wire, false, null, null, null,
-        null, null, "", null, false, emptyList(), null, 0L, null, controller.state.value.signingInExisting,
+            stage = TvAddStage.ADDRESS,
+            address = existing?.address.orEmpty(),
+            selectedType = existing?.providerId ?: "jellyfin",
+            busy = false, error = null, certAuthority = null, certFingerprint = null, certChanged = false,
+            foundName = null, foundProduct = null, quickConnectAvailable = false, quickConnectCode = null,
+            quickConnectStartedAtMs = 0L, quickConnectAttempt = 0, signingInExisting = existing != null,
+            providerNames = ServerProviders.registered.map { it.id },
+        ),
     )
+    val state: StateFlow<TvAddState> = mutable.asStateFlow()
 
-    fun setAddress(text: String) = controller.setAddress(text)
-    fun selectType(wire: String?) = controller.selectType(MediaServerType.fromWire(wire))
-    fun connect() = controller.connect()
-    fun trustCertificate() = controller.trustCertificate()
-    fun declineCertificate() = controller.declineCertificate()
-    fun setServerName(text: String) = controller.setServerName(text)
-    fun startQuickConnect() = controller.startQuickConnect()
-    suspend fun runQuickConnect() = controller.runQuickConnect()
-    fun usePassword() = controller.usePassword()
-    fun backToChoice() = controller.backToChoice()
-    fun backToAddress() = controller.backToAddress()
-    fun submitPassword(username: String, password: String) = controller.submitPassword(username, password)
-    fun enableRecentlyAdded() = controller.enableRecentlyAdded()
-    fun skipHomeRowOffer() = controller.skipHomeRowOffer()
+    private var driver: QuickConnectDriver? = null
+    private var driverJob: kotlinx.coroutines.Job? = null
+    private var work: kotlinx.coroutines.Job? = null
+    private var resolvedAddress: String? = null
+
+    init {
+        // Signing in an existing server: go straight to the sign-in choice (its address and product are known).
+        if (existing != null) connect()
+    }
+
+    private fun provider(): ServerProvider =
+        ServerProviders.forId(mutable.value.selectedType) ?: ServerProviders.registered.first()
+
+    fun setAddress(text: String) = mutable.update { it.copy(address = text, error = null, certAuthority = null) }
+
+    fun selectType(wire: String) {
+        if (existing != null) return
+        mutable.update { it.copy(selectedType = wire, error = null, certAuthority = null) }
+    }
+
+    /** Reach the server and read its name (and certificate) before asking for credentials. */
+    fun connect() {
+        val current = mutable.value
+        if (current.busy || current.address.isBlank()) return
+        mutable.update { it.copy(busy = true, error = null, certAuthority = null, certFingerprint = null) }
+        work?.cancel()
+        work = scope.launch {
+            val provider = provider()
+            try {
+                val found = provider.discover(mutable.value.address)
+                resolvedAddress = found.address
+                val quick = provider.supports(ServerCapability.QUICK_CONNECT) &&
+                    runCatching { provider.quickConnectAvailable(found.address) }.getOrDefault(false)
+                mutable.update {
+                    it.copy(
+                        stage = TvAddStage.CHOOSE_SIGN_IN, busy = false, foundName = found.serverName,
+                        foundProduct = listOfNotNull(provider.displayName, found.version).joinToString(" "),
+                        quickConnectAvailable = quick,
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (untrusted: ServerCertificateException) {
+                showCertificate(untrusted)
+            } catch (error: ServerException) {
+                mutable.update { it.copy(busy = false, error = TvServerAddErrorPolicy.of(error.failure, duringSignIn = false)) }
+            } catch (_: Exception) {
+                mutable.update { it.copy(busy = false, error = TvAddError.UNREACHABLE) }
+            }
+        }
+    }
+
+    private fun showCertificate(untrusted: ServerCertificateException) = mutable.update {
+        it.copy(
+            busy = false,
+            certAuthority = untrusted.authority,
+            certFingerprint = untrusted.fingerprint.chunked(2).joinToString(":"),
+            certChanged = untrusted.changed,
+        )
+    }
+
+    private var pendingCertificate: ServerCertificateException? = null
+
+    /** The viewer accepted the certificate shown: pin it on this device (never synced) and continue. */
+    fun trustCertificate() {
+        val authority = mutable.value.certAuthority ?: return
+        val fingerprint = mutable.value.certFingerprint?.replace(":", "") ?: return
+        ServerTrust.shared.pin(authority, fingerprint)
+        mutable.update { it.copy(certAuthority = null, certFingerprint = null, certChanged = false) }
+        connect()
+    }
+
+    fun declineCertificate() = mutable.update { it.copy(certAuthority = null, certFingerprint = null, certChanged = false, busy = false) }
+
+    fun startQuickConnect() {
+        val address = resolvedAddress ?: return
+        if (!provider().supports(ServerCapability.QUICK_CONNECT)) return
+        driverJob?.cancel()
+        val next = QuickConnectDriver(provider(), address)
+        driver = next
+        mutable.update { it.copy(stage = TvAddStage.QUICK_CONNECT, error = null, quickConnectCode = null, quickConnectAttempt = it.quickConnectAttempt + 1) }
+        driverJob = scope.launch {
+            next.start()
+            publishQuickConnect(next)
+        }
+    }
+
+    private fun publishQuickConnect(from: QuickConnectDriver) {
+        when (val s = from.state.value) {
+            is QuickConnectState.Waiting -> mutable.update {
+                it.copy(quickConnectCode = QuickConnectPolicy.displayCode(s.code), quickConnectStartedAtMs = s.startedAtMs)
+            }
+            is QuickConnectState.Failed -> failQuickConnect(from, s.reason)
+            else -> Unit
+        }
+    }
+
+    private fun failQuickConnect(from: QuickConnectDriver, reason: QuickConnectFailure) {
+        if (reason == QuickConnectFailure.CERTIFICATE) {
+            from.certificate?.let { cert ->
+                mutable.update { it.copy(stage = TvAddStage.ADDRESS) }
+                showCertificate(cert)
+                return
+            }
+        }
+        mutable.update {
+            it.copy(
+                error = when (reason) {
+                    QuickConnectFailure.DISABLED -> TvAddError.QUICK_CONNECT_OFF
+                    else -> TvAddError.QUICK_CONNECT_FAILED
+                },
+            )
+        }
+    }
+
+    /**
+     * Polls until the request is approved, expires or fails; then signs in with the approved request. Cancelled with the
+     * screen (task cancellation); safe to call again for the same request after a pause (it continues it).
+     */
+    suspend fun runQuickConnect() {
+        val active = driver ?: return
+        active.run()
+        publishQuickConnect(active)
+        when (active.state.value) {
+            QuickConnectState.Authorised -> {
+                mutable.update { it.copy(busy = true) }
+                try {
+                    val connection = active.complete()
+                    finish(connection)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (untrusted: ServerCertificateException) {
+                    mutable.update { it.copy(busy = false, stage = TvAddStage.ADDRESS) }
+                    showCertificate(untrusted)
+                } catch (error: ServerException) {
+                    mutable.update { it.copy(busy = false, error = TvServerAddErrorPolicy.of(error.failure, duringSignIn = true)) }
+                } catch (_: IllegalStateException) {
+                    // The sign-in worked but this device could not keep it (the keychain refused the write).
+                    mutable.update { it.copy(busy = false, error = TvAddError.NOT_SAVED) }
+                } catch (_: Exception) {
+                    mutable.update { it.copy(busy = false, error = TvAddError.SIGN_IN_FAILED) }
+                }
+            }
+            QuickConnectState.Expired -> mutable.update { it.copy(error = TvAddError.QUICK_CONNECT_EXPIRED, quickConnectCode = null) }
+            else -> Unit
+        }
+    }
+
+    fun usePassword() {
+        driverJob?.cancel()
+        driver?.cancel()
+        driver = null
+        mutable.update { it.copy(stage = TvAddStage.PASSWORD, error = null) }
+    }
+
+    fun backToChoice() {
+        driverJob?.cancel()
+        driver?.cancel()
+        driver = null
+        mutable.update { it.copy(stage = TvAddStage.CHOOSE_SIGN_IN, error = null, quickConnectCode = null, busy = false) }
+    }
+
+    fun backToAddress() {
+        mutable.update { it.copy(stage = TvAddStage.ADDRESS, error = null, busy = false, foundName = null, foundProduct = null) }
+    }
+
+    fun submitPassword(username: String, password: String) {
+        val address = resolvedAddress ?: return
+        if (mutable.value.busy || username.isBlank()) return
+        mutable.update { it.copy(busy = true, error = null) }
+        work?.cancel()
+        work = scope.launch {
+            try {
+                finish(ServerRepository.connect(provider(), address, username.trim(), password))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (untrusted: ServerCertificateException) {
+                mutable.update { it.copy(busy = false, stage = TvAddStage.ADDRESS) }
+                showCertificate(untrusted)
+            } catch (error: ServerException) {
+                mutable.update { it.copy(busy = false, error = TvServerAddErrorPolicy.of(error.failure, duringSignIn = true)) }
+            } catch (_: IllegalStateException) {
+                mutable.update { it.copy(busy = false, error = TvAddError.NOT_SAVED) }
+            } catch (_: Exception) {
+                mutable.update { it.copy(busy = false, error = TvAddError.SIGN_IN_FAILED) }
+            }
+        }
+    }
+
+    /** The sign-in landed: refuse a different server than the one being signed in, otherwise close the flow. */
+    private fun finish(connection: ServerConnection) {
+        val wanted = existing
+        if (wanted != null && connection.remoteServerId != wanted.remoteServerId) {
+            ServerRepository.remove(connection.id)
+            mutable.update { it.copy(busy = false, error = TvAddError.DIFFERENT_SERVER) }
+            return
+        }
+        TvMediaServers.refreshHomeRows()
+        mutable.update { it.copy(busy = false, stage = TvAddStage.DONE) }
+    }
 
     /** "9:41" for the code screen's countdown. */
     fun countdownLabel(startedAtMs: Long, nowMs: Long): String =
         QuickConnectPolicy.countdownLabel(QuickConnectPolicy.remainingMs(startedAtMs, nowMs))
 
-    fun nowMs(): Long = runtime.nowMs()
+    fun nowMs(): Long = Clock.System.now().toEpochMilliseconds()
 
     fun close() {
-        controller.cancel()
+        driverJob?.cancel()
+        driver?.cancel()
         scope.cancel()
     }
 }
 
 // ---------------------------------------------------------------- one server
 
-data class TvLibraryRow(val id: String, val name: String, val onHome: Boolean)
+data class TvLibraryRow(val id: String, val name: String, val selected: Boolean)
 
 data class TvServerDetails(
     val key: String,
@@ -238,92 +381,79 @@ data class TvServerDetails(
     val status: TvServerStatus,
     val signedIn: Boolean,
     val enabled: Boolean,
-    val syncAddress: Boolean,
-    val homeContinueWatching: Boolean,
-    val homeNextUp: Boolean,
-    val homeRecentlyAdded: Boolean,
-    /** Libraries can be listed (signed in, enabled, has an address). */
-    val canListLibraries: Boolean,
+    val useCatalogMetadata: Boolean,
+    val importWatchState: Boolean,
+    val libraries: List<TvLibraryRow>,
+    val providerName: String,
+    /** Titles can open with the add-ons' details (needs the provider's external-id lookup). */
+    val supportsCatalogMetadata: Boolean,
+    val supportsWatchState: Boolean,
 )
-
-enum class TvLibrariesState { LOADING, READY, EMPTY, FAILED }
-
-data class TvLibraries(val state: TvLibrariesState, val libraries: List<TvLibraryRow>)
 
 class TvServerDetailsSession(private val key: String) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val runtime = MediaServerRuntime.production.also { it.entryStore.ensureLoaded() }
-    private val management = MediaServerManagement(
-        accounts = MediaServerAccounts(runtime.entryStore, runtime.services),
-        services = runtime.services,
-        onChanged = { changed -> MediaServerHomeSurfaces.changed(runtime, changed) },
-    )
 
-    private fun build(entries: List<MediaServerEntry>, expired: Set<String>): TvServerDetails? {
-        val e = entries.firstOrNull { it.key == key } ?: return null
-        val signedIn = runtime.services.isSignedIn(e)
+    private fun build(): TvServerDetails? {
+        ServerRepository.ensureLoaded()
+        val state = ServerRepository.uiState.value
+        val c = state.connections.firstOrNull { it.id == key } ?: return null
+        val status = c.status(state.failures[c.id])
         return TvServerDetails(
-            key = e.key, name = e.name, subtitle = subtitleOf(e),
-            status = MediaServerStatusPolicy.of(e, signedIn, e.serverKey in expired, null).toTv(),
-            signedIn = signedIn, enabled = e.enabled, syncAddress = e.syncAddress,
-            homeContinueWatching = MediaServerHomeRow.CONTINUE_WATCHING in e.homeRows,
-            homeNextUp = MediaServerHomeRow.NEXT_UP in e.homeRows,
-            homeRecentlyAdded = MediaServerHomeRow.RECENTLY_ADDED in e.homeRows,
-            canListLibraries = signedIn && e.enabled && !e.address.isNullOrBlank(),
+            key = c.id, name = c.name, subtitle = c.subtitle(), status = status,
+            signedIn = status != TvServerStatus.NEEDS_SIGN_IN && status != TvServerStatus.SIGN_IN_AGAIN,
+            enabled = c.enabled, useCatalogMetadata = c.useCatalogMetadata, importWatchState = c.importWatchState,
+            libraries = c.libraries.map { TvLibraryRow(it.id, it.name, it.selected) },
+            providerName = ServerRepository.provider(c)?.displayName ?: c.providerId,
+            supportsCatalogMetadata = ServerRepository.provider(c)?.supports(ServerCapability.EXTERNAL_ID_LOOKUP) == true,
+            supportsWatchState = ServerRepository.provider(c)?.supports(ServerCapability.USER_STATE_READ) == true,
         )
     }
 
-    /** Null once the entry is gone (removed here or from another device); the FIRST value is already the entry, never a placeholder. */
-    val details: StateFlow<TvServerDetails?> = combine(
-        runtime.entryStore.entries, runtime.services.expiredSessions, runtime.services.credentialVersion,
-    ) { entries, expired, _ -> build(entries, expired) }
-        .stateIn(scope, SharingStarted.Eagerly, build(runtime.entryStore.current(), runtime.services.expiredSessions.value))
+    /** Null once the connection is gone (removed here or from another device). */
+    val details: StateFlow<TvServerDetails?> = ServerRepository.uiState.map { build() }
+        .stateIn(scope, SharingStarted.Eagerly, build())
 
-    private fun entry(): MediaServerEntry? = runtime.entryStore.entryByKey(key)
+    fun setEnabled(on: Boolean) = ServerRepository.setEnabled(key, on)
+    fun setCatalogMetadata(on: Boolean) = ServerRepository.setCatalogMetadata(key, on)
+    fun setImportWatchState(on: Boolean) = ServerRepository.setImportWatchState(key, on)
+    fun setLibrarySelected(id: String, on: Boolean) = ServerRepository.setLibrarySelected(key, id, on)
 
-    fun rename(name: String) { entry()?.let { management.rename(it, name) } }
-    fun setEnabled(on: Boolean) { entry()?.let { management.setEnabled(it, on) } }
-    fun setSyncAddress(on: Boolean) { entry()?.let { management.setSyncAddress(it, on) } }
-
-    /** [row]: "continue_watching" | "next_up" | "recently_added". */
-    fun setHomeRow(row: String, on: Boolean) {
-        val r = MediaServerHomeRow.entries.firstOrNull { it.name.lowercase() == row } ?: return
-        entry()?.let { management.setHomeRow(it, r, on) }
+    /** Re-reads the libraries from the server once when the page opens (a revoked token is noticed here too). */
+    suspend fun refreshLibraries() {
+        runCatching { ServerRepository.refreshLibraries(key) }.onFailure { if (it is CancellationException) throw it }
     }
 
-    fun setHomeLibrary(id: String, name: String, on: Boolean) { entry()?.let { management.setHomeLibrary(it, id, name, on) } }
-
-    private val librariesFlow = MutableStateFlow(TvLibraries(TvLibrariesState.LOADING, emptyList()))
-    val libraries: StateFlow<TvLibraries> = librariesFlow.asStateFlow()
-
-    /** An authenticated call, made once when the page opens (a revoked token is noticed here too). */
-    suspend fun loadLibraries() {
-        val e = entry() ?: return
-        val client = runtime.services.clientFor(e)
-        if (client == null) { librariesFlow.value = TvLibraries(TvLibrariesState.EMPTY, emptyList()); return }
-        try {
-            val list = MediaServerLibraries.browsable(client.views())
-            librariesFlow.value = TvLibraries(
-                if (list.isEmpty()) TvLibrariesState.EMPTY else TvLibrariesState.READY,
-                list.map { TvLibraryRow(it.id, it.name, it.id in e.homeLibraries) },
-            )
-        } catch (c: kotlinx.coroutines.CancellationException) {
-            throw c
-        } catch (ex: MediaServerException) {
-            if ((ex as? MediaServerException.Http)?.isUnauthorized == true) runtime.services.onUnauthorized(e.serverKey)
-            librariesFlow.value = TvLibraries(TvLibrariesState.FAILED, emptyList())
-        }
+    fun remove() {
+        ServerRepository.remove(key)
+        TvMediaServers.refreshHomeRows()
     }
-
-    /** Re-reads which libraries are on Home after a toggle (the list itself is not re-fetched). */
-    fun refreshLibraryFlags() {
-        val e = entry() ?: return
-        librariesFlow.update { cur -> cur.copy(libraries = cur.libraries.map { it.copy(onHome = it.id in e.homeLibraries) }) }
-    }
-
-    suspend fun signOut() { entry()?.let { management.signOut(it) } }
-
-    suspend fun remove(purgeSavedData: Boolean): Boolean = entry()?.let { management.remove(it, purgeSavedData) } ?: false
 
     fun close() { scope.cancel() }
+}
+
+// ---------------------------------------------------------------- Library "Servers" shelves
+
+data class TvServerShelf(val key: String, val title: String, val items: List<com.nuvio.app.features.home.MetaPreview>, val failed: Boolean)
+
+/** The Library's "Servers" source: one shelf per selected server library (the phone's loadServerShelves). */
+object TvServerLibrary {
+    fun hasServers(): Boolean { ServerRepository.ensureLoaded(); return ServerRepository.uiState.value.enabledConnections.isNotEmpty() }
+
+    suspend fun shelves(): List<TvServerShelf> = coroutineScope {
+        ServerRepository.ensureLoaded()
+        ServerCatalog.libraries().map { ref ->
+            async {
+                try {
+                    val section = ServerCatalog.librarySection(ref, SHELF_LIMIT)
+                    TvServerShelf("${ref.connection.id}:${ref.library.id}", ref.title, section.items, failed = false)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Throwable) {
+                    TvServerShelf("${ref.connection.id}:${ref.library.id}", ref.title, emptyList(), failed = true)
+                }
+            }
+        }.awaitAll()
+    }
+
+    private const val SHELF_LIMIT = 18
 }

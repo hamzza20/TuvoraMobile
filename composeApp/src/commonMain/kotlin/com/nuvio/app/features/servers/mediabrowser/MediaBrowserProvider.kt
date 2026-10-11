@@ -4,6 +4,7 @@ import com.nuvio.app.features.servers.ServerCandidate
 import com.nuvio.app.features.servers.ServerCapability
 import com.nuvio.app.features.servers.ServerEpisode
 import com.nuvio.app.features.servers.ServerCertificateException
+import com.nuvio.app.features.servers.ServerDiscovery
 import com.nuvio.app.features.servers.ServerException
 import com.nuvio.app.features.servers.ServerFailure
 import com.nuvio.app.features.servers.ServerIndexEntry
@@ -97,6 +98,17 @@ internal abstract class MediaBrowserProvider(
             userId = user.id,
             userName = user.name ?: fallbackUserName,
             token = token,
+        )
+    }
+
+    override suspend fun discover(address: String): ServerDiscovery {
+        val normalized = normalizeServerAddress(address, apiPath) ?: throw ServerException(ServerFailure.NOT_FOUND)
+        val (baseUrl, info) = publicInfo(normalized)
+        if (!isSupported(info)) throw ServerException(ServerFailure.UNSUPPORTED)
+        return ServerDiscovery(
+            address = baseUrl,
+            serverName = info.serverName?.takeIf { it.isNotBlank() } ?: Url(baseUrl).host,
+            version = info.version,
         )
     }
 

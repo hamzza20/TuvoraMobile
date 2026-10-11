@@ -113,4 +113,15 @@ class QuickConnectProviderTest {
     fun `emby refuses quick connect`() = runTest {
         assertFailsWith<ServerException> { EmbyProvider(http().client).quickConnectStart("emby.local:8096") }
     }
+
+    @Test
+    fun `discover reports the server without signing in`() = runTest {
+        val http = http()
+        val found = JellyfinProvider(http.client).discover("jf.local:8096")
+        assertEquals("Den", found.serverName, "server name")
+        assertEquals("10.10.0", found.version, "version")
+        assertTrue(found.address.startsWith("http://jf.local:8096"), "normalized address")
+        assertTrue(http.requests.none { it.url.encodedPath.contains("Authenticate") }, "no credentials involved")
+        assertFailsWith<ServerException> { JellyfinProvider(http().client).discover("") }
+    }
 }

@@ -9,8 +9,8 @@ import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
  * `LaunchedEffect(appContentGeneration, homeCatalogRefreshKey)` (MainAppContent.kt:419).
  */
 object TvHomeRefreshPolicy {
-    data class Key(val generation: Int, val addonSignature: List<String>)
+    data class Key(val generation: Int, val addonSignature: List<String>, val serverRevision: Int = 0)
 
-    fun key(generation: Int, addons: List<ManagedAddon>): Key =
-        Key(generation, buildAddonCatalogRefreshSignature(addons))
+    fun key(generation: Int, addons: List<ManagedAddon>, serverRevision: Int = 0): Key =
+        Key(generation, buildAddonCatalogRefreshSignature(addons), serverRevision)
 }

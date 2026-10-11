@@ -12,6 +12,7 @@ import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.player.PlayerPlaybackSnapshot
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.externalPlaybackSession
+import com.nuvio.app.features.servers.ServerPlayback
 import com.nuvio.app.features.player.AddonSubtitle
 import com.nuvio.app.features.player.PlayerStreamInfo
 import com.nuvio.app.features.player.PlayerTrackPreferenceStorage
@@ -139,6 +140,19 @@ class TvPlayerSession(
     private val liveReresolve: (suspend () -> TvResolvedSource?)? = null,
     private val vodReresolve: (suspend () -> TvResolvedSource?)? = null,
 ) {
+    /** A media-server stream: the session URL ServerPlayback prepared (progress is reported against it, stop on close). */
+    private var serverPlaybackUrl: String? = null
+
+    /** Runs once when the session is closed (frees a loopback relay opened for a pinned server). */
+    private var onClosed: () -> Unit = {}
+
+    /** Kept off the constructor so the Swift-visible initializer stays (launch:liveReresolve:vodReresolve:). */
+    internal fun bindServer(playbackUrl: String?, onClosed: () -> Unit): TvPlayerSession {
+        serverPlaybackUrl = playbackUrl
+        this.onClosed = onClosed
+        return this
+    }
+
     private val log = Logger.withTag("TvPlayerSession")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val isLive = LivePlaybackRejoinPolicy.rejoinsLiveEdge(launch.streamType, launch.liveReplay != null)
@@ -312,6 +326,8 @@ class TvPlayerSession(
         if (closed) return
         closed = true
         detach()
+        ServerPlayback.stop(serverPlaybackUrl)
+        onClosed()
         seekSaveJob?.cancel()
         bridge?.clearNowPlayingInfo()
         bridge?.destroy()
@@ -736,6 +752,9 @@ class TvPlayerSession(
             videoProgressTicks = b.getVideoFrameTicks(),
             hasVideoTrack = true,
         )
+        serverPlaybackUrl?.let {
+            ServerPlayback.onPlaybackSnapshot(it, snapshot.positionMs, snapshot.isPlaying, snapshot.isLoading, snapshot.isEnded)
+        }
         val lane = _state.value.lane
         if (error != null && handleFailure(lane, error)) return
         if (snapshot.isPlaying && snapshot.positionMs > 0L) TvLaneMemory.put(progressKey, lane)

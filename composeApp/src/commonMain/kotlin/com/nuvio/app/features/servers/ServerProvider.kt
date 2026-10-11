@@ -40,6 +40,14 @@ interface ServerProvider {
 
     suspend fun signOut(session: ServerSession) = Unit
 
+    /**
+     * Reaches the server at [address] without signing in: the address as it will be stored, the server's own name and version.
+     * Throws [ServerException] (NOT_FOUND = not an address, UNSUPPORTED = not this product / too old, UNREACHABLE) or a
+     * [ServerCertificateException] when the certificate must be trusted first. Lets a screen with a slow keyboard (Apple TV)
+     * confirm the server and its certificate before asking for credentials.
+     */
+    suspend fun discover(address: String): ServerDiscovery = unsupported()
+
     /** Whether the server at [address] currently accepts Quick Connect (false when off, unreachable or unsupported). */
     suspend fun quickConnectAvailable(address: String): Boolean = false
 
@@ -84,6 +92,12 @@ interface ServerProvider {
         episode: Int,
     ): ServerEpisode? = unsupported()
 }
+
+data class ServerDiscovery(
+    val address: String,
+    val serverName: String,
+    val version: String?,
+)
 
 data class ServerIndexEntry(
     val itemId: String,

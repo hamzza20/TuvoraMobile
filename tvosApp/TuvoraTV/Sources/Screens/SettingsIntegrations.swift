@@ -413,8 +413,8 @@ struct IntegrationsSettingsDetail: View {
                     SettingsActionRow(title: "MDBList Ratings", subtitle: "External ratings providers") { nav.section = .mdblist }
                     SettingsActionRow(title: "Anime-Skip", subtitle: "Anime intro/outro skip timestamps") { nav.section = .animeskip }
                     SettingsActionRow(title: "IPTV (Xtream Codes)", subtitle: "Add a live TV / VOD provider by URL") { nav.section = .iptv }
-                    SettingsActionRow(title: MS("ms_settings_page_servers", "Media servers"),
-                                      subtitle: MS("ms_settings_integrations_description", "Movies and series from your own Jellyfin or Emby server")) { nav.section = .mediaservers }
+                    SettingsActionRow(title: MS("compose_settings_page_media_servers", "Media servers"),
+                                      subtitle: MS("settings_content_discovery_media_servers_description", "Connect Jellyfin or Emby to browse and play your own library.")) { nav.section = .mediaservers }
                         .accessibilityIdentifier("integrations.mediaServers")
                 }
             }

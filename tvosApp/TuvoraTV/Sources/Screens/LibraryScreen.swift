@@ -15,13 +15,18 @@ struct LibraryScreen: View {
     private static let cloudAvailable = AppFeaturePolicy.shared.debridEnabled
     @State private var cloud = cloudAvailable && AppArguments.list.contains("-smokeLibraryCloud")
     @State private var managingLists = AppArguments.list.contains("-smokeManageLists")
+    /// The Servers source (Jellyfin / Emby libraries). Only offered once a server is connected. Smoke hook: `-smokeLibraryServers`.
+    private let hasServers = TvServerLibrary.shared.hasServers()
+    @State private var servers = AppArguments.list.contains("-smokeLibraryServers")
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: dp(16)) {
                 header
-                if Self.cloudAvailable { viewModeRow }
-                if cloud && Self.cloudAvailable {
+                if Self.cloudAvailable || hasServers { viewModeRow }
+                if servers && hasServers {
+                    ServerLibraryView(open: open)
+                } else if cloud && Self.cloudAvailable {
                     CloudLibraryView()
                 } else if let view {
                     selectors(view).focusSection()
@@ -73,8 +78,9 @@ struct LibraryScreen: View {
     /// refresh button on the right.
     private var viewModeRow: some View {
         HStack(spacing: dp(12)) {
-            NuvioTextButton(title: "Saved", selected: !cloud) { cloud = false }
-            NuvioTextButton(title: "Cloud", selected: cloud) { cloud = true }
+            NuvioTextButton(title: "Saved", selected: !cloud && !servers) { cloud = false; servers = false }
+            if Self.cloudAvailable { NuvioTextButton(title: "Cloud", selected: cloud) { cloud = true; servers = false } }
+            if hasServers { NuvioTextButton(title: "Servers", selected: servers) { servers = true; cloud = false } }
             Spacer()
             if cloud { NuvioTextButton(title: "Refresh cloud library") { TvCloudLibrary.shared.refresh() } }
         }
@@ -86,7 +92,7 @@ struct LibraryScreen: View {
             Text("Library").font(NuvioType.headlineMedium).kerning(dp(0.5)).foregroundStyle(colors.textPrimary)
             Spacer()
             if let view {
-                Text(cloud && Self.cloudAvailable ? "CLOUD" : sourceLabel(view.sourceMode)).font(NuvioType.labelLarge).kerning(dp(2)).foregroundStyle(colors.textTertiary)
+                Text(servers && hasServers ? "SERVERS" : cloud && Self.cloudAvailable ? "CLOUD" : sourceLabel(view.sourceMode)).font(NuvioType.labelLarge).kerning(dp(2)).foregroundStyle(colors.textTertiary)
             }
         }
     }

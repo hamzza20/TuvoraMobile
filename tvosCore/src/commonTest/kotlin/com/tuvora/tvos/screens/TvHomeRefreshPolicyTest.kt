@@ -19,4 +19,10 @@ class TvHomeRefreshPolicyTest {
         assertEquals(TvHomeRefreshPolicy.key(generation = 3, addons = emptyList()),
                      TvHomeRefreshPolicy.key(generation = 3, addons = emptyList()))
     }
+
+    @Test
+    fun `a media server change reloads the rows`() {
+        assertNotEquals(TvHomeRefreshPolicy.key(generation = 1, addons = emptyList(), serverRevision = 1),
+                        TvHomeRefreshPolicy.key(generation = 1, addons = emptyList(), serverRevision = 2))
+    }
 }

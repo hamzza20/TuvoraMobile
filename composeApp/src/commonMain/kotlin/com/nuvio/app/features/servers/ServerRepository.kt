@@ -90,6 +90,12 @@ object ServerRepository {
         return _uiState.value.enabledConnections
     }
 
+    /** True when this device holds no usable token for [connectionId] (it arrived from another device, or was signed out here). */
+    fun needsSignIn(connectionId: String): Boolean {
+        val connection = connection(connectionId) ?: return false
+        return ServerTokenPolicy.needsSignIn(token(connection.credentialRef))
+    }
+
     fun provider(connection: ServerConnection): ServerProvider? = ServerProviders.forId(connection.providerId)
 
     fun sourceLabel(connection: ServerConnection): String =

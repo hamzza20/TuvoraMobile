@@ -101,24 +101,36 @@ final class MediaServerTests: XCTestCase {
     }
 
     /// Opens Add a server and types the address, then Connect: lands on the sign-in choice.
-    private func enterAddressAndConnect() {
+    private func enterAddressAndConnect(_ address: String = "localhost:18096") {
         press(.select, settle: 1.5)
         XCTAssertTrue(waitFocus { $0 == "mediaServers.address" }, "the address field did not take focus; on \(focusedId())")
         snap("1-address")
         press(.select, settle: 2)                       // opens the tvOS keyboard
-        app.typeText("localhost:18096")
-        press(.menu, settle: 1.5)                       // back from the keyboard, keeping the text
-        press(.down, settle: 0.6)                       // the button row: Cancel first, Connect beside it
-        if focusedId() != "mediaServers.connect" { press(.right, settle: 0.6) }
-        XCTAssertEqual(focusedId(), "mediaServers.connect", "never reached Connect")
-        press(.select, settle: 1)
+        app.typeText(address)
+        submitKeyboard()                                // "done" submits the field: it connects
     }
 
     // MARK: Tests
 
-    /// Add by Quick Connect: the code is on screen, "another device" approves it, the server joins the list signed in,
-    /// and the "Recently added on Home?" question appears and is answered yes.
-    func testAddServerByQuickConnectThenShowRecentlyAddedOnHome() throws {
+    /// A self-signed https server: the trust-on-first-use prompt names the server and its fingerprint, declining ends the
+    /// attempt (nothing is saved), trusting goes on to the sign-in choice.
+    func testSelfSignedServerAsksToTrustItsCertificate() throws {
+        _ = try requireServer()
+        launchToMediaServers()
+        enterAddressAndConnect("https://localhost:18097")
+        XCTAssertTrue(el("mediaServers.trust").waitForExistence(timeout: 20), "no certificate prompt; on \(focusedId()); ids: \(visibleIds())")
+        snap("tofu-prompt")
+        XCTAssertTrue(waitFocus(20) { $0 == "mediaServers.decline" || $0 == "mediaServers.trust" }, "the prompt took no focus; on \(focusedId())")
+        if focusedId() != "mediaServers.trust" { press(.right, settle: 0.6) }
+        XCTAssertEqual(focusedId(), "mediaServers.trust")
+        press(.select, settle: 3)
+        XCTAssertTrue(waitFocus(20) { $0.hasPrefix("mediaServers.") && $0 != "mediaServers.trust" }, "trusting did not reach the sign-in choice; on \(focusedId())")
+        snap("tofu-trusted-choice")
+        XCTAssertTrue(el("mediaServers.usePassword").exists, "the sign-in choice is missing after trusting")
+    }
+
+    /// Add by Quick Connect: the code is on screen, "another device" approves it and the server joins the list signed in.
+    func testAddServerByQuickConnect() throws {
         let session = try requireServer()
         launchToMediaServers()
         enterAddressAndConnect()
@@ -132,12 +144,8 @@ final class MediaServerTests: XCTestCase {
         XCTAssertEqual(digits.count, 6, "the code is not 6 digits: \(code.label)")
         let (status, _) = request("POST", "/QuickConnect/Authorize?code=\(digits)", token: session.token)
         XCTAssertTrue((200..<300).contains(status), "the server refused to approve the code (\(status))")
-        // The poll finishes the sign-in by itself; then the one question about Home.
-        XCTAssertTrue(el("mediaServers.showOnHome").waitForExistence(timeout: 40), "sign-in did not finish after the approval")
-        XCTAssertTrue(waitFocus(10) { $0 == "mediaServers.showOnHome" }, "the Home question did not take focus; on \(focusedId())")
-        snap("4-home-offer")
-        press(.select, settle: 2)
-        // Back on the list: the server is there with its own name and the Signed in badge.
+        // The poll finishes the sign-in by itself and the dialog closes: back on the list the server is there with its own
+        // name and the Signed in badge.
         let row = el("mediaServers.row.\(serverName)")
         XCTAssertTrue(row.waitForExistence(timeout: 15), "the new server is not on the list")
         XCTAssertTrue(row.label.contains("Signed in") || row.label.contains("Checking"), "no signed-in badge: \(row.label)")
@@ -154,17 +162,12 @@ final class MediaServerTests: XCTestCase {
         XCTAssertTrue(downTo("mediaServers.usePassword", max: 3), "no password row; on \(focusedId())")
         press(.select, settle: 1)
         XCTAssertTrue(waitFocus { $0 == "mediaServers.username" || $0.hasPrefix("#") }, "the password step did not appear; on \(focusedId())")
-        typeInto("mediaServers.username", "tester")
-        typeInto("mediaServers.password", "wrong-password")
-        XCTAssertTrue(reachSignIn(), "never reached Sign in; on \(focusedId())")
-        press(.select, settle: 2.5)
+        typeCredentials("tester", "wrong-password")
+        // Return on the password keyboard submits the field: it signs in (the Sign in button does the same).
         XCTAssertTrue(el("mediaServers.error").waitForExistence(timeout: 15), "a wrong password was not reported")
         // The password field was cleared by the submit: type the right one.
         typeInto("mediaServers.password", "tvtest123")
-        XCTAssertTrue(reachSignIn(), "never reached Sign in; on \(focusedId())")
-        press(.select, settle: 2.5)
-        XCTAssertTrue(el("mediaServers.showOnHome").waitForExistence(timeout: 30), "password sign-in did not finish")
-        press(.left, settle: 0.6); press(.select, settle: 2)   // "Not now"
+        // Return on the password keyboard submits the field: it signs in (the Sign in button does the same).
         XCTAssertTrue(el("mediaServers.row.\(serverName)").waitForExistence(timeout: 15), "the server is not on the list")
         try removeServerFromDetails()
     }
@@ -175,30 +178,33 @@ final class MediaServerTests: XCTestCase {
         let session = try requireServer()
         guard let item = movieId(session) else { throw XCTSkip("the test library is empty") }
         _ = request("DELETE", "/UserPlayedItems/\(item)?userId=\(session.userId)", token: session.token)   // unplayed again
+        // A previous run leaves a resume position: a stop report at 0 clears it, so this run measures only its own play.
+        _ = request("POST", "/Sessions/Playing/Stopped", token: session.token,
+                    body: "{\"ItemId\":\"\(item)\",\"PositionTicks\":0}".data(using: .utf8))
         XCTAssertEqual(savedPositionTicks(session, itemId: item), 0, "the test movie already has a saved position; reset it first")
         launchToMediaServers()
         enterAddressAndConnect()
         XCTAssertTrue(waitFocus(20) { $0.hasPrefix("mediaServers.") })
         XCTAssertTrue(downTo("mediaServers.usePassword", max: 3))
         press(.select, settle: 1)
-        typeInto("mediaServers.username", "tester")
-        typeInto("mediaServers.password", "tvtest123")
-        XCTAssertTrue(reachSignIn(), "never reached Sign in; on \(focusedId())")
-        press(.select, settle: 2.5)
-        XCTAssertTrue(el("mediaServers.showOnHome").waitForExistence(timeout: 30))
-        press(.select, settle: 2)                       // yes: Recently added joins Home
-        // Home: the server's row shows its movie.
+        typeCredentials("tester", "tvtest123")
+        // Return on the password keyboard submits the field: it signs in (the Sign in button does the same).
+        XCTAssertTrue(el("mediaServers.row.\(serverName)").waitForExistence(timeout: 30), "password sign-in did not finish")
+        // Home: the server's library row (every library is selected by default) shows its movie.
         app.terminate()
         app.launchArguments = ["-smokePickProfile", "1", "-smokeTab", "home"]
         app.launch()
         XCTAssertTrue(waitFocus(60) { !$0.hasPrefix("sidebar.") && $0 != "<none>" }, "Home never took focus; on \(focusedId())")
-        // The server's row sits after the add-on rows: walk DOWN until a card of its movie has focus.
+        // The server's rows sit after the add-on rows: walk DOWN until a card of its movie has focus.
+        // Continue Watching comes first and may hold this movie from an earlier run (its server is gone, so it cannot
+        // open): leave that row before looking.
         var found = false
+        press(.down, settle: 1.0)
         for _ in 0..<30 {
             if focused.exists && focused.label.contains("Tuvora Test") { found = true; break }
             press(.down, settle: 1.0)
         }
-        XCTAssertTrue(found, "the server's Recently added row never showed its movie on Home; on \(focusedId())")
+        XCTAssertTrue(found, "the server's library row never showed its movie on Home; on \(focusedId())")
         // Card -> title page (or, from Continue Watching, straight to the sources) -> Play -> the one source.
         press(.select, settle: 4)
         snap("titlepage")
@@ -217,14 +223,27 @@ final class MediaServerTests: XCTestCase {
 
     // MARK: Shared steps
 
-    /// The password step's button row is Back | Sign in: DOWN from the password field, then RIGHT.
-    private func reachSignIn() -> Bool {
-        for _ in 0..<3 where focusedId() != "mediaServers.signIn" { press(.down, settle: 0.5); if focusedId() == "#Back" { press(.right, settle: 0.5) } }
-        return focusedId() == "mediaServers.signIn"
-    }
-
     private func snap(_ name: String) {
         let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
+    }
+
+    /// Username then password on the tvOS keyboard, each closed with its action key (next, then done).
+    private func typeCredentials(_ user: String, _ password: String) {
+        XCTAssertTrue(waitFocus { $0 == "mediaServers.username" }, "username field not focused; on \(focusedId())")
+        press(.select, settle: 2)
+        app.typeText(user)
+        submitKeyboard()                                // "next": on to the password keyboard
+        app.typeText(password)
+        submitKeyboard()                                // "done": submits the password field
+    }
+
+    /// The tvOS keyboard's action key (next / done) sits below the key rows and the abc/ABC switch: DOWN to it, Select.
+    /// ("\n" and Play/Pause do not press it in the simulator.)
+    private func submitKeyboard() {
+        for _ in 0..<3 { press(.down, settle: 0.4) }
+        snap("kb-on-action-key")
+        press(.select, settle: 2)
+        snap("kb-after-action-key")
     }
 
     private func typeInto(_ id: String, _ text: String) {
@@ -234,7 +253,13 @@ final class MediaServerTests: XCTestCase {
         XCTAssertTrue(reached, "never reached \(id); on \(focusedId())")
         press(.select, settle: 2)
         app.typeText(text)
-        press(.menu, settle: 1.5)
+        submitKeyboard()                                // "done" closes the keyboard and submits
+    }
+
+    /// The password step's button row is Back | Sign in: DOWN from the password field, then RIGHT.
+    private func reachSignIn() -> Bool {
+        for _ in 0..<3 where focusedId() != "mediaServers.signIn" { press(.down, settle: 0.5); if focusedId() == "#Back" { press(.right, settle: 0.5) } }
+        return focusedId() == "mediaServers.signIn"
     }
 
     /// List -> the server's details page -> Remove (Cancel is focused first; Remove confirms).

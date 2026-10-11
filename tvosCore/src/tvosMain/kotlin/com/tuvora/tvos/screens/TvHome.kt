@@ -13,6 +13,7 @@ import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.seriesPrimaryAction
 import com.nuvio.app.features.home.HomeRepository
+import com.nuvio.app.features.servers.ServerRepository
 import com.nuvio.app.features.home.HomeUiState
 import com.nuvio.app.features.tracking.TrackingSettingsRepository
 import com.nuvio.app.features.watched.WatchedItem
@@ -79,10 +80,15 @@ object TvHome {
         // A profile switch clears HomeRepository, so reload per session as well as per add-on change
         // (TvHomeRefreshPolicy); enabled add-ons only, catalog settings synced first - as the phone.
         scope.launch {
-            combine(TvAppLifecycle.sessionGeneration, AddonRepository.uiState.map { it.addons }) { generation, addons ->
-                generation to addons
-            }.distinctUntilChangedBy { (generation, addons) -> TvHomeRefreshPolicy.key(generation, addons) }
-                .collect { (_, addons) ->
+            // A connected media server adds, changes or drops library rows: its revision is part of the key (the phone's
+            // HomeCatalogSettingsRepository sync input carries the same revision).
+            combine(
+                TvAppLifecycle.sessionGeneration,
+                AddonRepository.uiState.map { it.addons },
+                ServerRepository.uiState.map { it.revision },
+            ) { generation, addons, serverRevision -> Triple(generation, addons, serverRevision) }
+                .distinctUntilChangedBy { (generation, addons, serverRevision) -> TvHomeRefreshPolicy.key(generation, addons, serverRevision) }
+                .collect { (_, addons, _) ->
                     val enabled = addons.enabledAddons()
                     if (enabled.isWaitingForFirstEnabledManifest()) return@collect
                     HomeCatalogSettingsRepository.syncCatalogs(enabled)
@@ -132,7 +138,11 @@ object TvHome {
         refreshNextUp(state.entries, watchedItems, seeds, inputs.prefs)
     }
 
-    fun refresh() = HomeRepository.refresh(AddonRepository.uiState.value.addons.enabledAddons(), force = true)
+    fun refresh() {
+        val enabled = AddonRepository.uiState.value.addons.enabledAddons()
+        HomeCatalogSettingsRepository.syncCatalogs(enabled)
+        HomeRepository.refresh(enabled, force = true)
+    }
 
     /** Fetches again only what failed on an earlier load (Home appeared, or Retry); no request when nothing did. */
     fun retryFailed() {

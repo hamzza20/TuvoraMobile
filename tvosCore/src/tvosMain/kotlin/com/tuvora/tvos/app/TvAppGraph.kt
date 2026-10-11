@@ -28,12 +28,6 @@ object TvAppGraph {
             // The same logic-port list every platform registers (FeatureContributions.kt). The Compose UI
             // slots in FeatureWiring.kt have no Apple TV role.
             registerLogicFeatureContributions()
-            // 13th upstream sync: phones moved to upstream's features/servers; Apple TV's SwiftUI media-server
-            // screens (TvMediaServers.kt) still drive the fork's features/mediaserver, so only tvOS registers it
-            // (port ledger: SwiftUI port of upstream servers, then delete features/mediaserver).
-            com.nuvio.app.features.mediaserver.api.MediaServerFeature.registerLogic(
-                syncSink = com.nuvio.app.features.iptv.PlaylistMediaServerSyncSink,
-            )
             FeatureRegistry.markInitialized()
         }
         // Static half of the memory probe; Apple TV HD has 2 GB, the 4K models 3-4 GB. The dynamic half
