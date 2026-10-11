@@ -101,7 +101,7 @@ final class MediaServerTests: XCTestCase {
     }
 
     /// Opens Add a server and types the address, then Connect: lands on the sign-in choice.
-    private func enterAddressAndConnect(_ address: String = "localhost:18096") {
+    private func enterAddressAndConnect(_ address: String = "http://localhost:18096") {
         press(.select, settle: 1.5)
         XCTAssertTrue(waitFocus { $0 == "mediaServers.address" }, "the address field did not take focus; on \(focusedId())")
         snap("1-address")

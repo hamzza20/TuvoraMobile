@@ -7,6 +7,7 @@ import com.nuvio.app.features.servers.QuickConnectState
 import com.nuvio.app.features.servers.ServerCapability
 import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.servers.ServerCertificateException
+import com.nuvio.app.features.servers.ServerPlainHttpException
 import com.nuvio.app.features.servers.ServerConnection
 import com.nuvio.app.features.servers.ServerException
 import com.nuvio.app.features.servers.ServerFailure
@@ -133,6 +134,8 @@ data class TvAddState(
     val signingInExisting: Boolean,
     /** The viewer's server types offered on the address step (Quick Connect only exists on Jellyfin). */
     val providerNames: List<String>,
+    /** Set when an address typed without a scheme only answers over plain http: the screen asks before anything secret is sent. */
+    val plainHttpAddress: String? = null,
 )
 
 /**
@@ -169,7 +172,7 @@ class TvAddServerSession(existingId: String? = null) {
     private fun provider(): ServerProvider =
         ServerProviders.forId(mutable.value.selectedType) ?: ServerProviders.registered.first()
 
-    fun setAddress(text: String) = mutable.update { it.copy(address = text, error = null, certAuthority = null) }
+    fun setAddress(text: String) = mutable.update { it.copy(address = text, error = null, certAuthority = null, plainHttpAddress = null) }
 
     fun selectType(wire: String) {
         if (existing != null) return
@@ -200,6 +203,8 @@ class TvAddServerSession(existingId: String? = null) {
                 throw cancelled
             } catch (untrusted: ServerCertificateException) {
                 showCertificate(untrusted)
+            } catch (plain: ServerPlainHttpException) {
+                mutable.update { it.copy(busy = false, plainHttpAddress = plain.httpAddress) }
             } catch (error: ServerException) {
                 mutable.update { it.copy(busy = false, error = TvServerAddErrorPolicy.of(error.failure, duringSignIn = false)) }
             } catch (_: Exception) {
@@ -227,6 +232,15 @@ class TvAddServerSession(existingId: String? = null) {
         mutable.update { it.copy(certAuthority = null, certFingerprint = null, certChanged = false) }
         connect()
     }
+
+    /** The viewer chose plain http for a server that does not offer https: the address becomes the explicit http one and the connect goes on. */
+    fun continuePlainHttp() {
+        val address = mutable.value.plainHttpAddress ?: return
+        mutable.update { it.copy(address = address, plainHttpAddress = null) }
+        connect()
+    }
+
+    fun declinePlainHttp() = mutable.update { it.copy(plainHttpAddress = null, busy = false) }
 
     fun declineCertificate() = mutable.update { it.copy(certAuthority = null, certFingerprint = null, certChanged = false, busy = false) }
 

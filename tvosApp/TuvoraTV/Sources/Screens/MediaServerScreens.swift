@@ -80,7 +80,7 @@ struct MediaServersSettingsDetail: View {
 
 private enum AddFocus: Hashable {
     case address, connect, type(String), quickConnect, password, changeAddress, retry
-    case username, passwordField, signIn, back, trust, decline, usePassword
+    case username, passwordField, signIn, back, trust, decline, usePassword, plainHttp, plainDecline
 }
 
 struct MediaServerAddDialog: View {
@@ -114,6 +114,7 @@ struct MediaServerAddDialog: View {
         }
         .onChange(of: s.stage) { _, stage in focusFirst(stage) }
         .onChange(of: s.certAuthority) { _, cert in if cert != nil { setFocus(.trust) } }
+        .onChange(of: s.plainHttpAddress) { _, address in if address != nil { setFocus(.plainDecline) } }
         .onAppear { focusFirst(s.stage) }
         .onDisappear { model.close() }
         .onExitCommand { back(s) }
@@ -166,12 +167,13 @@ struct MediaServerAddDialog: View {
             }
         }
         SettingsTextField(label: MS("servers_address", "Server address"),
-                          hint: MS("servers_address_hint", "http://192.168.1.10:8096"),
+                          hint: MS("servers_address_hint", "https://192.168.1.10:8920"),
                           text: Binding(get: { model.state.address }, set: { model.session.setAddress(text: $0) }),
                           onSubmit: { model.session.connect() }, id: "mediaServers.address")
             .focused($focus, equals: .address)
         if let e = s.error { errorLine(e) }
         if let cert = s.certAuthority, let fp = s.certFingerprint { certificate(cert, fp, changed: s.certChanged) }
+        if let plain = s.plainHttpAddress { plainHttpNotice(plain) }
         HStack(spacing: dp(8)) {
             Spacer()
             SettingsDialogButton(title: L("Cancel")) { dialogs.pop() }
@@ -189,6 +191,26 @@ struct MediaServerAddDialog: View {
         SettingsChoiceChip(label: label, selected: selected) { model.session.selectType(wire: wire) }
             .focused($focus, equals: .type(wire))
             .accessibilityIdentifier("mediaServers.type.\(wire)")
+    }
+
+    /// An address typed without a scheme that does not offer https: nothing secret is sent until the viewer agrees to plain http.
+    private func plainHttpNotice(_ address: String) -> some View {
+        VStack(alignment: .leading, spacing: dp(8)) {
+            Text(ui: MS("servers_plain_http_title", "No secure connection"))
+                .font(NuvioType.titleMedium).foregroundStyle(colors.error)
+            Text(ui: MS("servers_plain_http_message", "%1$s does not offer HTTPS. Continuing sends your password over plain HTTP, which anyone on the network can read. Only continue on a network you trust.", address.replacingOccurrences(of: "http://", with: "")))
+                .font(NuvioType.bodySmall).foregroundStyle(colors.textSecondary)
+            HStack(spacing: dp(8)) {
+                Spacer()
+                SettingsDialogButton(title: L("Cancel")) { model.session.declinePlainHttp() }.focused($focus, equals: .plainDecline)
+                    .accessibilityIdentifier("mediaServers.plainDecline")
+                SettingsDialogButton(title: MS("servers_plain_http_continue", "Continue over HTTP"), primary: true, destructive: true) { model.session.continuePlainHttp() }
+                    .focused($focus, equals: .plainHttp)
+                    .accessibilityIdentifier("mediaServers.plainContinue")
+            }
+        }
+        .padding(dp(14))
+        .background(RoundedRectangle(cornerRadius: dp(12)).fill(colors.backgroundCard))
     }
 
     /// The certificate the system did not trust (trust on first use), or one that differs from the one this device trusted.
