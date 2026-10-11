@@ -17,10 +17,6 @@ import nuvio.composeapp.generated.resources.compose_settings_page_appearance
 import nuvio.composeapp.generated.resources.compose_settings_page_content_discovery
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv
-import nuvio.composeapp.generated.resources.ms_settings_page_add
-import nuvio.composeapp.generated.resources.ms_settings_page_approve
-import nuvio.composeapp.generated.resources.ms_settings_page_details
-import nuvio.composeapp.generated.resources.ms_settings_page_servers
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv_add_playlist
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv_content
 import nuvio.composeapp.generated.resources.compose_settings_page_iptv_category_checklist
