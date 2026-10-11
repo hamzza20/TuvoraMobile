@@ -44,6 +44,7 @@ jobs:
             echo "TRAKT_CLIENT_SECRET=${{ secrets.TRAKT_CLIENT_SECRET }}"
             echo "SIMKL_CLIENT_ID=${{ secrets.SIMKL_CLIENT_ID }}"
             echo "SIMKL_CLIENT_SECRET=${{ secrets.SIMKL_CLIENT_SECRET }}"
+            echo "MDBLIST_CLIENT_ID=${{ secrets.MDBLIST_CLIENT_ID }}"
             echo "DONATIONS_DONATE_URL=${{ secrets.DONATIONS_DONATE_URL }}"
           } >> local.properties
 
