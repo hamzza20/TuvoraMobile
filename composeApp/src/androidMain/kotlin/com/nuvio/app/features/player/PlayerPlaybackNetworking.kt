@@ -6,6 +6,12 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.nuvio.app.core.diagnostics.SentryNetworkBreadcrumbInterceptor
 import com.nuvio.app.core.network.IPv4FirstDns
+import com.nuvio.app.core.contracts.PlaybackTrustHosts
+import com.nuvio.app.features.servers.ServerRepository
+import com.nuvio.app.features.streams.PlaybackTlsClass
+import com.nuvio.app.features.streams.PlaybackTlsPolicy
+import io.ktor.http.Url
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import java.net.HttpURLConnection
 import java.net.URL
@@ -13,7 +19,6 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.HostnameVerifier
-import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
@@ -27,6 +32,7 @@ internal object PlayerPlaybackNetworking {
         "User-Agent" to DEFAULT_USER_AGENT,
     )
 
+    /** Certificate checks off. Reachable ONLY through [PanelFallbackCallFactory], for hosts [PlaybackTlsPolicy] calls PermissivePanel. */
     private val trustAllManager = object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
 
@@ -35,19 +41,17 @@ internal object PlayerPlaybackNetworking {
         override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
     }
 
-    private val playbackHostnameVerifier = HostnameVerifier { _, _ -> true }
+    private val permissiveHostnameVerifier = HostnameVerifier { _, _ -> true }
 
-    private val sslContext: SSLContext by lazy {
+    private val permissiveSslContext: SSLContext by lazy {
         SSLContext.getInstance("TLS").apply {
             init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
         }
     }
 
-    private val playbackHttpClient: OkHttpClient by lazy {
+    private fun baseClientBuilder(): OkHttpClient.Builder =
         OkHttpClient.Builder()
             .dns(IPv4FirstDns())
-            .sslSocketFactory(sslContext.socketFactory, trustAllManager)
-            .hostnameVerifier(playbackHostnameVerifier)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -55,21 +59,45 @@ internal object PlayerPlaybackNetworking {
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
             .addInterceptor(SentryNetworkBreadcrumbInterceptor())
+
+    /** Normal system validation and hostname verification: what every host gets unless the policy says otherwise. */
+    private val strictPlaybackHttpClient: OkHttpClient by lazy { baseClientBuilder().build() }
+
+    private val permissivePlaybackHttpClient: OkHttpClient by lazy {
+        strictPlaybackHttpClient.newBuilder()
+            .sslSocketFactory(permissiveSslContext.socketFactory, trustAllManager)
+            .hostnameVerifier(permissiveHostnameVerifier)
             .build()
     }
 
-    private val loopbackPlaybackHttpClient: OkHttpClient by lazy {
-        playbackHttpClient.newBuilder()
-            .addInterceptor { chain ->
-                val request = chain.request()
-                val requestChain = if (isLoopbackHost(request.url.host)) {
-                    chain.withReadTimeout(65, TimeUnit.SECONDS)
-                } else {
-                    chain
-                }
-                requestChain.proceed(request)
+    /** The class of [host] for the live app: panel hosts of the user's IPTV providers, minus any media-server host. */
+    internal fun tlsClassOf(host: String): PlaybackTlsClass = PlaybackTlsPolicy.classify(
+        host = host,
+        isPanelHost = PlaybackTrustHosts::isPanelHost,
+        isMediaServerHost = { candidate ->
+            ServerRepository.uiState.value.connections.any { connection ->
+                runCatching { Url(connection.address).host }.getOrNull()?.let(PlaybackTlsPolicy::normalize) == candidate
             }
-            .build()
+        },
+    )
+
+    private fun playbackCallFactory(configure: OkHttpClient.Builder.() -> Unit = {}): Call.Factory =
+        PanelFallbackCallFactory(
+            strict = strictPlaybackHttpClient.newBuilder().apply(configure).build(),
+            permissive = permissivePlaybackHttpClient.newBuilder().apply(configure).build(),
+            classify = ::tlsClassOf,
+        )
+
+    private fun loopbackConfigure(): OkHttpClient.Builder.() -> Unit = {
+        addInterceptor { chain ->
+            val request = chain.request()
+            val requestChain = if (isLoopbackHost(request.url.host)) {
+                chain.withReadTimeout(65, TimeUnit.SECONDS)
+            } else {
+                chain
+            }
+            requestChain.proceed(request)
+        }
     }
 
     fun createHttpDataSourceFactory(
@@ -77,27 +105,25 @@ internal object PlayerPlaybackNetworking {
         useLongReadTimeout: Boolean = false,
     ): DataSource.Factory {
         val requestHeaders = sanitizeHeaders(defaultHeaders)
-        val baseClient = if (useLongReadTimeout) loopbackPlaybackHttpClient else playbackHttpClient
-        val client = requestHeaders.headerValue("Authorization")?.let { authorization ->
-            baseClient.newBuilder()
-                .addNetworkInterceptor { chain ->
+        val authorization = requestHeaders.headerValue("Authorization")
+        val loopback = useLongReadTimeout
+        val client = playbackCallFactory {
+            if (loopback) loopbackConfigure()(this)
+            authorization?.let { value ->
+                addNetworkInterceptor { chain ->
                     val request = chain.request()
                     // Re-inject only on the original host. OkHttp deliberately drops Authorization on
                     // a cross-host redirect; re-adding it there would leak the credential to a foreign
                     // host (e.g. a subtitle/segment URL that 30x-es away).
                     val sameHost = request.url.host.equals(chain.call().request().url.host, ignoreCase = true)
                     if (sameHost && request.header("Authorization") == null) {
-                        chain.proceed(
-                            request.newBuilder()
-                                .header("Authorization", authorization)
-                                .build()
-                        )
+                        chain.proceed(request.newBuilder().header("Authorization", value).build())
                     } else {
                         chain.proceed(request)
                     }
                 }
-                .build()
-        } ?: baseClient
+            }
+        }
 
         return OkHttpDataSource.Factory(client).apply {
             setDefaultRequestProperties(requestHeaders)
@@ -128,10 +154,6 @@ internal object PlayerPlaybackNetworking {
     ): HttpURLConnection {
         val mergedHeaders = withDefaultUserAgent(headers)
         return (URL(url).openConnection() as HttpURLConnection).apply {
-            if (this is HttpsURLConnection) {
-                sslSocketFactory = sslContext.socketFactory
-                hostnameVerifier = playbackHostnameVerifier
-            }
             instanceFollowRedirects = true
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
