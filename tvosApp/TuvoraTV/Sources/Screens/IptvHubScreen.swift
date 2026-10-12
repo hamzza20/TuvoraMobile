@@ -111,7 +111,7 @@ private struct IptvShelves: View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: NuvioTokens.Layout.rowGap) {
                 ForEach(hub.categories, id: \.id) { category in
-                    IptvShelf(category: category, onOpen: onOpen)
+                    IptvShelf(category: category, generation: hub.catalogueGeneration, onOpen: onOpen)
                 }
             }
             .padding(.vertical, dp(12))
@@ -121,6 +121,7 @@ private struct IptvShelves: View {
 
 private struct IptvShelf: View {
     let category: XtreamHubCategory
+    let generation: Int64
     let onOpen: (MetaPreview) -> Void
     @State private var seeAll: String?
     @State private var deadlineTick = 0
@@ -161,7 +162,9 @@ private struct IptvShelf: View {
             .scrollClipDisabled()
             .focusSection()
         }
-        .onAppear { if !category.loaded && !category.loading { TvIptvBrowse.shared.loadCategory(categoryId: category.id) } }
+        .task(id: "\(category.id)|\(generation)") {
+            if !category.loaded && !category.loading { TvIptvBrowse.shared.loadCategory(categoryId: category.id) }
+        }
         // Wake once at the row's own deadline so a wait that never returns still ends on Retry (no polling).
         .task(id: "\(category.id)|\(category.loading)") {
             if let ms = TvIptvBrowse.shared.msUntilRowDeadline(category: category)?.int64Value {

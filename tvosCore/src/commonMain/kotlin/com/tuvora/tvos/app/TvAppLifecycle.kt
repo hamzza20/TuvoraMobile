@@ -32,6 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -197,7 +198,6 @@ object TvAppLifecycle {
         ContinueWatchingPreferencesRepository.ensureLoaded()
         runCatching { RecTrackingAccess.reporter.startLogging() }
         runCatching { EpisodeReleaseNotificationsRepository.refreshAsync() }
-        scope.launch { runCatching { IptvCatalogAccess.catalog.refreshDuePlaylists() } }
         scope.launch { watchReconnects() }
     }
 
@@ -220,7 +220,7 @@ object TvAppLifecycle {
             }
 
             try {
-                AppForegroundMonitor.events().collect { visibility ->
+                AppForegroundMonitor.events().collectLatest { visibility ->
                     when (visibility) {
                         AppVisibility.Foreground -> {
                             NetworkStatusRepository.requestForegroundRefresh()
@@ -231,6 +231,8 @@ object TvAppLifecycle {
                             } else {
                                 SyncManager.stopPeriodicNuvioSyncPull()
                             }
+                            runCatching { IptvCatalogAccess.catalog.refreshDuePlaylists() }
+                                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
                         }
                         AppVisibility.Background -> SyncManager.stopPeriodicNuvioSyncPull()
                     }
