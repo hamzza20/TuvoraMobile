@@ -41,13 +41,13 @@ jobs:
       MPVKIT_SHA256: 448e0636f3e4fcc69b26efc405fb1f62eae37cbf7b7fbbbcb25729b28155c785
 
     steps:
-      # 1. Checkout app source without initializing submodules
+      # 1. Checkout without initializing submodules
       - name: Check out source
         uses: actions/checkout@v6
         with:
           submodules: false
 
-      # 2. Download the exact MPVKit source revision
+      # 2. Download pinned MPVKit source
       - name: Download MPVKit source
         run: |
           set -euo pipefail
@@ -66,12 +66,9 @@ jobs:
 
           test -f MPVKit/Package.swift
 
-          echo "MPVKit source revision:"
-          git -C MPVKit rev-parse --verify HEAD 2>/dev/null || echo "$MPVKIT_COMMIT"
+          echo "MPVKit source downloaded successfully."
 
-          echo "MPVKit Package.swift found."
-
-      # 3. Download and verify the prepared XCFramework archive
+      # 3. Download and verify prepared MPVKit binaries
       - name: Download and verify MPVKit binaries
         run: |
           set -euo pipefail
@@ -84,7 +81,6 @@ jobs:
           ARCHIVE="$RUNNER_TEMP/mpvkit-release/$MPVKIT_ARCHIVE"
           CHECKSUM_FILE="$RUNNER_TEMP/mpvkit-release/$MPVKIT_ARCHIVE.sha256"
 
-          # Download archive and its published checksum file
           curl --fail --location --retry 5 --retry-all-errors \
             --output "$ARCHIVE" \
             "$RELEASE_URL/$MPVKIT_ARCHIVE"
@@ -93,46 +89,37 @@ jobs:
             --output "$CHECKSUM_FILE" \
             "$RELEASE_URL/$MPVKIT_ARCHIVE.sha256"
 
-          # Verify the checksum file against the pinned release digest
-          CHECKSUM_FILE_HASH="$(shasum -a 256 "$CHECKSUM_FILE" | awk '{print $1}')"
-
-          echo "Checksum file SHA-256: $CHECKSUM_FILE_HASH"
-
-          # Verify the archive against the pinned GitHub release digest
           ACTUAL_SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')"
 
-          echo "Expected archive SHA-256: $MPVKIT_SHA256"
-          echo "Actual archive SHA-256:   $ACTUAL_SHA256"
+          echo "Expected SHA-256: $MPVKIT_SHA256"
+          echo "Actual SHA-256:   $ACTUAL_SHA256"
 
           if [ "$ACTUAL_SHA256" != "$MPVKIT_SHA256" ]; then
             echo "MPVKit archive SHA-256 verification failed."
             exit 1
           fi
 
-          # Also verify the downloaded checksum file agrees with the archive
           PUBLISHED_SHA256="$(awk 'NF {print $1; exit}' "$CHECKSUM_FILE")"
 
           if [ "$PUBLISHED_SHA256" != "$ACTUAL_SHA256" ]; then
-            echo "Published checksum file does not match the archive."
+            echo "Published checksum does not match archive."
             exit 1
           fi
 
-          echo "MPVKit archive checksum verified successfully."
+          echo "MPVKit archive checksum verified."
 
-          # Confirm expected archive directory layout
           if ! unzip -Z1 "$ARCHIVE" | grep -q '^release/xcframework/'; then
-            echo "Expected release/xcframework directory not found in archive."
+            echo "Expected release/xcframework directory not found."
             exit 1
           fi
 
-          # Restore MPVKit/dist/release/
           ditto -x -k "$ARCHIVE" MPVKit/dist
 
           test -d MPVKit/dist/release/xcframework
 
-          echo "MPVKit binaries extracted."
+          echo "MPVKit binaries extracted successfully."
 
-      # 4. Validate all nine XCFrameworks
+      # 4. Validate all nine MPVKit frameworks
       - name: Validate MPVKit XCFrameworks
         run: |
           set -euo pipefail
@@ -220,7 +207,7 @@ jobs:
             echo "Validated: $name"
           done
 
-          echo "All nine MPVKit XCFrameworks are valid."
+          echo "All nine MPVKit XCFrameworks validated."
 
       # 5. Set up Java
       - name: Set up Java
@@ -250,12 +237,33 @@ jobs:
 
       # 9. Configure runtime properties
       - name: Configure runtime properties
-        if: env.RELEASE_PROPERTIES_BASE64 != ''
         run: |
-          printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
-          sed -i '' -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
+          set -euo pipefail
 
-      # 10. Prepare remaining iOS dependencies
+          if [[ -n "${RELEASE_PROPERTIES_BASE64:-}" ]]; then
+            echo "Decoding release properties..."
+
+            printf '%s' "${RELEASE_PROPERTIES_BASE64}" \
+              | base64 --decode > local.properties
+          else
+            echo "No release properties secret provided."
+            echo "Creating empty local.properties for the unsigned build."
+
+            touch local.properties
+          fi
+
+          # Remove machine-specific and signing-only properties.
+          sed -i '' -E \
+            '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' \
+            local.properties
+
+          # Ensure Gradle receives an existing file.
+          test -f local.properties
+
+          echo "local.properties is ready."
+          ls -l local.properties
+
+      # 10. Prepare iOS dependencies
       - name: Prepare iOS dependencies
         run: ./scripts/prepare-ios-dependencies.sh
 
@@ -272,6 +280,7 @@ jobs:
             done
           ) &
           monitor_pid=$!
+
           trap 'kill "${monitor_pid}" 2>/dev/null || true' EXIT
 
           ./scripts/build-ios-ipa.sh
@@ -306,7 +315,7 @@ jobs:
             echo "- MPVKit: ${MPVKIT_RELEASE_TAG}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-      # 13. Upload test IPA
+      # 13. Upload IPA
       - name: Upload test IPA
         uses: actions/upload-artifact@v7
         with:
