@@ -1,5 +1,5 @@
 
-name: Build MPVKit iOS Binaries
+name: Prepare MPVKit iOS Binaries
 
 on:
   workflow_dispatch:
@@ -8,122 +8,48 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build MPVKit XCFrameworks
+  prepare:
+    name: Download and Verify MPVKit Frameworks
     runs-on: macos-26
-    timeout-minutes: 360
+    timeout-minutes: 60
+
+    env:
+      MPVKIT_TAG: v0.41.0-tuvora.3
+      MPVKIT_COMMIT: 742bf0177a93b353c68de57daa05bc5acd5d61ce
 
     steps:
-      # 1. Checkout without recursive submodules or persisted credentials
+      # 1. Checkout without initializing any submodules
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: false
           persist-credentials: false
 
-      # 2. Initialize MPVKit only
-      - name: Initialize MPVKit only
+      # 2. Download the pinned MPVKit source package
+      - name: Download MPVKit source
         run: |
-          git submodule sync MPVKit
-          git -c protocol.version=2 submodule update \
-            --init --force --depth=1 MPVKit
+          set -euo pipefail
 
-      # 3. Verify MPVKit revision
-      - name: Verify MPVKit revision
-        working-directory: MPVKit
+          SOURCE_URL="https://github.com/paradox-kush/MPVKit/archive/${MPVKIT_COMMIT}.tar.gz"
+
+          mkdir -p MPVKit
+
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output "$RUNNER_TEMP/mpvkit-source.tar.gz" \
+            "$SOURCE_URL"
+
+          tar -xzf "$RUNNER_TEMP/mpvkit-source.tar.gz" \
+            --strip-components=1 \
+            -C MPVKit
+
+          test -f MPVKit/Package.swift
+
+          echo "MPVKit source downloaded."
+
+      # 3. Verify the expected local framework paths
+      - name: Verify MPVKit Package.swift
         run: |
-          EXPECTED="742bf0177a93b353c68de57daa05bc5acd5d61ce"
-          ACTUAL="$(git rev-parse HEAD)"
-
-          echo "Expected: $EXPECTED"
-          echo "Actual:   $ACTUAL"
-
-          if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "Incorrect MPVKit revision."
-            exit 1
-          fi
-
-      # 4. Select Xcode
-      - name: Select Xcode 27.1
-        run: |
-          if [ -d "/Applications/Xcode_27.1.app" ]; then
-            sudo xcode-select -s \
-              /Applications/Xcode_27.1.app/Contents/Developer
-          fi
-
-          xcodebuild -version
-          swift --version
-
-      # 5. Install build tools
-      - name: Install build tools
-        run: |
-          brew install nasm sdl2
-
-      # 6. Build MPVKit for iOS and save the build log
-      - name: Build MPVKit for iOS
-        working-directory: MPVKit
-        run: |
-          set -o pipefail
-          make build platform=ios 2>&1 | tee "$RUNNER_TEMP/mpvkit-build.log"
-
-      # 7. Inspect generated build files
-      - name: Inspect MPVKit build output
-        if: always()
-        run: |
-          echo "========== DIST DIRECTORY =========="
-
-          if [ -d "MPVKit/dist" ]; then
-            find MPVKit/dist -maxdepth 6 -print
-          else
-            echo "MPVKit/dist does not exist"
-          fi
-
-          echo "========== XCFRAMEWORK DIRECTORIES =========="
-
-          find MPVKit -type d -name "*.xcframework" -print
-
-          echo "========== RELEASE ZIP FILES =========="
-
-          find MPVKit/dist/release -maxdepth 2 -type f -name "*.zip" -print 2>/dev/null || true
-
-          echo "========== LIBPLACEBO DIRECTORY =========="
-
-          find MPVKit/dist/libplacebo-* -maxdepth 5 -print 2>/dev/null || true
-
-          echo "========== LIBPLACEBO BUILD LOG =========="
-
-          if [ -f "$RUNNER_TEMP/mpvkit-build.log" ]; then
-            grep -i -E "libplacebo|xcframework|error|failed|skip" \
-              "$RUNNER_TEMP/mpvkit-build.log" | tail -n 200 || true
-          else
-            echo "Build log not found"
-          fi
-
-      # 8. Inspect contents of combined archives
-      - name: Inspect combined archive contents
-        if: always()
-        run: |
-          for archive in \
-            MPVKit/dist/release/FFmpeg-all.zip \
-            MPVKit/dist/release/Libmpv-all.zip \
-            MPVKit/dist/libplacebo-7.360.1/libplacebo.zip
-          do
-            echo ""
-            echo "========== $archive =========="
-
-            if [ -f "$archive" ]; then
-              unzip -l "$archive" | \
-                grep -i -E "libplacebo|xcframework|framework|\.a$" | \
-                head -n 100 || true
-            else
-              echo "Archive not found"
-            fi
-          done
-
-      # 9. Validate generated artifacts
-      - name: Validate XCFramework archives
-        run: |
-          RELEASE_DIR="MPVKit/dist/release"
+          set -euo pipefail
 
           FRAMEWORKS=(
             Libplacebo
@@ -138,27 +64,236 @@ jobs:
           )
 
           for name in "${FRAMEWORKS[@]}"; do
-            archive="$RELEASE_DIR/$name.xcframework.zip"
+            grep -Fq \
+              "path: \"dist/release/xcframework/${name}.xcframework\"" \
+              MPVKit/Package.swift
 
-            if [ -f "$archive" ]; then
-              echo "Found archive: $archive"
-              continue
-            fi
-
-            framework="$RELEASE_DIR/xcframework/$name.xcframework"
-
-            if [ -d "$framework" ] && [ -f "$framework/Info.plist" ]; then
-              echo "Found framework: $framework"
-              continue
-            fi
-
-            echo "Missing build artifact: $name"
-            exit 1
+            echo "Verified Package.swift path: $name"
           done
 
-      # 10. Package generated frameworks
-      - name: Package XCFrameworks
+      # 4. Download, checksum and extract all nine frameworks
+      - name: Download and verify prebuilt XCFrameworks
         run: |
+          set -euo pipefail
+
+          RELEASE_URL="https://github.com/paradox-kush/MPVKit/releases/download/${MPVKIT_TAG}"
+
+          FRAMEWORKS=(
+            Libplacebo
+            Libavcodec
+            Libavdevice
+            Libavformat
+            Libavfilter
+            Libavutil
+            Libswresample
+            Libswscale
+            Libmpv
+          )
+
+          CHECKSUMS=(
+            3de3ad6a3a9ee21f72ef508cdedce6bc6118e3ceb657dc6d7108f9fb6e08739c
+            1102d858eef749115fc99f4b7a425e697ba701e1b98b646785cde0801e93ff50
+            2a3015b63d3ff19ce89eae0e21d86a8d5d25fc000cdbabb5378623592ce80a2a
+            b764f664295d5337d25542378b664f35d8b744b060f5be595d89b5e05c84c47e
+            9b2a078a6c83133fd571967f1c064909dcdb25abed75c1e8b3a422b6108567b3
+            43183fcf048b0ff921dbac6c5814df42e098fdf03c7bfae3468c10bc6f9e8771
+            f10dd3b2f5a11e3ec11ff190d2ce8d7d13e9fcd80bd1c1a452bfb9dc56eeb910
+            4f2e0cd84cae6ed7e3f025ecdc10fcac0f0a5be6480ed65e6a6ba9d3cf66bc9d
+            bb5806a96842ce9a8edd3abb483697b460b6696f2c22707cedad5d69858a6bfb
+          )
+
+          DOWNLOAD_DIR="$RUNNER_TEMP/mpvkit-downloads"
+          EXTRACT_DIR="$RUNNER_TEMP/mpvkit-extracted"
+
+          DESTINATION="MPVKit/dist/release/xcframework"
+
+          mkdir -p "$DOWNLOAD_DIR" "$EXTRACT_DIR" "$DESTINATION"
+
+          for index in "${!FRAMEWORKS[@]}"; do
+
+            name="${FRAMEWORKS[$index]}"
+            expected="${CHECKSUMS[$index]}"
+
+            archive="$DOWNLOAD_DIR/$name.xcframework.zip"
+            checksum_file="$DOWNLOAD_DIR/$name.xcframework.checksum.txt"
+
+            echo ""
+            echo "========== $name =========="
+
+            # Download framework archive
+            curl --fail --location --retry 5 --retry-all-errors \
+              --output "$archive" \
+              "$RELEASE_URL/$name.xcframework.zip"
+
+            # Download official checksum file
+            curl --fail --location --retry 5 --retry-all-errors \
+              --output "$checksum_file" \
+              "$RELEASE_URL/$name.xcframework.checksum.txt"
+
+            # Verify published checksum against pinned checksum
+            published="$(awk 'NF {print $1; exit}' "$checksum_file")"
+
+            if [ "$published" != "$expected" ]; then
+              echo "Published checksum mismatch: $name"
+              exit 1
+            fi
+
+            # Calculate actual downloaded archive checksum
+            actual="$(shasum -a 256 "$archive" | awk '{print $1}')"
+
+            echo "Expected: $expected"
+            echo "Actual:   $actual"
+
+            if [ "$actual" != "$expected" ]; then
+              echo "SHA-256 verification FAILED: $name"
+              exit 1
+            fi
+
+            echo "SHA-256 verification PASSED: $name"
+
+            # Extract framework
+            mkdir -p "$EXTRACT_DIR/$name"
+
+            unzip -q "$archive" -d "$EXTRACT_DIR/$name"
+
+            framework="$(find "$EXTRACT_DIR/$name" \
+              -type d \
+              -name "$name.xcframework" \
+              -print -quit)"
+
+            if [ -z "$framework" ]; then
+              echo "Framework not found in archive: $name"
+              exit 1
+            fi
+
+            if [ ! -f "$framework/Info.plist" ]; then
+              echo "Missing Info.plist: $name"
+              exit 1
+            fi
+
+            # Install into the exact Package.swift directory
+            ditto "$framework" "$DESTINATION/$name.xcframework"
+
+            echo "Installed: $DESTINATION/$name.xcframework"
+
+          done
+
+      # 5. Validate framework structure and iOS arm64 binaries
+      - name: Validate XCFrameworks
+        run: |
+          set -euo pipefail
+
+          DESTINATION="MPVKit/dist/release/xcframework"
+
+          FRAMEWORKS=(
+            Libplacebo
+            Libavcodec
+            Libavdevice
+            Libavformat
+            Libavfilter
+            Libavutil
+            Libswresample
+            Libswscale
+            Libmpv
+          )
+
+          for name in "${FRAMEWORKS[@]}"; do
+
+            framework="$DESTINATION/$name.xcframework"
+
+            if [ ! -f "$framework/Info.plist" ]; then
+              echo "Missing framework: $name"
+              exit 1
+            fi
+
+            plutil -lint "$framework/Info.plist"
+
+            python3 - "$framework" <<'PY'
+          import plistlib
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+
+          with open(root / "Info.plist", "rb") as f:
+              info = plistlib.load(f)
+
+          valid = False
+
+          for entry in info.get("AvailableLibraries", []):
+              if entry.get("SupportedPlatform") != "ios":
+                  continue
+
+              if entry.get("SupportedPlatformVariant") not in (None, ""):
+                  continue
+
+              identifier = entry.get("LibraryIdentifier")
+              library_path = entry.get("LibraryPath")
+
+              if not identifier or not library_path:
+                  continue
+
+              binary = root / identifier / library_path
+
+              if binary.is_dir():
+                  binary = binary / binary.stem
+
+              if not binary.is_file():
+                  continue
+
+              result = subprocess.run(
+                  ["lipo", "-info", str(binary)],
+                  capture_output=True,
+                  text=True
+              )
+
+              if result.returncode == 0 and "arm64" in result.stdout:
+                  valid = True
+                  break
+
+          if not valid:
+              print(f"Invalid iOS arm64 framework: {root.name}")
+              sys.exit(1)
+
+          print(f"Valid iOS arm64 framework: {root.name}")
+          PY
+
+          done
+
+          echo ""
+          echo "All 9 XCFrameworks validated successfully."
+
+      # 6. Display final directory structure
+      - name: Inspect prepared frameworks
+        run: |
+          set -euo pipefail
+
+          echo "========== MPVKIT PACKAGE =========="
+
+          find MPVKit/dist/release/xcframework \
+            -maxdepth 2 -print
+
+          echo ""
+          echo "========== FRAMEWORK COUNT =========="
+
+          COUNT="$(find MPVKit/dist/release/xcframework \
+            -maxdepth 1 \
+            -type d \
+            -name '*.xcframework' | wc -l | tr -d ' ')"
+
+          echo "Frameworks: $COUNT"
+
+          if [ "$COUNT" -ne 9 ]; then
+            echo "Expected 9 frameworks."
+            exit 1
+          fi
+
+      # 7. Package prepared dependencies
+      - name: Package MPVKit frameworks
+        run: |
+          set -euo pipefail
+
           mkdir -p "$RUNNER_TEMP/mpvkit-release"
 
           ditto -c -k --sequesterRsrc --keepParent \
@@ -172,7 +307,7 @@ jobs:
 
           cat mpvkit-ios-742bf01.zip.sha256
 
-      # 11. Publish binary release
+      # 8. Publish prepared binaries
       - name: Publish MPVKit binary release
         uses: softprops/action-gh-release@v2
         with:
