@@ -14,11 +14,12 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      # 1. Checkout main repository without recursive submodules
+      # 1. Checkout without recursive submodules or persisted credentials
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: false
+          persist-credentials: false
 
       # 2. Initialize MPVKit only
       - name: Initialize MPVKit only
@@ -58,13 +59,14 @@ jobs:
         run: |
           brew install nasm sdl2
 
-      # 6. Build MPVKit for iOS
+      # 6. Build MPVKit for iOS and save the build log
       - name: Build MPVKit for iOS
         working-directory: MPVKit
         run: |
-          make build platform=ios
+          set -o pipefail
+          make build platform=ios 2>&1 | tee "$RUNNER_TEMP/mpvkit-build.log"
 
-      # 7. Diagnose generated build files
+      # 7. Inspect generated build files
       - name: Inspect MPVKit build output
         if: always()
         run: |
@@ -80,15 +82,45 @@ jobs:
 
           find MPVKit -type d -name "*.xcframework" -print
 
-          echo "========== ZIP FILES =========="
+          echo "========== RELEASE ZIP FILES =========="
 
-          find MPVKit -type f -name "*.zip" -print
+          find MPVKit/dist/release -maxdepth 2 -type f -name "*.zip" -print 2>/dev/null || true
 
-          echo "========== INFO.PLIST FILES =========="
+          echo "========== LIBPLACEBO DIRECTORY =========="
 
-          find MPVKit -type f -name "Info.plist" -print
+          find MPVKit/dist/libplacebo-* -maxdepth 5 -print 2>/dev/null || true
 
-      # 8. Validate build artifacts
+          echo "========== LIBPLACEBO BUILD LOG =========="
+
+          if [ -f "$RUNNER_TEMP/mpvkit-build.log" ]; then
+            grep -i -E "libplacebo|xcframework|error|failed|skip" \
+              "$RUNNER_TEMP/mpvkit-build.log" | tail -n 200 || true
+          else
+            echo "Build log not found"
+          fi
+
+      # 8. Inspect contents of combined archives
+      - name: Inspect combined archive contents
+        if: always()
+        run: |
+          for archive in \
+            MPVKit/dist/release/FFmpeg-all.zip \
+            MPVKit/dist/release/Libmpv-all.zip \
+            MPVKit/dist/libplacebo-7.360.1/libplacebo.zip
+          do
+            echo ""
+            echo "========== $archive =========="
+
+            if [ -f "$archive" ]; then
+              unzip -l "$archive" | \
+                grep -i -E "libplacebo|xcframework|framework|\.a$" | \
+                head -n 100 || true
+            else
+              echo "Archive not found"
+            fi
+          done
+
+      # 9. Validate generated artifacts
       - name: Validate XCFramework archives
         run: |
           RELEASE_DIR="MPVKit/dist/release"
@@ -124,7 +156,7 @@ jobs:
             exit 1
           done
 
-      # 9. Package all generated frameworks
+      # 10. Package generated frameworks
       - name: Package XCFrameworks
         run: |
           mkdir -p "$RUNNER_TEMP/mpvkit-release"
@@ -140,7 +172,7 @@ jobs:
 
           cat mpvkit-ios-742bf01.zip.sha256
 
-      # 10. Publish binary release
+      # 11. Publish binary release
       - name: Publish MPVKit binary release
         uses: softprops/action-gh-release@v2
         with:
