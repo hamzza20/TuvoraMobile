@@ -1,3 +1,4 @@
+
 name: Build Test IPA
 
 on:
@@ -24,6 +25,7 @@ jobs:
     name: Build unsigned full ${{ inputs.configuration }} IPA
     runs-on: xcode-27
     timeout-minutes: ${{ inputs.configuration == 'Release' && 75 || 30 }}
+
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
       GRADLE_OPTS: -Dfile.encoding=UTF-8
@@ -33,19 +35,205 @@ jobs:
       NUVIO_KOTLIN_NATIVE_JVMARGS: -Xmx4608M
       RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
 
+      MPVKIT_COMMIT: 742bf0177a93b353c68de57daa05bc5acd5d61ce
+      MPVKIT_RELEASE_TAG: mpvkit-742bf01-ios
+      MPVKIT_ARCHIVE: mpvkit-ios-742bf01.zip
+      MPVKIT_SHA256: 448e0636f3e4fcc69b26efc405fb1f62eae37cbf7b7fbbbcb25729b28155c785
+
     steps:
+      # 1. Checkout app source without initializing submodules
       - name: Check out source
         uses: actions/checkout@v6
+        with:
+          submodules: false
 
+      # 2. Download the exact MPVKit source revision
+      - name: Download MPVKit source
+        run: |
+          set -euo pipefail
+
+          SOURCE_URL="https://github.com/paradox-kush/MPVKit/archive/${MPVKIT_COMMIT}.tar.gz"
+
+          mkdir -p MPVKit
+
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output "$RUNNER_TEMP/mpvkit-source.tar.gz" \
+            "$SOURCE_URL"
+
+          tar -xzf "$RUNNER_TEMP/mpvkit-source.tar.gz" \
+            --strip-components=1 \
+            -C MPVKit
+
+          test -f MPVKit/Package.swift
+
+          echo "MPVKit source revision:"
+          git -C MPVKit rev-parse --verify HEAD 2>/dev/null || echo "$MPVKIT_COMMIT"
+
+          echo "MPVKit Package.swift found."
+
+      # 3. Download and verify the prepared XCFramework archive
+      - name: Download and verify MPVKit binaries
+        run: |
+          set -euo pipefail
+
+          RELEASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${MPVKIT_RELEASE_TAG}"
+
+          mkdir -p "$RUNNER_TEMP/mpvkit-release"
+          mkdir -p MPVKit/dist
+
+          ARCHIVE="$RUNNER_TEMP/mpvkit-release/$MPVKIT_ARCHIVE"
+          CHECKSUM_FILE="$RUNNER_TEMP/mpvkit-release/$MPVKIT_ARCHIVE.sha256"
+
+          # Download archive and its published checksum file
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output "$ARCHIVE" \
+            "$RELEASE_URL/$MPVKIT_ARCHIVE"
+
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output "$CHECKSUM_FILE" \
+            "$RELEASE_URL/$MPVKIT_ARCHIVE.sha256"
+
+          # Verify the checksum file against the pinned release digest
+          CHECKSUM_FILE_HASH="$(shasum -a 256 "$CHECKSUM_FILE" | awk '{print $1}')"
+
+          echo "Checksum file SHA-256: $CHECKSUM_FILE_HASH"
+
+          # Verify the archive against the pinned GitHub release digest
+          ACTUAL_SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')"
+
+          echo "Expected archive SHA-256: $MPVKIT_SHA256"
+          echo "Actual archive SHA-256:   $ACTUAL_SHA256"
+
+          if [ "$ACTUAL_SHA256" != "$MPVKIT_SHA256" ]; then
+            echo "MPVKit archive SHA-256 verification failed."
+            exit 1
+          fi
+
+          # Also verify the downloaded checksum file agrees with the archive
+          PUBLISHED_SHA256="$(awk 'NF {print $1; exit}' "$CHECKSUM_FILE")"
+
+          if [ "$PUBLISHED_SHA256" != "$ACTUAL_SHA256" ]; then
+            echo "Published checksum file does not match the archive."
+            exit 1
+          fi
+
+          echo "MPVKit archive checksum verified successfully."
+
+          # Confirm expected archive directory layout
+          if ! unzip -Z1 "$ARCHIVE" | grep -q '^release/xcframework/'; then
+            echo "Expected release/xcframework directory not found in archive."
+            exit 1
+          fi
+
+          # Restore MPVKit/dist/release/
+          ditto -x -k "$ARCHIVE" MPVKit/dist
+
+          test -d MPVKit/dist/release/xcframework
+
+          echo "MPVKit binaries extracted."
+
+      # 4. Validate all nine XCFrameworks
+      - name: Validate MPVKit XCFrameworks
+        run: |
+          set -euo pipefail
+
+          FRAMEWORK_DIR="MPVKit/dist/release/xcframework"
+
+          FRAMEWORKS=(
+            Libplacebo
+            Libavcodec
+            Libavdevice
+            Libavformat
+            Libavfilter
+            Libavutil
+            Libswresample
+            Libswscale
+            Libmpv
+          )
+
+          for name in "${FRAMEWORKS[@]}"; do
+            framework="$FRAMEWORK_DIR/$name.xcframework"
+
+            if [ ! -d "$framework" ]; then
+              echo "Missing XCFramework: $framework"
+              exit 1
+            fi
+
+            if [ ! -f "$framework/Info.plist" ]; then
+              echo "Missing Info.plist: $framework"
+              exit 1
+            fi
+
+            plutil -lint "$framework/Info.plist"
+
+            python3 - "$framework" <<'PY'
+          import plistlib
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+
+          with open(root / "Info.plist", "rb") as f:
+              info = plistlib.load(f)
+
+          valid = False
+
+          for entry in info.get("AvailableLibraries", []):
+              if entry.get("SupportedPlatform") != "ios":
+                  continue
+
+              if entry.get("SupportedPlatformVariant") not in (None, ""):
+                  continue
+
+              identifier = entry.get("LibraryIdentifier")
+              library_path = entry.get("LibraryPath")
+
+              if not identifier or not library_path:
+                  continue
+
+              binary = root / identifier / library_path
+
+              if binary.is_dir():
+                  binary = binary / binary.stem
+
+              if not binary.is_file():
+                  continue
+
+              result = subprocess.run(
+                  ["lipo", "-info", str(binary)],
+                  capture_output=True,
+                  text=True
+              )
+
+              if result.returncode == 0 and "arm64" in result.stdout:
+                  valid = True
+                  break
+
+          if not valid:
+              print(f"Invalid iOS arm64 framework: {root.name}")
+              sys.exit(1)
+
+          print(f"Valid iOS arm64 framework: {root.name}")
+          PY
+
+            echo "Validated: $name"
+          done
+
+          echo "All nine MPVKit XCFrameworks are valid."
+
+      # 5. Set up Java
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
+      # 6. Set up Gradle
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # 7. Cache Kotlin Native
       - name: Cache Kotlin Native
         uses: actions/cache@v5
         with:
@@ -54,20 +242,24 @@ jobs:
           restore-keys: |
             konan-${{ runner.os }}-${{ runner.arch }}-
 
+      # 8. Verify Apple toolchain
       - name: Verify Apple toolchain
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
 
+      # 9. Configure runtime properties
       - name: Configure runtime properties
         if: env.RELEASE_PROPERTIES_BASE64 != ''
         run: |
           printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
           sed -i '' -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
 
+      # 10. Prepare remaining iOS dependencies
       - name: Prepare iOS dependencies
         run: ./scripts/prepare-ios-dependencies.sh
 
+      # 11. Build IPA
       - name: Build unsigned full ${{ inputs.configuration }} IPA
         run: |
           (
@@ -81,12 +273,22 @@ jobs:
           ) &
           monitor_pid=$!
           trap 'kill "${monitor_pid}" 2>/dev/null || true' EXIT
+
           ./scripts/build-ios-ipa.sh
 
+      # 12. Summarize IPA
       - name: Summarize IPA
         run: |
+          set -euo pipefail
+
           configuration_slug="$(printf '%s' "${IOS_CONFIGURATION}" | tr '[:upper:]' '[:lower:]')"
-          ipa_path="$(find build/ios-ipa -maxdepth 1 -type f -name "*-full-${configuration_slug}.ipa" -print -quit)"
+
+          ipa_path="$(find build/ios-ipa \
+            -maxdepth 1 \
+            -type f \
+            -name "*-full-${configuration_slug}.ipa" \
+            -print -quit)"
+
           if [[ -z "${ipa_path}" ]]; then
             echo "No IPA was produced." >&2
             exit 1
@@ -101,8 +303,10 @@ jobs:
             echo "- Distribution: full"
             echo "- Configuration: ${IOS_CONFIGURATION}"
             echo "- Signing: unsigned"
+            echo "- MPVKit: ${MPVKIT_RELEASE_TAG}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
+      # 13. Upload test IPA
       - name: Upload test IPA
         uses: actions/upload-artifact@v7
         with:
