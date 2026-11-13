@@ -23,12 +23,6 @@ engine_framework="${engine_root}/platform/apple/NuvioEngine.xcframework"
 
 mpvkit_revision="742bf0177a93b353c68de57daa05bc5acd5d61ce"
 
-mpvkit_release="mpvkit-742bf01-ios"
-
-mpvkit_archive="mpvkit-ios-742bf01.zip"
-
-mpvkit_release_url="https://github.com/hamzza20/TuvoraMobile/releases/download/${mpvkit_release}"
-
 mpvkit_root="${repository_root}/MPVKit"
 
 mpvkit_framework_root="${mpvkit_root}/dist/release/xcframework"
@@ -52,23 +46,6 @@ mpvkit_frameworks=(
 temporary_directory="$(mktemp -d "${TMPDIR:-/tmp}/tuvora-ios-deps.XXXXXX")"
 
 trap 'rm -rf "${temporary_directory}"' EXIT
-
-# --------------------------------------------------
-# INITIALIZE MPVKIT SUBMODULE
-# --------------------------------------------------
-
-echo "Checking MPVKit submodule..."
-
-git -C "${repository_root}" submodule update --init --depth 1 MPVKit
-
-actual_revision="$(git -C "${mpvkit_root}" rev-parse HEAD)"
-
-if [[ "${actual_revision}" != "${mpvkit_revision}" ]]; then
-    echo "Unexpected MPVKit revision." >&2
-    echo "Expected: ${mpvkit_revision}" >&2
-    echo "Actual:   ${actual_revision}" >&2
-    exit 1
-fi
 
 # --------------------------------------------------
 # VALIDATE XCFRAMEWORK
@@ -207,95 +184,41 @@ prepare_nuvio_engine() {
 }
 
 # --------------------------------------------------
-# PREPARE MPVKIT FRAMEWORKS
+# VALIDATE PREPARED MPVKIT
 # --------------------------------------------------
 
 prepare_mpvkit() {
 
-    if validate_mpvkit_set "${mpvkit_framework_root}"; then
-        echo "All MPVKit frameworks already available."
-        return
-    fi
+    echo "Checking prepared MPVKit..."
 
-    echo "Downloading MPVKit binary release..."
-
-    local archive="${temporary_directory}/${mpvkit_archive}"
-
-    local checksum_file="${temporary_directory}/${mpvkit_archive}.sha256"
-
-    curl --fail --location --retry 5 --retry-all-errors \
-        --silent --show-error \
-        --output "${archive}" \
-        "${mpvkit_release_url}/${mpvkit_archive}"
-
-    curl --fail --location --retry 5 --retry-all-errors \
-        --silent --show-error \
-        --output "${checksum_file}" \
-        "${mpvkit_release_url}/${mpvkit_archive}.sha256"
-
-    local expected_checksum
-    local actual_checksum
-
-    expected_checksum="$(awk 'NF {print $1; exit}' "${checksum_file}")"
-
-    if [[ ! "${expected_checksum}" =~ ^[[:xdigit:]]{64}$ ]]; then
-        echo "Invalid MPVKit checksum file." >&2
+    # The workflow must download the pinned MPVKit source.
+    if [[ ! -f "${mpvkit_root}/Package.swift" ]]; then
+        echo "MPVKit Package.swift is missing." >&2
+        echo "Download the pinned MPVKit source before running this script." >&2
         exit 1
     fi
 
-    actual_checksum="$(shasum -a 256 "${archive}" | awk '{print $1}')"
+    # Confirm that Package.swift references the expected local frameworks.
+    for name in "${mpvkit_frameworks[@]}"; do
+        if ! grep -Fq \
+            "path: \"dist/release/xcframework/${name}.xcframework\"" \
+            "${mpvkit_root}/Package.swift"; then
+            echo "Unexpected Package.swift framework path: ${name}" >&2
+            exit 1
+        fi
+    done
 
-    if [[ "${actual_checksum}" != "${expected_checksum}" ]]; then
-        echo "MPVKit archive checksum mismatch." >&2
-        exit 1
-    fi
+    # Do not initialize the MPVKit Git submodule here.
+    # Do not download the binary archive here.
+    # The IPA workflow prepares both before calling this script.
 
-    echo "MPVKit archive checksum verified."
-
-    local extraction_root="${temporary_directory}/mpvkit"
-
-    mkdir -p "${extraction_root}"
-
-    ditto -x -k "${archive}" "${extraction_root}"
-
-    local source_root
-
-    source_root="$(find "${extraction_root}" \
-        -type d -name xcframework -print -quit)"
-
-    if [[ -z "${source_root}" ]]; then
-        echo "MPVKit archive does not contain xcframework directory." >&2
-        exit 1
-    fi
-
-    # Validate every framework before installing anything.
-
-    validate_mpvkit_set "${source_root}" || {
-        echo "MPVKit archive validation failed." >&2
+    validate_mpvkit_set "${mpvkit_framework_root}" || {
+        echo "Prepared MPVKit frameworks are missing or invalid." >&2
         exit 1
     }
 
-    # Install atomically through a staging directory.
-
-    local staging="${mpvkit_framework_root}.staging"
-
-    rm -rf "${staging}"
-
-    mkdir -p "${staging}"
-
-    for name in "${mpvkit_frameworks[@]}"; do
-        ditto \
-            "${source_root}/${name}.xcframework" \
-            "${staging}/${name}.xcframework"
-    done
-
-    rm -rf "${mpvkit_framework_root}"
-
-    mkdir -p "$(dirname "${mpvkit_framework_root}")"
-
-    mv "${staging}" "${mpvkit_framework_root}"
-
-    echo "All nine MPVKit frameworks installed."
+    echo "MPVKit source and all nine frameworks validated."
+    echo "MPVKit revision: ${mpvkit_revision}"
 }
 
 # --------------------------------------------------
