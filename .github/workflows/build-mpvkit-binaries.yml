@@ -1,0 +1,3 @@
+- name: Build MPVKit
+  working-directory: MPVKit
+  run: make build platform=ios
