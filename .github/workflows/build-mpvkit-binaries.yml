@@ -1,3 +1,122 @@
-- name: Build MPVKit
-  working-directory: MPVKit
-  run: make build platform=ios
+
+name: Build MPVKit iOS Binaries
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build MPVKit XCFrameworks
+    runs-on: macos-26
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Select Xcode 27.1
+        run: |
+          if [ -d "/Applications/Xcode_27.1.app" ]; then
+            sudo xcode-select -s \
+              /Applications/Xcode_27.1.app/Contents/Developer
+          fi
+
+          xcodebuild -version
+          swift --version
+
+      - name: Verify MPVKit revision
+        working-directory: MPVKit
+        run: |
+          EXPECTED="742bf0177a93b353c68de57daa05bc5acd5d61ce"
+          ACTUAL="$(git rev-parse HEAD)"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual:   $ACTUAL"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Incorrect MPVKit revision."
+            exit 1
+          fi
+
+      - name: Install build tools
+        run: |
+          brew install nasm sdl2
+
+      - name: Build MPVKit for iOS
+        working-directory: MPVKit
+        run: |
+          make build platform=ios
+
+      - name: Validate XCFrameworks
+        run: |
+          FRAMEWORK_DIR="MPVKit/dist/release/xcframework"
+
+          FRAMEWORKS=(
+            Libplacebo
+            Libavcodec
+            Libavdevice
+            Libavformat
+            Libavfilter
+            Libavutil
+            Libswresample
+            Libswscale
+            Libmpv
+          )
+
+          for name in "${FRAMEWORKS[@]}"; do
+            framework="$FRAMEWORK_DIR/$name.xcframework"
+
+            if [ ! -f "$framework/Info.plist" ]; then
+              echo "Missing: $name Info.plist"
+              exit 1
+            fi
+
+            plutil -lint "$framework/Info.plist"
+
+            binary="$(find "$framework" -type f \
+              -name '*.a' -size +0c -print -quit)"
+
+            if [ -z "$binary" ]; then
+              echo "Missing binary: $name"
+              exit 1
+            fi
+
+            if ! lipo -info "$binary" | grep -q arm64; then
+              echo "Missing arm64: $name"
+              exit 1
+            fi
+
+            echo "Validated: $name"
+          done
+
+      - name: Package XCFrameworks
+        run: |
+          mkdir -p "$RUNNER_TEMP/mpvkit-release"
+
+          ditto -c -k --sequesterRsrc --keepParent \
+            MPVKit/dist/release/xcframework \
+            "$RUNNER_TEMP/mpvkit-release/mpvkit-ios-742bf01.zip"
+
+          cd "$RUNNER_TEMP/mpvkit-release"
+
+          shasum -a 256 mpvkit-ios-742bf01.zip \
+            > mpvkit-ios-742bf01.zip.sha256
+
+          cat mpvkit-ios-742bf01.zip.sha256
+
+      - name: Publish MPVKit binary release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mpvkit-742bf01-ios
+          name: MPVKit iOS Binaries 742bf01
+          target_commitish: main
+          files: |
+            ${{ runner.temp }}/mpvkit-release/mpvkit-ios-742bf01.zip
+            ${{ runner.temp }}/mpvkit-release/mpvkit-ios-742bf01.zip.sha256
+          fail_on_unmatched_files: true
+          make_latest: false
