@@ -14,21 +14,20 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout repository and submodules
+      # 1. Checkout the main repository WITHOUT recursive submodules
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
-      - name: Select Xcode 27.1
+      # 2. Initialize MPVKit only (do not initialize its nested submodules)
+      - name: Initialize MPVKit only
         run: |
-          if [ -d "/Applications/Xcode_27.1.app" ]; then
-            sudo xcode-select -s \
-              /Applications/Xcode_27.1.app/Contents/Developer
-          fi
+          git submodule sync MPVKit
+          git -c protocol.version=2 submodule update \
+            --init --force --depth=1 MPVKit
 
-          xcodebuild -version
-          swift --version
-
+      # 3. Verify the exact MPVKit revision
       - name: Verify MPVKit revision
         working-directory: MPVKit
         run: |
@@ -43,15 +42,29 @@ jobs:
             exit 1
           fi
 
+      # 4. Select Xcode
+      - name: Select Xcode 27.1
+        run: |
+          if [ -d "/Applications/Xcode_27.1.app" ]; then
+            sudo xcode-select -s \
+              /Applications/Xcode_27.1.app/Contents/Developer
+          fi
+
+          xcodebuild -version
+          swift --version
+
+      # 5. Install build tools
       - name: Install build tools
         run: |
           brew install nasm sdl2
 
+      # 6. Build MPVKit for iOS
       - name: Build MPVKit for iOS
         working-directory: MPVKit
         run: |
           make build platform=ios
 
+      # 7. Validate the generated XCFrameworks
       - name: Validate XCFrameworks
         run: |
           FRAMEWORK_DIR="MPVKit/dist/release/xcframework"
@@ -94,6 +107,7 @@ jobs:
             echo "Validated: $name"
           done
 
+      # 8. Package the XCFrameworks
       - name: Package XCFrameworks
         run: |
           mkdir -p "$RUNNER_TEMP/mpvkit-release"
@@ -109,6 +123,7 @@ jobs:
 
           cat mpvkit-ios-742bf01.zip.sha256
 
+      # 9. Publish the binary release
       - name: Publish MPVKit binary release
         uses: softprops/action-gh-release@v2
         with:
