@@ -1,7 +1,21 @@
 [submodule "MPVKit"]
-	path = MPVKit
-	url = https://github.com/paradox-kush/MPVKit.git
-	branch = tuvora-rebase-04579bd
+    path = MPVKit
+    url = https://github.com/paradox-kush/MPVKit.git
+    branch = tuvora-rebase-04579bd
+    ignore = untracked
+
+[submodule "libass-android"]
+    path = libass-android
+    url = https://github.com/peerless2012/libass-android.git
+
+[submodule "vendor/TorrServer"]
+    path = vendor/TorrServer
+    url = https://github.com/YouROK/TorrServer.git
+
+[submodule "vendor/quickjs-kt"]
+    path = vendor/quickjs-kt
+    url = https://github.com/dokar3/quickjs-kt.git
+
 	# Ignore the submodule's local build output (build/, .swiftpm xcuserdata) so it stops showing
 	# as " M MPVKit" in git status. "untracked" hides only untracked junk — a real MPVKit commit
 	# move or a tracked-file edit still surfaces. Keeps the pinned commit (tag v0.41.0-tuvora.2)
