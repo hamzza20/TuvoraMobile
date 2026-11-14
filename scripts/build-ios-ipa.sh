@@ -54,25 +54,26 @@ fi
     CODE_SIGN_IDENTITY= \
     build
 
-app_path="${derived_data}/Build/Products/${configuration}-iphoneos/Nuvio.app"
-if [[ ! -d "${app_path}" ]]; then
-    echo "iOS build did not produce ${app_path}." >&2
+app_dir="$(find "${derived_data}/Build/Products/${configuration}-iphoneos" -maxdepth 1 -type d -name '*.app' -print -quit)"
+if [[ -z "${app_dir}" || ! -d "${app_dir}" ]]; then
+    echo "iOS build did not produce an .app bundle under ${derived_data}/Build/Products/${configuration}-iphoneos." >&2
     exit 1
 fi
+app_name="$(basename "${app_dir}")"
 
-built_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${app_path}/Info.plist")"
+built_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${app_dir}/Info.plist")"
 if [[ "${built_version}" != "${version}" ]]; then
     echo "Built iOS version ${built_version} does not match ${version}." >&2
     exit 1
 fi
 
-executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${app_path}/Info.plist")"
-architectures="$(xcrun lipo -archs "${app_path}/${executable}")"
+executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${app_dir}/Info.plist")"
+architectures="$(xcrun lipo -archs "${app_dir}/${executable}")"
 if [[ " ${architectures} " != *" arm64 "* ]]; then
     echo "Built iOS application does not contain arm64." >&2
     exit 1
 fi
-if ! launch_screen_plist="$(plutil -extract UILaunchScreen xml1 -o - "${app_path}/Info.plist" 2>/dev/null)"; then
+if ! launch_screen_plist="$(plutil -extract UILaunchScreen xml1 -o - "${app_dir}/Info.plist" 2>/dev/null)"; then
     echo "Built iOS application does not contain UILaunchScreen." >&2
     exit 1
 fi
@@ -80,12 +81,12 @@ if [[ "${launch_screen_plist}" == *"<key>UILaunchScreen</key>"* ]]; then
     echo "Built iOS application contains a nested UILaunchScreen." >&2
     exit 1
 fi
-if [[ -d "${app_path}/_CodeSignature" ]]; then
+if [[ -d "${app_dir}/_CodeSignature" ]]; then
     echo "Built iOS application is unexpectedly signed." >&2
     exit 1
 fi
 
-widget_path="${app_path}/PlugIns/DownloadsWidgetExtension.appex"
+widget_path="${app_dir}/PlugIns/DownloadsWidgetExtension.appex"
 if [[ ! -d "${widget_path}" ]]; then
     echo "Built iOS application does not contain the downloads widget." >&2
     exit 1
@@ -102,7 +103,7 @@ output_directory="$(cd "${output_directory}" && pwd -P)"
 package_root="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-ios-ipa.XXXXXX")"
 trap 'rm -rf "${package_root}"' EXIT
 mkdir -p "${package_root}/Payload"
-ditto "${app_path}" "${package_root}/Payload/Nuvio.app"
+cp -R "${app_dir}" "${package_root}/Payload/${app_name}"
 
 ipa_path="${output_directory}/nuvio-${version}-full-${configuration_slug}.ipa"
 temporary_ipa="${package_root}/nuvio-${version}-full-${configuration_slug}.ipa"
