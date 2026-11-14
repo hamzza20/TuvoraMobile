@@ -23,7 +23,7 @@ concurrency:
 jobs:
   build:
     name: Build unsigned full ${{ inputs.configuration }} IPA
-    runs-on: xcode-27
+    runs-on: xcode-27-xlarge
     timeout-minutes: ${{ inputs.configuration == 'Release' && 120 || 45 }}
 
     env:
